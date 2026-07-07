@@ -146,6 +146,8 @@ INDEX_HTML = r"""
     }
     .answer-card.assistant { border-top: 3px solid var(--accent); }
     .answer-card.assistant .badge { background: var(--accent-soft); color: var(--accent); }
+    .answer-card.local { border-top: 3px solid #2f9e63; }
+    .answer-card.local .badge { background: #eaf7f0; color: #2f9e63; }
     .answer-card .error { color: var(--danger); font-size: 13px; }
     .thinking { color: var(--muted); font-style: italic; }
 
@@ -155,9 +157,31 @@ INDEX_HTML = r"""
       left: 0;
       right: 0;
       background: linear-gradient(transparent, var(--surface) 25%);
-      padding: 20px 16px 20px;
+      padding: 16px 16px 20px;
     }
     .composer-box { width: min(1080px, 100%); margin: 0 auto; }
+    .mode-toggle {
+      display: inline-flex;
+      gap: 4px;
+      padding: 4px;
+      margin-bottom: 10px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(31, 36, 48, .06);
+    }
+    .mode-toggle button {
+      min-width: 124px;
+      padding: 8px 12px;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 6px;
+      font-size: 13px;
+    }
+    .mode-toggle button.active {
+      background: var(--accent);
+      color: #fff;
+    }
     .composer-inner { display: flex; gap: 10px; align-items: flex-end; }
     .composer textarea {
       min-height: 52px;
@@ -212,6 +236,10 @@ INDEX_HTML = r"""
     </main>
     <div class="composer">
       <div class="composer-box">
+        <div class="mode-toggle" role="group" aria-label="답변 모드">
+          <button id="aiModeButton" class="active" type="button" data-responder="ai">AI가 답변</button>
+          <button id="localModeButton" type="button" data-responder="local">로컬 LLM이 답변</button>
+        </div>
         <form class="composer-inner" id="chatForm">
           <textarea id="chatInput" placeholder="질문을 입력하세요 (Enter로 전송, Shift+Enter 줄바꿈)" required></textarea>
           <button id="sendButton" type="submit">보내기</button>
@@ -225,6 +253,7 @@ INDEX_HTML = r"""
     // 📝 토큰은 localStorage에 저장해서 새로고침해도 로그인이 유지되게 함
     let token = localStorage.getItem("lc_token") || "";
     let authMode = "login";  // login | signup
+    let responderMode = localStorage.getItem("lc_responder") || "ai";
 
     const $ = (sel) => document.querySelector(sel);
     const loginView = $("#loginView"), chatView = $("#chatView");
@@ -232,6 +261,7 @@ INDEX_HTML = r"""
     const authSubmit = $("#authSubmit"), toggleLink = $("#toggleLink"), toggleText = $("#toggleText");
     const chatLog = $("#chatLog"), emptyHint = $("#emptyHint");
     const chatForm = $("#chatForm"), chatInput = $("#chatInput"), sendButton = $("#sendButton");
+    const modeButtons = document.querySelectorAll(".mode-toggle button");
 
     // ── API 호출 도우미 ──
     async function api(path, options = {}) {
@@ -314,13 +344,29 @@ INDEX_HTML = r"""
       emptyHint.hidden = false;
     });
 
+    function setResponderMode(next) {
+      responderMode = next === "local" ? "local" : "ai";
+      localStorage.setItem("lc_responder", responderMode);
+      modeButtons.forEach((button) => {
+        const active = button.dataset.responder === responderMode;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+    }
+
+    modeButtons.forEach((button) => {
+      button.addEventListener("click", () => setResponderMode(button.dataset.responder));
+    });
+    setResponderMode(responderMode);
+
     // ── 채팅 렌더링 ──
     function answerCard(result) {
       const card = document.createElement("div");
-      card.className = "answer-card assistant";
+      const responder = result.responder === "local" ? "local" : "assistant";
+      card.className = `answer-card ${responder}`;
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.textContent = "AI";
+      badge.textContent = result.responder === "local" ? "로컬 LLM" : "AI";
       card.appendChild(badge);
       const body = document.createElement("div");
       if (result.pending) {
@@ -362,7 +408,7 @@ INDEX_HTML = r"""
     }
 
     function pendingAnswer() {
-      return { pending: true };
+      return { responder: responderMode, pending: true };
     }
 
     // ── 질문 전송 ──
@@ -377,7 +423,7 @@ INDEX_HTML = r"""
       try {
         const data = await api("/api/chat/ask", {
           method: "POST",
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({ message, responder: responderMode }),
         });
         renderAnswer(turn.querySelector(".answers"), data);
       } catch (error) {

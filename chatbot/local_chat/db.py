@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     question TEXT NOT NULL,
+    responder TEXT,
     answer TEXT,
     error TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now', 'localtime'))
@@ -38,6 +39,7 @@ CREATE TABLE IF NOT EXISTS messages (
 
 # 📝 이미 만들어진 DB에 나중에 추가된 컬럼을 넣어주는 마이그레이션 목록
 _MIGRATIONS = (
+    "responder",
     "answer",
     "error",
 )

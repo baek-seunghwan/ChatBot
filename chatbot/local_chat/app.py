@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import asyncio
 import os
+from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from ..model import generate_text_hybrid, load_checkpoint
 from ..providers import LLMRouter
 from ..rag_chain import RagChain
 from . import auth
@@ -17,6 +20,9 @@ from .db import get_conn, init_db
 from .web import INDEX_HTML
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+MODEL_PATH = Path(
+    os.getenv("CHATBOT_MODEL_PATH", REPO_ROOT / "artifacts" / "chatbot.pt")
+)
 
 # 📝 .env에 있는 ANTHROPIC_API_KEY / GEMINI_API_KEY를 불러옴
 try:
@@ -55,15 +61,18 @@ class AuthResponse(BaseModel):
 
 class AskRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
+    responder: Literal["ai", "local"] = "ai"
 
 
 class ChatAnswer(BaseModel):
+    responder: Literal["ai", "local"] = "ai"
     answer: str | None = None
     error: str | None = None
 
 
 class AskResponse(BaseModel):
     question: str
+    responder: Literal["ai", "local"] = "ai"
     answer: str | None = None
     error: str | None = None
 
@@ -133,9 +142,45 @@ def _chatbot_call(prompt: str) -> ChatAnswer:
         result = _router.generate(
             prompt, system=_SYSTEM_PROMPT, max_tokens=800, temperature=0.5
         )
-        return ChatAnswer(answer=result.text)
+        return ChatAnswer(responder="ai", answer=result.text)
     except Exception as exc:
-        return ChatAnswer(error=f"{type(exc).__name__}: {str(exc)[:200]}")
+        return ChatAnswer(responder="ai", error=f"{type(exc).__name__}: {str(exc)[:200]}")
+
+
+@lru_cache(maxsize=1)
+def get_local_model_bundle():
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"학습 모델이 없습니다: {MODEL_PATH}. 먼저 `python -m chatbot.train`을 실행하세요."
+        )
+    return load_checkpoint(MODEL_PATH, device="cpu")
+
+
+def _local_llm_call(prompt: str) -> ChatAnswer:
+    """로컬 학습 모델(chatbot.pt)로 답변을 생성함."""
+    try:
+        model, tokenizer, config, metadata = get_local_model_bundle()
+        generated = generate_text_hybrid(
+            model,
+            tokenizer,
+            config,
+            prompt,
+            max_new_words=24,
+            top_k=8,
+            next_word_index=metadata.get("next_word_index"),
+            device="cpu",
+        )
+        return ChatAnswer(responder="local", answer=generated)
+    except Exception as exc:
+        return ChatAnswer(
+            responder="local", error=f"{type(exc).__name__}: {str(exc)[:200]}"
+        )
+
+
+def _answer_for_mode(prompt: str, responder: Literal["ai", "local"]) -> ChatAnswer:
+    if responder == "local":
+        return _local_llm_call(prompt)
+    return _chatbot_call(prompt)
 
 
 def _row_value(row, column: str) -> str | None:
@@ -152,6 +197,7 @@ def _stored_answer(row) -> dict | None:
     error = _row_value(row, "error")
     if answer is not None or error is not None:
         return {
+            "responder": _row_value(row, "responder") or "ai",
             "answer": answer,
             "error": error,
         }
@@ -160,6 +206,7 @@ def _stored_answer(row) -> dict | None:
     error = _row_value(row, "assistant_error")
     if answer is not None or error is not None:
         return {
+            "responder": "ai",
             "answer": answer,
             "error": error,
         }
@@ -170,6 +217,7 @@ def _stored_answer(row) -> dict | None:
             if value is None:
                 continue
             return {
+                "responder": "local" if name == "local" else "ai",
                 "answer": _row_value(row, f"{name}_answer"),
                 "error": _row_value(row, f"{name}_error"),
             }
@@ -179,16 +227,16 @@ def _stored_answer(row) -> dict | None:
 # ── 챗봇 API ──────────────────────────────
 @app.post("/api/chat/ask", response_model=AskResponse)
 async def ask(request: AskRequest, user: dict = Depends(current_user)) -> AskResponse:
-    answer = await asyncio.to_thread(_chatbot_call, request.message)
+    answer = await asyncio.to_thread(_answer_for_mode, request.message, request.responder)
     with get_conn() as conn:
         conn.execute(
             """
             INSERT INTO messages (
-                user_id, question, answer, error
-            ) VALUES (?, ?, ?, ?)
+                user_id, question, responder, answer, error
+            ) VALUES (?, ?, ?, ?, ?)
             """,
             (
-                user["id"], request.message,
+                user["id"], request.message, answer.responder,
                 answer.answer, answer.error,
             ),
         )
@@ -205,7 +253,7 @@ def history(user: dict = Depends(current_user), limit: int = 30) -> list[dict]:
         ).fetchall()
     turns = []
     for row in reversed(rows):
-        stored = _stored_answer(row) or {"answer": None, "error": None}
+        stored = _stored_answer(row) or {"responder": "ai", "answer": None, "error": None}
         turns.append(
             {
                 "question": row["question"],
@@ -243,8 +291,11 @@ async def rag_ask(
     response = await asyncio.to_thread(_rag_call, request.message)
     with get_conn() as conn:
         conn.execute(
-            "INSERT INTO messages (user_id, question, answer, error) VALUES (?, ?, ?, ?)",
-            (user["id"], request.message, response.answer, response.error),
+            """
+            INSERT INTO messages (user_id, question, responder, answer, error)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user["id"], request.message, "ai", response.answer, response.error),
         )
     return response
 
