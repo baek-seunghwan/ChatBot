@@ -1,15 +1,17 @@
 [project]
 name = "chatbot"
 version = "0.1.0"
-description = "Login-based FastAPI chatbot app with one assistant response and Claude, Gemini, and local fallback engines."
+description = "Login-based FastAPI chatbot app with one assistant response and Claude-to-Gemini fallback."
 requires-python = ">=3.10"
 dependencies = [
     "anthropic>=0.69,<1",
+    "chromadb>=0.5,<2",
     "fastapi>=0.110,<1",
     "google-genai>=1.0,<2",
     "numpy>=1.26,<3",
     "pydantic>=2.6,<3",
     "python-dotenv>=1.0,<2",
+    "sentence-transformers>=3.0,<6",
     "torch>=2.2,<3",
     "uvicorn[standard]>=0.27,<1",
 ]

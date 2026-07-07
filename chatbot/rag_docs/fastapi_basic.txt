@@ -1,0 +1,21 @@
+FastAPI는 Python으로 API 서버를 만들 수 있는 웹 프레임워크입니다.
+챗봇을 만들었을 때 다른 사람이 쓸 수 있도록 웹 API로 배포하는 역할을 합니다.
+
+FastAPI의 장점은 다음과 같습니다.
+첫째, 타입 힌트 기반이라 요청과 응답의 데이터 형태를 코드로 명확하게 정의할 수 있습니다.
+둘째, Pydantic 모델로 입력값을 자동 검증합니다.
+셋째, /docs 주소에서 Swagger 문서가 자동으로 생성되어 API를 바로 테스트할 수 있습니다.
+넷째, 비동기(async) 처리를 지원해 동시에 여러 요청을 효율적으로 처리합니다.
+
+FastAPI에서 엔드포인트는 데코레이터로 정의합니다.
+예를 들어 @app.post("/api/rag/ask")는 POST 요청을 받는 주소를 만듭니다.
+요청 본문은 Pydantic의 BaseModel을 상속한 클래스로 받습니다.
+
+uvicorn은 FastAPI 앱을 실행하는 ASGI 서버입니다.
+uvicorn chatbot.local_chat.app:app --reload --port 8001 같은 명령으로 실행하며,
+--reload 옵션은 코드가 바뀔 때마다 서버를 자동으로 다시 시작합니다.
+
+RAG 챗봇에서 FastAPI의 역할은 다음과 같습니다.
+사용자의 질문을 HTTP 요청으로 받고,
+RAG 체인을 호출해 검색과 답변 생성을 수행한 뒤,
+답변과 참고 문서를 JSON 형태로 돌려줍니다.

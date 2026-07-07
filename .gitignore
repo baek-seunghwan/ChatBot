@@ -8,4 +8,6 @@ __pycache__/
 !.env.example
 
 artifacts/*backup*.pt
+artifacts/chroma_db/
+eval_result.csv
 colab_train_bundle.zip

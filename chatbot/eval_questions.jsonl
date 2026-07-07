@@ -1,0 +1,30 @@
+{"category": "direct", "question": "RAG가 뭐야?", "expected_source": "rag_basic.txt", "expected_answer": "문서를 검색한 뒤 검색된 내용을 바탕으로 답변을 생성하는 방식"}
+{"category": "direct", "question": "임베딩이 뭐야?", "expected_source": "rag_basic.txt", "expected_answer": "문장을 숫자 벡터로 바꾸는 과정, 비슷한 문장은 벡터가 가깝다"}
+{"category": "direct", "question": "벡터DB는 왜 필요해?", "expected_source": "rag_basic.txt", "expected_answer": "임베딩 벡터를 저장하고 유사도 검색을 빠르게 하기 위해"}
+{"category": "direct", "question": "청크는 왜 나눠야 해?", "expected_source": "rag_basic.txt", "expected_answer": "문서를 통째로 넣으면 검색이 잘 안 되기 때문에 작은 덩어리로 나눈다"}
+{"category": "direct", "question": "TOP_K는 무슨 뜻이야?", "expected_source": "rag_basic.txt", "expected_answer": "검색 결과를 몇 개 가져올지 정하는 값"}
+{"category": "direct", "question": "LangChain은 왜 사용해?", "expected_source": "langchain_basic.txt", "expected_answer": "RAG 파이프라인의 각 단계를 부품처럼 쉽게 조립하기 위해"}
+{"category": "direct", "question": "FastAPI는 어떤 역할을 해?", "expected_source": "fastapi_basic.txt", "expected_answer": "Python 웹 프레임워크로 챗봇을 웹 API로 배포하는 역할"}
+{"category": "direct", "question": "uvicorn은 뭐야?", "expected_source": "fastapi_basic.txt", "expected_answer": "FastAPI 앱을 실행하는 ASGI 서버"}
+{"category": "direct", "question": "LangGraph는 LangChain과 뭐가 달라?", "expected_source": "langgraph_basic.txt", "expected_answer": "LangChain은 순차 체인, LangGraph는 상태 기반 그래프로 분기와 반복 가능"}
+{"category": "direct", "question": "양자화는 왜 해?", "expected_source": "qwen_finetuning.txt", "expected_answer": "가중치 정밀도를 낮춰 모델 크기와 메모리를 줄여 작은 GPU에서도 실행하기 위해"}
+{"category": "paraphrase", "question": "RAG의 동작 순서를 설명해줘", "expected_source": "rag_basic.txt", "expected_answer": "청크 분리, 임베딩, 벡터DB 저장, 질문 검색, 답변 생성 순서"}
+{"category": "paraphrase", "question": "문장을 숫자로 바꾸는 걸 뭐라고 해?", "expected_source": "rag_basic.txt", "expected_answer": "임베딩"}
+{"category": "paraphrase", "question": "검색 결과 개수를 정하는 설정값은 뭐야?", "expected_source": "rag_basic.txt", "expected_answer": "TOP_K"}
+{"category": "paraphrase", "question": "CHUNK_OVERLAP은 왜 두는 거야?", "expected_source": "rag_basic.txt", "expected_answer": "청크 경계에서 문장이 끊겨 의미가 사라지는 것을 막기 위해"}
+{"category": "paraphrase", "question": "LangSmith는 어떤 도구야?", "expected_source": "langchain_basic.txt", "expected_answer": "체인의 프롬프트와 응답을 추적하는 관측/디버깅 도구"}
+{"category": "paraphrase", "question": "FastAPI에서 API 문서는 어디서 볼 수 있어?", "expected_source": "fastapi_basic.txt", "expected_answer": "/docs 주소에서 Swagger 문서 자동 생성"}
+{"category": "paraphrase", "question": "Pydantic은 FastAPI에서 무슨 일을 해?", "expected_source": "fastapi_basic.txt", "expected_answer": "요청 입력값을 자동 검증"}
+{"category": "paraphrase", "question": "LangGraph의 State, Node, Edge가 각각 뭐야?", "expected_source": "langgraph_basic.txt", "expected_answer": "State는 공유 데이터, Node는 작업 함수, Edge는 노드 간 연결"}
+{"category": "paraphrase", "question": "LoRA가 뭔지 쉽게 설명해줘", "expected_source": "qwen_finetuning.txt", "expected_answer": "원본 가중치는 고정하고 작은 어댑터 행렬만 학습하는 파인튜닝 방법"}
+{"category": "paraphrase", "question": "QLoRA는 뭐야?", "expected_source": "qwen_finetuning.txt", "expected_answer": "양자화된 모델 위에 LoRA를 적용해 더 적은 메모리로 파인튜닝하는 방법"}
+{"category": "complex", "question": "RAG와 파인튜닝의 차이가 뭐야? 언제 뭘 써야 해?", "expected_source": "qwen_finetuning.txt", "expected_answer": "RAG는 지식을 밖에서 찾아오고 파인튜닝은 행동을 모델에 새김. 문서 기반 답변은 RAG, 말투/형식은 파인튜닝"}
+{"category": "complex", "question": "ChromaDB와 FAISS 중에 소규모 프로젝트에는 뭐가 좋아? 이유도 알려줘", "expected_source": "rag_basic.txt", "expected_answer": "ChromaDB, 설치가 쉽고 로컬 파일로 저장 가능"}
+{"category": "complex", "question": "CHUNK_SIZE와 TOP_K 값이 답변 품질에 어떤 영향을 줘?", "expected_source": "rag_basic.txt", "expected_answer": "청크가 크면 주제가 섞이고, TOP_K가 작으면 정보를 놓치고 크면 무관한 문서가 섞임"}
+{"category": "complex", "question": "단순한 RAG 챗봇에도 LangGraph가 필요할까? 언제 도입하는 게 좋아?", "expected_source": "langgraph_basic.txt", "expected_answer": "단순 RAG는 체인으로 충분, 분기와 반복이 필요해지는 시점에 도입"}
+{"category": "complex", "question": "RAG 챗봇에서 FastAPI와 uvicorn은 각각 무슨 역할이야?", "expected_source": "fastapi_basic.txt", "expected_answer": "FastAPI는 질문을 HTTP로 받아 답변을 JSON으로 반환, uvicorn은 앱을 실행하는 ASGI 서버"}
+{"category": "not_in_docs", "question": "알렉스 나이가 몇 살이야?", "expected_source": null, "expected_answer": "문서에서 확인할 수 없습니다"}
+{"category": "not_in_docs", "question": "오늘 서울 날씨 어때?", "expected_source": null, "expected_answer": "문서에서 확인할 수 없습니다"}
+{"category": "not_in_docs", "question": "김치찌개 맛있게 만드는 법 알려줘", "expected_source": null, "expected_answer": "문서에서 확인할 수 없습니다"}
+{"category": "not_in_docs", "question": "비트코인 가격 전망이 어떻게 돼?", "expected_source": null, "expected_answer": "문서에서 확인할 수 없습니다"}
+{"category": "not_in_docs", "question": "이 문서에 파이썬 설치 방법이 나와 있어?", "expected_source": null, "expected_answer": "문서에서 확인할 수 없습니다"}

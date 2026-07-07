@@ -1,29 +1,22 @@
-# 📝 로그인형 통합 챗봇의 FastAPI 메인 파일
+# 📝 로그인형 단일 챗봇의 FastAPI 메인 파일
 # 📝 실행: uvicorn chatbot.local_chat.app:app --reload --port 8001
 from __future__ import annotations
 
 import asyncio
 import os
-from functools import lru_cache
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-# 📝 5주차 과제에서 학습한 내 모델(chatbot.pt)을 불러오는 함수들
-from ..model import generate_text_hybrid, load_checkpoint
 from ..providers import LLMRouter
+from ..rag_chain import RagChain
 from . import auth
 from .db import get_conn, init_db
 from .web import INDEX_HTML
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
-
-# 📝 학습된 모델 파일 위치 (기존 앱과 동일한 경로)
-MODEL_PATH = Path(
-    os.getenv("CHATBOT_MODEL_PATH", REPO_ROOT / "artifacts" / "chatbot.pt")
-)
 
 # 📝 .env에 있는 ANTHROPIC_API_KEY / GEMINI_API_KEY를 불러옴
 try:
@@ -35,15 +28,18 @@ except ImportError:
 
 app = FastAPI(
     title="Leon's ChatBot",
-    description="로그인 후 단일 채팅 화면에서 하나의 AI 답변만 제공하는 통합 챗봇",
+    description="로그인 후 단일 채팅 화면에서 하나의 AI 답변만 제공하는 챗봇",
     version="2.0.0",
 )
 
 # 📝 서버가 시작될 때 DB 테이블을 준비함
 init_db()
 
-# 📝 기존 providers.py의 LLMRouter를 재사용함 (Claude 우선 → Gemini 폴백 로직 내장)
+# 📝 providers.py의 LLMRouter가 Claude 우선 → Gemini 폴백으로 하나의 답변을 만든다.
 _router = LLMRouter()
+
+# 📝 RAG 체인: 첫 질문이 들어올 때 임베딩 모델과 벡터DB를 로드한다(lazy loading).
+_rag_chain = RagChain()
 
 
 # ── 요청/응답 데이터 모양 ──────────────────────────────
@@ -61,18 +57,27 @@ class AskRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
 
 
-# 📝 name은 화면에서 항상 assistant로 내려 보내고, 실제 사용 모델은 model에 남김
-class NamedAnswer(BaseModel):
-    name: str
+class ChatAnswer(BaseModel):
     answer: str | None = None
-    model: str | None = None
     error: str | None = None
 
 
 class AskResponse(BaseModel):
     question: str
-    mode: str
-    results: list[NamedAnswer]
+    answer: str | None = None
+    error: str | None = None
+
+
+class RagAskResponse(BaseModel):
+    """RAG 응답 형식: 답변 + 출처 + 신뢰도 + 사용 청크 수"""
+
+    question: str
+    answer: str | None = None
+    error: str | None = None
+    sources: list[str] = []
+    confidence: float = 0.0
+    retrieved_chunks: int = 0
+    message: str = ""
 
 
 # ── 인증 도우미 ──────────────────────────────
@@ -122,91 +127,51 @@ _SYSTEM_PROMPT = (
 )
 
 
-def _cloud_call(prompt: str) -> NamedAnswer:
-    """Claude 우선 호출, 실패하면 LLMRouter가 자동으로 Gemini로 폴백함."""
+def _chatbot_call(prompt: str) -> ChatAnswer:
+    """LLMRouter를 통해 하나의 챗봇 답변만 생성함."""
     try:
         result = _router.generate(
             prompt, system=_SYSTEM_PROMPT, max_tokens=800, temperature=0.5
         )
-        provider = "Claude" if result.provider == "anthropic" else "Gemini"
-        return NamedAnswer(
-            name="assistant", answer=result.text, model=f"{provider} · {result.model}"
-        )
+        return ChatAnswer(answer=result.text)
     except Exception as exc:
-        return NamedAnswer(name="assistant", error=f"{type(exc).__name__}: {str(exc)[:200]}")
+        return ChatAnswer(error=f"{type(exc).__name__}: {str(exc)[:200]}")
 
 
-# 📝 내 모델은 무거우니 한 번만 불러오고 계속 재사용함
-@lru_cache(maxsize=1)
-def get_model_bundle():
-    if not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            f"학습 모델이 없습니다: {MODEL_PATH}. 먼저 `python -m chatbot.train`을 실행하세요."
-        )
-    return load_checkpoint(MODEL_PATH, device="cpu")
-
-
-def _local_call(prompt: str) -> NamedAnswer:
-    """내 학습 모델 호출. 외부 API를 못 쓸 때 통합 챗봇의 마지막 폴백으로 사용함."""
+def _row_value(row, column: str) -> str | None:
+    """기존 DB에만 있거나 새 DB에만 있는 컬럼을 안전하게 읽음."""
     try:
-        model, tokenizer, config, metadata = get_model_bundle()
-        generated = generate_text_hybrid(
-            model,
-            tokenizer,
-            config,
-            prompt,
-            max_new_words=15,
-            top_k=8,
-            next_word_index=metadata.get("next_word_index"),
-            device="cpu",
-        )
-        answer = (
-            "외부 AI를 사용할 수 없어 로컬 학습 모델로 문장을 이어 생성했습니다.\n\n"
-            f"{generated}"
-        )
-        return NamedAnswer(
-            name="assistant",
-            answer=answer,
-            model="Local · character-transformer (문장 이어쓰기 모델)",
-        )
-    except Exception as exc:
-        return NamedAnswer(name="assistant", error=f"{type(exc).__name__}: {str(exc)[:200]}")
+        return row[column]
+    except (IndexError, KeyError):
+        return None
 
 
-def _assistant_call(prompt: str) -> NamedAnswer:
-    """외부 LLM과 로컬 모델을 하나의 챗봇 응답 경로로 묶음."""
-    cloud_result = _cloud_call(prompt)
-    if cloud_result.answer:
-        return cloud_result
-
-    local_result = _local_call(prompt)
-    if local_result.answer:
-        return local_result
-
-    return NamedAnswer(
-        name="assistant",
-        error=(
-            "사용 가능한 응답 엔진이 없습니다. "
-            f"외부 API: {cloud_result.error or '실패'} / "
-            f"로컬 모델: {local_result.error or '실패'}"
-        ),
-    )
-
-
-def _legacy_answer(row) -> dict | None:
+def _stored_answer(row) -> dict | None:
     """예전 모델별 기록을 통합 챗봇 기록 모양으로 변환함."""
-    labels = {"claude": "Claude", "gemini": "Gemini", "local": "Local"}
+    answer = _row_value(row, "answer")
+    error = _row_value(row, "error")
+    if answer is not None or error is not None:
+        return {
+            "answer": answer,
+            "error": error,
+        }
+
+    answer = _row_value(row, "assistant_answer")
+    error = _row_value(row, "assistant_error")
+    if answer is not None or error is not None:
+        return {
+            "answer": answer,
+            "error": error,
+        }
+
     for field in ("answer", "error"):
         for name in ("claude", "gemini", "local"):
-            value = row[f"{name}_{field}"]
+            value = _row_value(row, f"{name}_{field}")
             if value is None:
                 continue
-            model = row[f"{name}_model"]
             return {
-                "name": "assistant",
-                "answer": row[f"{name}_answer"],
-                "model": f"{labels[name]} · {model}" if model else labels[name],
-                "error": row[f"{name}_error"],
+                "answer": _row_value(row, f"{name}_answer"),
+                "error": _row_value(row, f"{name}_error"),
             }
     return None
 
@@ -214,22 +179,20 @@ def _legacy_answer(row) -> dict | None:
 # ── 챗봇 API ──────────────────────────────
 @app.post("/api/chat/ask", response_model=AskResponse)
 async def ask(request: AskRequest, user: dict = Depends(current_user)) -> AskResponse:
-    # 📝 내부 엔진은 여러 개여도 화면과 API에는 하나의 assistant 답변만 내려간다.
-    answer = await asyncio.to_thread(_assistant_call, request.message)
+    answer = await asyncio.to_thread(_chatbot_call, request.message)
     with get_conn() as conn:
         conn.execute(
             """
             INSERT INTO messages (
-                user_id, question, mode,
-                assistant_answer, assistant_model, assistant_error
-            ) VALUES (?, ?, ?, ?, ?, ?)
+                user_id, question, answer, error
+            ) VALUES (?, ?, ?, ?)
             """,
             (
-                user["id"], request.message, "chat",
-                answer.answer, answer.model, answer.error,
+                user["id"], request.message,
+                answer.answer, answer.error,
             ),
         )
-    return AskResponse(question=request.message, mode="chat", results=[answer])
+    return AskResponse(question=request.message, **answer.model_dump())
 
 
 @app.get("/api/chat/history")
@@ -242,23 +205,11 @@ def history(user: dict = Depends(current_user), limit: int = 30) -> list[dict]:
         ).fetchall()
     turns = []
     for row in reversed(rows):
-        if row["assistant_answer"] is not None or row["assistant_error"] is not None:
-            results = [
-                {
-                    "name": "assistant",
-                    "answer": row["assistant_answer"],
-                    "model": row["assistant_model"],
-                    "error": row["assistant_error"],
-                }
-            ]
-        else:
-            legacy = _legacy_answer(row)
-            results = [legacy] if legacy else []
+        stored = _stored_answer(row) or {"answer": None, "error": None}
         turns.append(
             {
                 "question": row["question"],
-                "mode": "chat",
-                "results": results,
+                **stored,
                 "created_at": row["created_at"],
             }
         )
@@ -270,6 +221,32 @@ def clear_history(user: dict = Depends(current_user)) -> dict:
     with get_conn() as conn:
         conn.execute("DELETE FROM messages WHERE user_id = ?", (user["id"],))
     return {"ok": True}
+
+
+# ── RAG API ──────────────────────────────
+def _rag_call(question: str) -> RagAskResponse:
+    """RAG 체인(검색 → 답변 생성)을 호출함."""
+    try:
+        result = _rag_chain.ask(question)
+        return RagAskResponse(**result.to_dict())
+    except Exception as exc:
+        return RagAskResponse(
+            question=question, error=f"{type(exc).__name__}: {str(exc)[:200]}"
+        )
+
+
+@app.post("/api/rag/ask", response_model=RagAskResponse)
+async def rag_ask(
+    request: AskRequest, user: dict = Depends(current_user)
+) -> RagAskResponse:
+    """문서 검색 기반(RAG) 답변. 일반 채팅과 같은 messages 테이블에 기록함."""
+    response = await asyncio.to_thread(_rag_call, request.message)
+    with get_conn() as conn:
+        conn.execute(
+            "INSERT INTO messages (user_id, question, answer, error) VALUES (?, ?, ?, ?)",
+            (user["id"], request.message, response.answer, response.error),
+        )
+    return response
 
 
 # ── 화면 ──────────────────────────────

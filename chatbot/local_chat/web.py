@@ -146,8 +146,6 @@ INDEX_HTML = r"""
     }
     .answer-card.assistant { border-top: 3px solid var(--accent); }
     .answer-card.assistant .badge { background: var(--accent-soft); color: var(--accent); }
-    .answer-card .note { font-size: 11px; color: var(--muted); margin-top: 8px; }
-    .answer-card .model-name { font-size: 11px; color: var(--muted); margin-left: 6px; font-weight: 500; }
     .answer-card .error { color: var(--danger); font-size: 13px; }
     .thinking { color: var(--muted); font-style: italic; }
 
@@ -227,7 +225,6 @@ INDEX_HTML = r"""
     // 📝 토큰은 localStorage에 저장해서 새로고침해도 로그인이 유지되게 함
     let token = localStorage.getItem("lc_token") || "";
     let authMode = "login";  // login | signup
-    localStorage.removeItem("lc_mode");
 
     const $ = (sel) => document.querySelector(sel);
     const loginView = $("#loginView"), chatView = $("#chatView");
@@ -288,9 +285,9 @@ INDEX_HTML = r"""
       chatView.hidden = false;
       $("#whoami").textContent = `${username} 님`;
       chatLog.textContent = "";
-      // 📝 서버가 {question, mode, results[]} 모양으로 주므로 그대로 그림
+      // 📝 서버가 {question, answer, error} 모양으로 주므로 그대로 그림
       const turns = await api("/api/chat/history").catch(() => []);
-      for (const turn of turns) renderTurn(turn.question, turn.results);
+      for (const turn of turns) renderTurn(turn.question, turn);
       emptyHint.hidden = turns.length > 0;
       window.scrollTo(0, document.body.scrollHeight);
       chatInput.focus();
@@ -318,21 +315,13 @@ INDEX_HTML = r"""
     });
 
     // ── 채팅 렌더링 ──
-    const MODEL_LABELS = { assistant: "AI" };
-
     function answerCard(result) {
       const card = document.createElement("div");
-      card.className = `answer-card ${result.name}`;
+      card.className = "answer-card assistant";
       const badge = document.createElement("span");
       badge.className = "badge";
-      badge.textContent = MODEL_LABELS[result.name] || "AI";
+      badge.textContent = "AI";
       card.appendChild(badge);
-      if (result.model) {
-        const modelName = document.createElement("span");
-        modelName.className = "model-name";
-        modelName.textContent = result.model;
-        card.appendChild(modelName);
-      }
       const body = document.createElement("div");
       if (result.pending) {
         body.className = "thinking";
@@ -347,14 +336,13 @@ INDEX_HTML = r"""
       return card;
     }
 
-    function renderAnswers(container, results) {
+    function renderAnswer(container, result) {
       container.textContent = "";
       container.dataset.count = "1";
-      const result = (results && results[0]) || { name: "assistant", error: "응답이 없습니다." };
-      container.appendChild(answerCard(result));
+      container.appendChild(answerCard(result || { error: "응답이 없습니다." }));
     }
 
-    function renderTurn(question, results) {
+    function renderTurn(question, result) {
       const turn = document.createElement("div");
       turn.className = "turn";
       const questionRow = document.createElement("div");
@@ -366,15 +354,15 @@ INDEX_HTML = r"""
       turn.appendChild(questionRow);
       const answers = document.createElement("div");
       answers.className = "answers";
-      renderAnswers(answers, results);
+      renderAnswer(answers, result);
       turn.appendChild(answers);
       chatLog.appendChild(turn);
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       return turn;
     }
 
-    function pendingResults() {
-      return [{ name: "assistant", pending: true }];
+    function pendingAnswer() {
+      return { pending: true };
     }
 
     // ── 질문 전송 ──
@@ -385,17 +373,15 @@ INDEX_HTML = r"""
       chatInput.value = "";
       emptyHint.hidden = true;
       sendButton.disabled = true;
-      const turn = renderTurn(message, pendingResults());
+      const turn = renderTurn(message, pendingAnswer());
       try {
         const data = await api("/api/chat/ask", {
           method: "POST",
           body: JSON.stringify({ message }),
         });
-        renderAnswers(turn.querySelector(".answers"), data.results);
+        renderAnswer(turn.querySelector(".answers"), data);
       } catch (error) {
-        renderAnswers(turn.querySelector(".answers"), [
-          { name: "assistant", error: error.message },
-        ]);
+        renderAnswer(turn.querySelector(".answers"), { error: error.message });
         if (error.message.includes("로그인")) leaveChat();
       } finally {
         sendButton.disabled = false;
