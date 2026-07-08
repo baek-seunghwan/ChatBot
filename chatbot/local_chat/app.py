@@ -12,8 +12,9 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from ..model import generate_text_hybrid, load_checkpoint
+from ..model import generate_text, load_checkpoint
 from ..providers import LLMRouter
+from ..qa_match import best_match
 from ..rag_chain import RagChain
 from . import auth
 from .db import get_conn, init_db
@@ -156,21 +157,53 @@ def get_local_model_bundle():
     return load_checkpoint(MODEL_PATH, device="cpu")
 
 
+# 📝 학습/추론에서 반드시 같은 형식을 써야 한다 (scripts/build_qa_corpus.py와 동일)
+_QA_PROMPT_FORMAT = "질문: {q} 답변:"
+_LOCAL_FALLBACK_ANSWER = (
+    "아직 배우지 못한 질문이에요. 저는 학습한 범위 안에서만 답할 수 있는 작은 모델이라, "
+    "이 질문은 AI 모드로 물어봐 주세요!"
+)
+
+
 def _local_llm_call(prompt: str) -> ChatAnswer:
-    """로컬 학습 모델(chatbot.pt)로 답변을 생성함."""
+    """로컬 학습 모델로 답변을 생성함. (질문 이어쓰기가 아니라 질문→답변 방식)
+
+    1차: 학습한 QA 쌍과 직접 매칭 → 비슷한 질문이면 학습된 답변을 그대로 반환
+    2차: "질문: X 답변:" 형식으로 모델이 답변 생성
+    3차: 생성이 실패하거나 너무 짧으면 솔직한 안내 메시지
+    """
     try:
+        # 📝 1차: 아는 질문이면 정확한 답을 바로 돌려줌 (생성 오류 방지)
+        matched, _score = best_match(prompt)
+        if matched is not None:
+            return ChatAnswer(responder="local", answer=matched)
+
+        # 📝 2차: QA 형식으로 모델 생성 (질문을 그대로 이어쓰지 않게 함)
         model, tokenizer, config, metadata = get_local_model_bundle()
-        generated = generate_text_hybrid(
+
+        # 📝 옛날 체크포인트(문장 이어쓰기용)는 질문에 답할 수 없으므로 생성하지 않음
+        #    → scripts.build_qa_corpus로 말뭉치를 만들고 qa_corpus.txt로 재학습해야 함
+        if "qa" not in str(metadata.get("corpus", "")):
+            return ChatAnswer(responder="local", answer=_LOCAL_FALLBACK_ANSWER)
+
+        qa_prompt = _QA_PROMPT_FORMAT.format(q=prompt.strip())
+        generated = generate_text(
             model,
             tokenizer,
             config,
-            prompt,
-            max_new_words=24,
-            top_k=8,
-            next_word_index=metadata.get("next_word_index"),
+            qa_prompt,
+            max_new_tokens=120,
+            temperature=0.5,
+            top_k=10,
             device="cpu",
         )
-        return ChatAnswer(responder="local", answer=generated)
+        # 📝 "질문: X 답변:" 뒤에 생성된 부분만 잘라냄
+        answer = generated[len(qa_prompt):].strip() if generated.startswith(qa_prompt) else ""
+
+        # 📝 3차: 빈 답/너무 짧은 답/질문 복붙이면 솔직하게 모른다고 답함
+        if len(answer) < 5 or answer in prompt:
+            answer = _LOCAL_FALLBACK_ANSWER
+        return ChatAnswer(responder="local", answer=answer)
     except Exception as exc:
         return ChatAnswer(
             responder="local", error=f"{type(exc).__name__}: {str(exc)[:200]}"

@@ -63,41 +63,55 @@ def split_into_chunks(text: str, chunk_size: int, chunk_overlap: int) -> list[st
     return chunks
 
 
-def build() -> int:
-    """문서 전체를 임베딩해서 ChromaDB에 저장하고, 저장한 청크 수를 돌려준다."""
+def build(
+    chunk_size: int | None = None,
+    chunk_overlap: int | None = None,
+    collection_name: str | None = None,
+    quiet: bool = False,
+) -> int:
+    """문서 전체를 임베딩해서 ChromaDB에 저장하고, 저장한 청크 수를 돌려준다.
+
+    chunk_size / chunk_overlap / collection_name을 넘기면 기본 설정 대신 그 값을 쓴다.
+    (실험 스크립트가 여러 설정의 인덱스를 나란히 만들 때 사용)
+    """
     # 📝 무거운 라이브러리는 함수 안에서 import (앱 시작 속도를 위해)
     import chromadb
     from sentence_transformers import SentenceTransformer
 
-    print(f"[1/4] 문서 로딩: {RAG_DOCS_DIR}")
+    chunk_size = chunk_size or CHUNK_SIZE
+    chunk_overlap = chunk_overlap if chunk_overlap is not None else CHUNK_OVERLAP
+    collection_name = collection_name or COLLECTION_NAME
+    log = (lambda *a: None) if quiet else print
+
+    log(f"[1/4] 문서 로딩: {RAG_DOCS_DIR}")
     documents = load_documents(RAG_DOCS_DIR)
 
-    print(f"[2/4] 청크 분리 (CHUNK_SIZE={CHUNK_SIZE}, CHUNK_OVERLAP={CHUNK_OVERLAP})")
+    log(f"[2/4] 청크 분리 (CHUNK_SIZE={chunk_size}, CHUNK_OVERLAP={chunk_overlap})")
     ids, texts, metadatas = [], [], []
     for filename, text in documents:
-        for i, chunk in enumerate(split_into_chunks(text, CHUNK_SIZE, CHUNK_OVERLAP)):
+        for i, chunk in enumerate(split_into_chunks(text, chunk_size, chunk_overlap)):
             ids.append(f"{filename}-{i}")
             texts.append(chunk)
             metadatas.append({"source": filename, "chunk_index": i})
-    print(f"      문서 {len(documents)}개 → 청크 {len(texts)}개")
+    log(f"      문서 {len(documents)}개 → 청크 {len(texts)}개")
 
-    print(f"[3/4] 임베딩 생성: {EMBEDDING_MODEL}")
+    log(f"[3/4] 임베딩 생성: {EMBEDDING_MODEL}")
     model = SentenceTransformer(EMBEDDING_MODEL)
-    embeddings = model.encode(texts, show_progress_bar=True).tolist()
+    embeddings = model.encode(texts, show_progress_bar=not quiet).tolist()
 
-    print(f"[4/4] ChromaDB 저장: {CHROMA_DIR}")
+    log(f"[4/4] ChromaDB 저장: {CHROMA_DIR} (컬렉션: {collection_name})")
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
     # 📝 다시 실행해도 깨끗하게 새로 만들도록 기존 컬렉션은 지운다.
     try:
-        client.delete_collection(COLLECTION_NAME)
+        client.delete_collection(collection_name)
     except Exception:
         pass
     collection = client.create_collection(
-        COLLECTION_NAME, metadata={"hnsw:space": "cosine"}
+        collection_name, metadata={"hnsw:space": "cosine"}
     )
     collection.add(ids=ids, documents=texts, embeddings=embeddings, metadatas=metadatas)
 
-    print(f"완료: 청크 {collection.count()}개 저장됨")
+    log(f"완료: 청크 {collection.count()}개 저장됨")
     return collection.count()
 
 

@@ -1,0 +1,16 @@
+{
+  "_설명": "RAG 평가 목표치. 이 값만 바꾸면 pass/fail 기준이 바뀐다. 지표는 모두 0.0~1.0.",
+  "targets": {
+    "faithfulness": 0.85,
+    "answer_relevancy": 0.80,
+    "context_precision": 0.75,
+    "context_recall": 0.75,
+    "answer_correctness": 0.75,
+    "overall_avg": 0.80
+  },
+  "critical_hallucination_rate_max": 0.10,
+  "judge": {
+    "_설명": "use_llm=true면 LLM 심사자로 채점, 실패하거나 false면 규칙 기반으로 채점",
+    "use_llm": true
+  }
+}

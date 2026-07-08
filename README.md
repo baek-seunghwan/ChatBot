@@ -125,6 +125,60 @@ curl -X POST http://127.0.0.1:8002/chat \
 }
 ```
 
+## 6.5 평가 + 개선 + 재평가 자동화 파이프라인
+
+목표 점수에 도달할 때까지 "평가 → 진단 → 설정 변경 → 재평가"를 반복하는 시스템이다.
+
+```bash
+# 1) 평가 실행 → 지표 계산 + pass/fail + 개선 진단
+uv run python -m scripts.evaluate_rag
+uv run python -m scripts.evaluate_rag --no-llm-judge     # API 없이 규칙 기반 채점
+uv run python -m scripts.evaluate_rag --top-k 5 --reranker --prompt-version v1  # 다른 설정 재평가
+
+# 2) 설정 조합 실험 → 최적 설정 추천
+uv run python -m scripts.run_rag_experiments             # 검색 지표만 (LLM 비용 0)
+uv run python -m scripts.run_rag_experiments --full      # 상위 설정은 답변 품질까지 평가
+
+# 3) 인덱스 재생성 (설정 적용 후)
+uv run python -m scripts.build_rag_index
+```
+
+생성 파일: `eval/results/latest.json`, `latest.csv`, `summary.md`, `experiments.csv`, `best_config.json`
+
+지표 (전부 0~1, `eval/targets.json`에서 목표치 수정 가능):
+
+| 지표 | 의미 | 기본 목표 |
+|---|---|---|
+| faithfulness | 답변이 검색 문서에 근거하는가 | ≥ 0.85 |
+| answer_relevancy | 질문에 직접적으로 답하는가 | ≥ 0.80 |
+| context_precision | 검색 청크 중 관련 문서 비율 | ≥ 0.75 |
+| context_recall | 필요한 근거 문서를 찾아왔는가 | ≥ 0.75 |
+| answer_correctness | 기준 정답과 맞는가 | ≥ 0.75 |
+| overall_avg | 위 5개 평균 | ≥ 0.80 |
+| critical_hallucination_rate | 치명적 환각 비율 | ≤ 0.10 |
+
+평가셋은 `eval/dataset.jsonl`에 한 줄씩 추가하면 된다
+(id, question, ground_truth, expected_sources, category, difficulty).
+목표 미달 지표가 있으면 `summary.md`에 원인별 개선 제안이 자동으로 붙는다.
+
+## 6.6 로컬 LLM (직접 학습 모델) 답변 개선
+
+로컬 모델은 원래 "문장 이어쓰기(자동완성)"용이라 질문에 답하지 못했다.
+이를 "질문 → 답변" 모델로 바꾸는 파이프라인:
+
+```bash
+# 1) QA 학습 데이터 생성 (chatbot/qa_pairs.jsonl → qa_corpus.txt)
+uv run python -m scripts.build_qa_corpus
+
+# 2) QA 형식으로 재학습 (GPU면 Colab 권장, CPU도 가능하지만 느림)
+uv run python -m chatbot.train --corpus chatbot/qa_corpus.txt \
+    --epochs 60 --max-steps 0 --block-size 256 --embedding-dim 256 --num-heads 8 --num-layers 6
+```
+
+답변 순서: ① 학습한 질문과 유사도 매칭 → 즉시 정답 반환(재학습 없이도 동작)
+② QA 형식(`질문: X 답변:`)으로 모델 생성 ③ 실패 시 솔직한 안내 메시지.
+새 질문을 가르치려면 `chatbot/qa_pairs.jsonl`에 추가하면 된다 (매칭은 즉시 반영, 생성은 재학습 필요).
+
 ## 7. 평가 방법
 
 `chatbot/eval_questions.jsonl`의 30개 질문으로 평가한다.

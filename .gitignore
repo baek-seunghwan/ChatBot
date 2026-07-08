@@ -10,4 +10,6 @@ __pycache__/
 artifacts/*backup*.pt
 artifacts/chroma_db/
 eval_result.csv
+eval/results/
+chatbot/qa_corpus.txt
 colab_train_bundle.zip

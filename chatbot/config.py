@@ -39,3 +39,9 @@ EMBEDDING_MODEL = os.getenv(
     "RAG_EMBEDDING_MODEL",
     "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
 )
+
+# 📝 답변 프롬프트 버전 (rag_chain.PROMPT_VERSIONS 참고. v2가 근거 규칙이 더 강함)
+PROMPT_VERSION = os.getenv("RAG_PROMPT_VERSION", "v2")
+
+# 📝 검색 후 재정렬(reranker) 사용 여부 ("1"이면 켜짐)
+USE_RERANKER = os.getenv("RAG_USE_RERANKER", "0") == "1"

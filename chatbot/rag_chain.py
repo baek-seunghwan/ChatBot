@@ -10,12 +10,17 @@ from .config import (
     COLLECTION_NAME,
     EMBEDDING_MODEL,
     MIN_RELEVANCE_SCORE,
+    PROMPT_VERSION,
     TOP_K,
+    USE_RERANKER,
 )
 from .providers import LLMRouter
 
-# 📝 18번 규칙: LLM이 문서 근거 없이 답하지 못하게 막는 시스템 프롬프트
-RAG_SYSTEM_PROMPT = """너는 문서 기반 RAG 챗봇이다.
+# 📝 프롬프트 버전: 실험(run_rag_experiments)에서 버전별 성능을 비교할 수 있다.
+#    기본은 v2. .env의 RAG_PROMPT_VERSION으로 바꿀 수 있다.
+PROMPT_VERSIONS: dict[str, str] = {
+    # v1: 초기 8규칙 프롬프트
+    "v1": """너는 문서 기반 RAG 챗봇이다.
 
 반드시 지켜야 할 규칙:
 1. 제공된 문서 내용만 사용해서 답변한다.
@@ -25,7 +30,22 @@ RAG_SYSTEM_PROMPT = """너는 문서 기반 RAG 챗봇이다.
 5. 답변은 한국어로 한다.
 6. 사용자가 초보자라면 쉬운 말로 설명한다.
 7. 코드나 개념 설명이 필요하면 단계별로 설명한다.
-8. 문서 근거와 답변 내용을 분리해서 보여준다."""
+8. 문서 근거와 답변 내용을 분리해서 보여준다.""",
+    # v2: 근거 규칙 강화 (질문에 직접 답변, 관련 없는 문서 무시, 부분 근거 처리)
+    "v2": """너는 문서 기반 RAG 챗봇이다.
+
+반드시 지켜야 할 규칙:
+1. 반드시 제공된 문서 내용만 근거로 답변한다. 너의 사전 지식은 사용하지 않는다.
+2. 문서에 없는 내용은 추측하지 않는다.
+3. 근거가 부족하면 "제공된 문서에서 확인할 수 없습니다"라고 답한다.
+4. 질문과 관련 없는 문서가 섞여 있으면 그 문서는 무시하고 답변에 사용하지 않는다.
+5. 답변의 첫 문장은 질문에 직접적으로 답한다. 서론을 붙이지 않는다.
+6. 문서 일부만 관련 있으면, 관련 있는 부분만 답하고 나머지는 "문서에서 확인할 수 없습니다"라고 밝힌다.
+7. 답변은 한국어로, 초보자도 이해할 수 있게 쉬운 말로 설명한다.
+8. 답변 마지막 줄에 "(참고: 문서명)" 형식으로 실제로 사용한 문서만 표시한다.""",
+}
+
+RAG_SYSTEM_PROMPT = PROMPT_VERSIONS[PROMPT_VERSION]
 
 RAG_PROMPT_TEMPLATE = """아래 문서를 참고해서 질문에 답하세요.
 
@@ -82,9 +102,19 @@ class RagChain:
     임베딩 모델과 벡터DB는 처음 질문이 들어올 때 한 번만 로드한다(lazy loading).
     """
 
-    def __init__(self, top_k: int = TOP_K, min_score: float = MIN_RELEVANCE_SCORE) -> None:
+    def __init__(
+        self,
+        top_k: int = TOP_K,
+        min_score: float = MIN_RELEVANCE_SCORE,
+        collection_name: str = COLLECTION_NAME,
+        prompt_version: str = PROMPT_VERSION,
+        use_reranker: bool = USE_RERANKER,
+    ) -> None:
         self.top_k = top_k
         self.min_score = min_score
+        self.collection_name = collection_name
+        self.system_prompt = PROMPT_VERSIONS[prompt_version]
+        self.use_reranker = use_reranker
         self._embedder = None
         self._collection = None
         self._router = LLMRouter()
@@ -99,19 +129,35 @@ class RagChain:
         self._embedder = SentenceTransformer(EMBEDDING_MODEL)
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
         try:
-            self._collection = client.get_collection(COLLECTION_NAME)
+            self._collection = client.get_collection(self.collection_name)
         except Exception as exc:
             raise RuntimeError(
-                "벡터DB가 없습니다. 먼저 `uv run python -m chatbot.ingest`를 실행하세요."
+                f"벡터DB 컬렉션({self.collection_name})이 없습니다. "
+                "먼저 `uv run python -m chatbot.ingest`를 실행하세요."
             ) from exc
 
+    @staticmethod
+    def _lexical_overlap(question: str, text: str) -> float:
+        """질문과 청크의 단어 겹침 비율 (0~1). reranker에 사용."""
+        q_tokens = set(question.split())
+        t_tokens = set(text.split())
+        if not q_tokens:
+            return 0.0
+        return len(q_tokens & t_tokens) / len(q_tokens)
+
     def retrieve(self, question: str) -> list[RetrievedChunk]:
-        """질문을 임베딩해서 벡터DB에서 비슷한 청크 TOP_K개를 찾는다."""
+        """질문을 임베딩해서 벡터DB에서 비슷한 청크 TOP_K개를 찾는다.
+
+        reranker가 켜져 있으면 TOP_K의 3배를 가져온 뒤,
+        임베딩 유사도 + 단어 겹침 점수로 다시 정렬해서 TOP_K개만 남긴다.
+        (임베딩만으로는 놓치는 키워드 일치를 보완하는 장치)
+        """
         self._ensure_loaded()
+        fetch_k = self.top_k * 3 if self.use_reranker else self.top_k
         query_embedding = self._embedder.encode([question]).tolist()
         result = self._collection.query(
             query_embeddings=query_embedding,
-            n_results=self.top_k,
+            n_results=fetch_k,
             include=["documents", "metadatas", "distances"],
         )
         chunks = []
@@ -122,6 +168,12 @@ class RagChain:
             chunks.append(
                 RetrievedChunk(text=text, source=meta["source"], score=1 - distance)
             )
+        if self.use_reranker:
+            chunks.sort(
+                key=lambda c: 0.7 * c.score + 0.3 * self._lexical_overlap(question, c.text),
+                reverse=True,
+            )
+            chunks = chunks[: self.top_k]
         return chunks
 
     def ask(self, question: str) -> RagAnswer:
@@ -138,7 +190,7 @@ class RagChain:
         context = "\n\n".join(f"[{c.source}]\n{c.text}" for c in relevant)
         prompt = RAG_PROMPT_TEMPLATE.format(context=context, question=question)
         result = self._router.generate(
-            prompt, system=RAG_SYSTEM_PROMPT, max_tokens=800, temperature=0.2
+            prompt, system=self.system_prompt, max_tokens=800, temperature=0.2
         )
 
         # 📝 4) 출처 문서명은 중복 없이 순서를 유지해서 모은다.
