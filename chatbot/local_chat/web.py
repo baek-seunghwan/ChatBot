@@ -148,8 +148,6 @@ INDEX_HTML = r"""
     .answer-card.assistant .badge { background: var(--accent-soft); color: var(--accent); }
     .answer-card.local { border-top: 3px solid #2f9e63; }
     .answer-card.local .badge { background: #eaf7f0; color: #2f9e63; }
-    .answer-card.agent { border-top: 3px solid #8a5a00; }
-    .answer-card.agent .badge { background: #fff4d6; color: #8a5a00; }
     .answer-card .error { color: var(--danger); font-size: 13px; }
     .thinking { color: var(--muted); font-style: italic; }
     /* 📝 스피너 글리프: 기호마다 폭이 달라서 고정폭으로 잡아 흔들림 방지 */
@@ -251,8 +249,6 @@ INDEX_HTML = r"""
         <div class="mode-toggle" role="group" aria-label="답변 모드">
           <button id="aiModeButton" class="active" type="button" data-responder="ai">AI가 답변</button>
           <button id="localModeButton" type="button" data-responder="local">로컬 LLM이 답변</button>
-          <button id="qwenModeButton" type="button" data-responder="qwen">Qwen이 답변</button>
-          <button id="agentModeButton" type="button" data-responder="agent">Agent가 답변</button>
         </div>
         <form class="composer-inner" id="chatForm">
           <textarea id="chatInput" placeholder="질문을 입력하세요 (Enter로 전송, Shift+Enter 줄바꿈)" required></textarea>
@@ -359,7 +355,9 @@ INDEX_HTML = r"""
     });
 
     function setResponderMode(next) {
-      responderMode = ["local", "qwen", "agent"].includes(next) ? next : "ai";
+      // 화면에서 지원하는 모드는 AI와 직접 학습한 로컬 모델 두 가지뿐이다.
+      // 예전에 저장된 지원하지 않는 값이 있어도 AI 모드로 안전하게 되돌린다.
+      responderMode = next === "local" ? "local" : "ai";
       localStorage.setItem("lc_responder", responderMode);
       modeButtons.forEach((button) => {
         const active = button.dataset.responder === responderMode;
@@ -398,14 +396,11 @@ INDEX_HTML = r"""
     // ── 채팅 렌더링 ──
     function answerCard(result) {
       const card = document.createElement("div");
-      const responder = result.responder === "agent"
-        ? "agent"
-        : (["local", "qwen"].includes(result.responder) ? "local" : "assistant");
+      const responder = result.responder === "local" ? "local" : "assistant";
       card.className = `answer-card ${responder}`;
       const badge = document.createElement("span");
       badge.className = "badge";
-      const badgeNames = { local: "로컬 LLM", qwen: "Qwen", agent: "LangGraph Agent" };
-      badge.textContent = badgeNames[result.responder] || "AI";
+      badge.textContent = responder === "local" ? "로컬 LLM" : "AI";
       card.appendChild(badge);
       const body = document.createElement("div");
       if (result.pending) {

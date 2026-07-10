@@ -1,4 +1,4 @@
-# FastAPI와 ChromaDB를 활용한 문서 기반 RAG 챗봇
+# Leon's ChatBot: 로그인형 AI·로컬 LLM 챗봇
 
 ## 1. 프로젝트 목적
 
@@ -32,8 +32,8 @@ rag_docs/ (txt/md/pdf)
     → 임베딩 (sentence-transformers)
     → ChromaDB 저장 (artifacts/chroma_db/)
 
-[질문 응답 단계 - rag_chain.py + main.py]
-사용자 질문 (POST /chat)
+[문서 질문 단계 - rag_chain.py + local_chat/app.py]
+사용자 질문 (POST /api/rag/ask)
     → LangGraph START
     → retrieve 노드: 질문 임베딩 + 벡터DB TOP_K 청크 검색
     → filter_context 노드: 유사도 < 0.35 청크 제거
@@ -54,21 +54,17 @@ ChatBot/
 │   ├── ingest.py            # 문서 읽기 → 청크 → 임베딩 → 벡터DB 저장
 │   ├── rag_chain.py         # LangGraph 기반 검색 → 필터 → 조건 분기 → 답변
 │   ├── rag_langchain.py     # LangChain 컴포넌트 기반 RAG
-│   ├── agent_graph.py       # LangGraph Agentic RAG
-│   ├── finetune_lora.py     # Qwen LoRA/QLoRA 파인튜닝
-│   ├── qwen_local.py        # Qwen 로컬 추론, LoRA/양자화 로딩
-│   ├── main.py              # RAG 전용 FastAPI 서버 (/chat)
+│   ├── main.py              # 기존 명령 호환용 앱 진입점
 │   ├── eval.py              # 테스트 질문 실행, 점수 계산
 │   ├── eval_questions.jsonl # 평가 질문 30개
 │   ├── providers.py         # Claude 우선 → Gemini 폴백 LLM 라우터
-│   ├── local_chat/          # (서브) 로그인형 통합 챗봇 앱 (/api/rag/ask 포함)
-│   ├── model.py, train.py   # (서브) 직접 학습한 소형 챗봇 모델
-│   └── chatbot.txt, nextword.txt  # (서브) 기본 챗봇 학습 데이터
+│   ├── local_chat/          # 메인 로그인형 웹 챗봇 앱
+│   ├── model.py, train.py   # 직접 학습한 소형 챗봇 모델
+│   └── chatbot.txt, nextword.txt  # 기본 챗봇 학습 데이터
 ├── artifacts/
 │   ├── chroma_db/           # 벡터DB 저장 위치 (ingest 실행 시 생성)
-│   ├── lora_adapter/        # LoRA 학습 결과 어댑터
 │   └── chatbot.pt           # 직접 학습한 로컬 모델 체크포인트
-├── Dockerfile               # RAG API 서버 컨테이너 배포
+├── Dockerfile               # 로그인형 웹 챗봇 컨테이너 배포
 └── docker-compose.yml       # 로컬 Docker 실행 구성
 ```
 
@@ -84,9 +80,10 @@ uv run python -m chatbot.ingest
 # 2) 터미널에서 RAG 질문 테스트
 uv run python -m chatbot.rag_chain "RAG가 뭐야?"
 
-# 3) RAG API 서버 실행
-uv run uvicorn chatbot.main:app --reload --port 8002
-# API 문서: http://127.0.0.1:8002/docs
+# 3) Leon's ChatBot 웹 서버 실행
+uv run uvicorn chatbot.local_chat.app:app --reload --port 8001
+# 웹 화면: http://127.0.0.1:8001
+# API 문서: http://127.0.0.1:8001/docs
 
 # 4) 답변 품질 평가 → eval_result.csv 생성
 uv run python -m chatbot.eval
@@ -101,7 +98,7 @@ GEMINI_API_KEY=...
 
 ### LangSmith로 RAG 실행 추적하기 (선택)
 
-LangSmith를 켜면 `rag-chat` 또는 `rag-agent` trace 안에서 LangGraph 노드,
+LangSmith를 켜면 `rag-chat` trace 안에서 LangGraph 노드,
 검색/필터/생성 경로, Claude→Gemini 폴백, 지연시간과 오류를 확인할 수 있다.
 
 1. LangSmith에서 API 키를 만든다.
@@ -131,39 +128,16 @@ uv run python -m scripts.evaluate_rag_langsmith
 문서 기반성을 기록한다. 기존의 같은 이름 LangSmith 데이터셋은 예전 프로젝트
 문서 기준이므로, 현재 평가에는 `chatbot-rag-eval-v2-20` 데이터셋을 사용한다.
 
-## 6. API 사용 예시
+## 6. 웹 앱과 API
 
-```bash
-curl -X POST http://127.0.0.1:8002/chat \
-  -H "Content-Type: application/json" \
-  -d '{"question": "RAG가 뭐야?"}'
-```
+- 웹 화면: `http://127.0.0.1:8001`
+- 회원가입: `POST /api/auth/signup`
+- 로그인: `POST /api/auth/login`
+- 일반 채팅: `POST /api/chat/ask`
+- 문서 기반 RAG: `POST /api/rag/ask`
+- 상태 확인: `GET /health`
 
-문서에 답이 있는 경우:
-
-```json
-{
-  "question": "RAG가 뭐야?",
-  "answer": "RAG는 Retrieval-Augmented Generation의 약자로, 질문과 관련된 문서를 먼저 검색한 뒤 검색된 내용을 근거로 답변을 생성하는 방식입니다. (참고: rag_basic.txt)",
-  "sources": ["rag_basic.txt"],
-  "confidence": 0.87,
-  "retrieved_chunks": 3,
-  "message": "문서 근거 기반으로 답변했습니다."
-}
-```
-
-문서에 답이 없는 경우:
-
-```json
-{
-  "question": "알렉스 나이가 몇 살이야?",
-  "answer": "문서에서 확인할 수 없습니다.",
-  "sources": [],
-  "confidence": 0.0,
-  "retrieved_chunks": 0,
-  "message": "관련 문서를 찾지 못했습니다."
-}
-```
+채팅 화면에는 `AI가 답변`과 `로컬 LLM이 답변` 두 모드만 제공한다.
 
 ## 6.5 평가 + 개선 + 재평가 자동화 파이프라인
 
@@ -264,20 +238,14 @@ uv run python -m chatbot.train --corpus chatbot/qa_corpus.txt \
 1. Hybrid Search 적용
 2. Parent-Child Chunking 적용
 3. RAGAS 기반 자동 평가 고도화
-4. LangChain RAG와 Agent 경로를 같은 평가셋으로 비교
-5. LoRA/QLoRA 학습 결과 품질을 기준 질문으로 재평가
-6. GGUF 변환 결과를 실제 llama.cpp 추론으로 검증
-7. Docker 이미지 빌드와 `/chat`, `/agent` 엔드포인트 헬스체크 자동화
+4. 임계값과 TOP_K를 별도 테스트셋으로 검증
+5. Docker 이미지 빌드와 웹·API 헬스체크 자동화
 
 ---
 
-## 서브 프로젝트: 로그인형 챗봇 + 직접 학습 모델
+## 메인 웹 앱: 로그인형 챗봇 + 직접 학습 모델
 
 로그인 후 하나의 AI 답변을 보여주는 FastAPI 앱. RAG 엔드포인트(`POST /api/rag/ask`)도 포함한다.
-
-```bash
-uv run uvicorn chatbot.local_chat.app:app --reload --port 8001
-```
 
 - 웹 화면: `http://127.0.0.1:8001` / API 문서: `/docs`
 - 회원가입 `POST /api/auth/signup`, 로그인 `POST /api/auth/login`
@@ -289,7 +257,7 @@ uv run uvicorn chatbot.local_chat.app:app --reload --port 8001
 
 ---
 
-## 11. 고급 단계 (LangChain / Agent / LoRA / 양자화 / 배포)
+## 11. 선택 기능 (LangChain / 배포)
 
 ### 11-1. LangChain 기반 RAG (`chatbot/rag_langchain.py`)
 
@@ -301,65 +269,16 @@ uv run python -m chatbot.rag_langchain --ingest   # 인덱스 생성 (컬렉션:
 uv run python -m chatbot.rag_langchain "RAG가 뭐야?"
 ```
 
-### 11-2. LangGraph Agent (`chatbot/agent_graph.py`)
-
-스스로 판단하고 재시도하는 Agentic RAG.
-
-```
-analyze_question → (잡담이면 direct_answer로 종료)
-→ retrieve → grade_documents(LLM이 청크별 관련성 평가)
-→ 근거 부족 시 rewrite_question → retrieve 재시도 (최대 2회)
-→ generate → self_check(답변이 문서 근거인지 자기검증)
-```
+### 11-2. Docker 배포
 
 ```bash
-uv run python -m chatbot.agent_graph "LoRA가 뭐야?"
-# API: POST /agent (uv run uvicorn chatbot.main:app --port 8002)
-# 통합 UI: uv run uvicorn chatbot.local_chat.app:app --port 8001
-# 채팅창 위 토글에서 "Agent가 답변" 선택
-```
-
-응답에 `rewrites`(재검색 횟수), `grounded`(자기검증 결과), `trace`(실행 경로)가 포함된다.
-
-### 11-3. LoRA / QLoRA 파인튜닝 (`chatbot/finetune_lora.py`)
-
-`qa_corpus.txt`의 QA 쌍으로 Qwen에 LoRA 어댑터를 학습한다.
-답변 부분만 loss에 반영하도록 프롬프트 토큰은 -100으로 마스킹한다.
-
-```bash
-uv run python -m chatbot.finetune_lora                # Mac/CPU: LoRA
-python -m chatbot.finetune_lora --qlora               # Colab/CUDA: QLoRA(4bit, bitsandbytes)
-uv run python -m chatbot.finetune_lora --merge        # 어댑터를 원본에 병합 → artifacts/qwen_merged
-```
-
-학습된 어댑터 적용:
-
-```bash
-QWEN_LORA_ADAPTER=artifacts/lora_adapter uv run python -m chatbot.qwen_local "이름 알려줘"
-```
-
-### 11-4. 양자화 및 GGUF 변환
-
-```bash
-# bitsandbytes 양자화 로딩 (CUDA 전용)
-QWEN_QUANT=4bit python -m chatbot.qwen_local "안녕"   # 메모리 약 1/4
-QWEN_QUANT=8bit python -m chatbot.qwen_local "안녕"   # 메모리 약 1/2
-
-# GGUF 변환 + Q4_K_M 양자화 (llama.cpp, Mac에서도 동작)
-bash scripts/convert_gguf.sh
-```
-
-### 11-5. Docker 배포
-
-```bash
-docker compose up --build      # http://localhost:8002/docs
+docker compose up --build      # http://localhost:8001
 ```
 
 API 키는 `.env`에서 주입되고, 벡터DB(`artifacts/chroma_db`)는 볼륨으로 연결된다.
 
-### 11-6. 신규 의존성 설치
+### 11-3. 의존성 설치
 
 ```bash
-uv sync                        # langchain 계열 + peft + datasets
-uv sync --extra cuda           # (CUDA 환경) bitsandbytes 추가
+uv sync
 ```

@@ -1,7 +1,7 @@
-# 📝 RAG 챗봇 API 서버 배포용 Dockerfile
+# 📝 로그인형 Leon's ChatBot 배포용 Dockerfile
 #
 # 빌드:  docker build -t chatbot .
-# 실행:  docker run -p 8002:8002 --env-file .env chatbot
+# 실행:  docker run -p 8001:8001 --env-file .env chatbot
 # (또는 docker compose up --build)
 FROM python:3.12-slim
 
@@ -28,7 +28,7 @@ COPY artifacts/chroma_db ./artifacts/chroma_db
 RUN uv run python -c "from sentence_transformers import SentenceTransformer; \
     SentenceTransformer('sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2', cache_folder='/app/artifacts/hf_cache')"
 
-EXPOSE 8002
+EXPOSE 8001
 
 # API 키는 실행 시 환경변수로 주입 (--env-file .env)
-CMD ["uv", "run", "uvicorn", "chatbot.main:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["uv", "run", "uvicorn", "chatbot.local_chat.app:app", "--host", "0.0.0.0", "--port", "8001"]

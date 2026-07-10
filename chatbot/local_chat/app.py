@@ -14,11 +14,11 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
-from ..agent_graph import RagAgent
 from ..model import generate_text, load_checkpoint
 from ..providers import LLMRouter
 from ..qa_match import best_match
 from ..rag_chain import RagChain
+from ..config import langsmith_status
 from . import auth
 from .db import get_conn, init_db
 from .web import INDEX_HTML
@@ -50,9 +50,8 @@ _router = LLMRouter()
 
 # 📝 RAG 체인: 첫 질문이 들어올 때 임베딩 모델과 벡터DB를 로드한다(lazy loading).
 _rag_chain = RagChain()
-_agent = RagAgent()
 
-ResponderMode = Literal["ai", "local", "qwen", "agent"]
+ResponderMode = Literal["ai", "local"]
 
 
 # ── 요청/응답 데이터 모양 ──────────────────────────────
@@ -167,7 +166,7 @@ def get_local_model_bundle():
 _QA_PROMPT_FORMAT = "질문: {q} 답변:"
 _LOCAL_FALLBACK_ANSWER = (
     "아직 배우지 못한 질문이에요. 저는 학습한 범위 안에서만 답할 수 있는 작은 모델이라, "
-    "이 질문은 AI나 Qwen 모드로 물어봐 주세요!"
+    "이 질문은 AI 모드로 물어봐 주세요!"
 )
 
 # 📝 학습 질문과의 유사도가 이 값보다 낮으면 생성도 하지 않고 솔직하게 모른다고 답함
@@ -247,48 +246,9 @@ def _local_llm_call(prompt: str) -> ChatAnswer:
         )
 
 
-def _qwen_call(prompt: str) -> ChatAnswer:
-    """로컬 Qwen 모델(사전학습 LLM)로 자유 대화 답변을 생성함."""
-    try:
-        from ..qwen_local import generate_answer
-
-        return ChatAnswer(responder="qwen", answer=generate_answer(prompt))
-    except ImportError:
-        return ChatAnswer(
-            responder="qwen",
-            error="transformers가 설치되지 않았습니다. `uv sync`를 실행하세요.",
-        )
-    except Exception as exc:
-        return ChatAnswer(
-            responder="qwen", error=f"{type(exc).__name__}: {str(exc)[:200]}"
-        )
-
-
-def _agent_call(prompt: str) -> ChatAnswer:
-    """LangGraph Agent로 질문 분석, 검색, 재검색, 자기검증까지 수행한다."""
-    try:
-        result = _agent.ask(prompt)
-        meta = (
-            f"\n\n[Agent]\n"
-            f"출처: {', '.join(result.sources) if result.sources else '없음'}\n"
-            f"재검색: {result.rewrites}회\n"
-            f"근거 검증: {'통과' if result.grounded else '미통과'}\n"
-            f"실행 경로: {' → '.join(result.trace)}"
-        )
-        return ChatAnswer(responder="agent", answer=result.answer + meta)
-    except Exception as exc:
-        return ChatAnswer(
-            responder="agent", error=f"{type(exc).__name__}: {str(exc)[:200]}"
-        )
-
-
 def _answer_for_mode(prompt: str, responder: ResponderMode) -> ChatAnswer:
     if responder == "local":
         return _local_llm_call(prompt)
-    if responder == "qwen":
-        return _qwen_call(prompt)
-    if responder == "agent":
-        return _agent_call(prompt)
     return _chatbot_call(prompt)
 
 
@@ -305,8 +265,9 @@ def _stored_answer(row) -> dict | None:
     answer = _row_value(row, "answer")
     error = _row_value(row, "error")
     if answer is not None or error is not None:
+        responder = _row_value(row, "responder") or "ai"
         return {
-            "responder": _row_value(row, "responder") or "ai",
+            "responder": responder if responder in ("ai", "local") else "ai",
             "answer": answer,
             "error": error,
         }
@@ -410,6 +371,11 @@ async def rag_ask(
 
 
 # ── 화면 ──────────────────────────────
+@app.get("/health")
+def health() -> dict:
+    return {"status": "ok", "app": "Leon's ChatBot", "langsmith": langsmith_status()}
+
+
 @app.get("/", response_class=HTMLResponse)
 def index() -> str:
     return INDEX_HTML
