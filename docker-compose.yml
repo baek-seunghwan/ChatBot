@@ -1,0 +1,18 @@
+# 📝 실행: docker compose up --build
+# 📝 종료: docker compose down
+services:
+  chatbot:
+    build: .
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env            # ANTHROPIC_API_KEY, GEMINI_API_KEY
+    volumes:
+      # 📝 벡터DB를 볼륨으로 연결하면 이미지를 다시 빌드하지 않고도 인덱스 갱신 가능
+      - ./artifacts/chroma_db:/app/artifacts/chroma_db
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

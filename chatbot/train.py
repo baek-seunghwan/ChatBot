@@ -4,6 +4,7 @@ import argparse
 import math
 import random
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -157,6 +158,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--min-learning-rate", type=float, default=3e-5)
     parser.add_argument("--warmup-steps", type=int, default=100)
     parser.add_argument("--eval-every", type=int, default=50)
+    parser.add_argument("--log-every", type=int, default=20, help="각 몇 step마다 학습 진행 로그를 출력할지")
     parser.add_argument("--eval-batches", type=int, default=20)
     parser.add_argument("--block-size", type=int, default=128)
     parser.add_argument("--embedding-dim", type=int, default=128)
@@ -216,6 +218,7 @@ def main() -> None:
     )
     global_step = 0
     best_validation_loss = float("inf")
+    start_time = time.time()
     for epoch in range(1, args.epochs + 1):
         for inputs, targets in train_loader:
             inputs = inputs.to(device)
@@ -239,38 +242,53 @@ def main() -> None:
             optimizer.step()
             global_step = step_number
 
-            if global_step == 1 or global_step % args.eval_every == 0:
+            should_log = global_step == 1 or global_step % args.log_every == 0 or global_step >= (total_steps or 0)
+            should_eval = global_step == 1 or global_step % args.eval_every == 0
+            if should_eval:
                 validation_loss = evaluate(
                     model,
                     validation_loader,
                     device,
                     max_batches=args.eval_batches,
                 )
-                print(
-                    f"epoch={epoch:02d} step={global_step:04d} "
+            else:
+                validation_loss = None
+
+            if should_log:
+                elapsed_minutes = (time.time() - start_time) / 60.0
+                progress_percent = (global_step / total_steps * 100.0) if total_steps else 0.0
+                log_message = (
+                    f"[학습중] epoch={epoch:02d}/{args.epochs} "
+                    f"step={global_step:04d}/{total_steps} "
+                    f"progress={progress_percent:.1f}% "
+                    f"loss={loss.item():.4f} "
                     f"lr={learning_rate:.2e} "
-                    f"train_loss={loss.item():.4f} val_loss={validation_loss:.4f}"
+                    f"elapsed={elapsed_minutes:.1f}분"
                 )
-                if validation_loss < best_validation_loss:
-                    best_validation_loss = validation_loss
-                    save_checkpoint(
-                        args.output,
-                        model,
-                        tokenizer,
-                        config,
-                        {
-                            "architecture": "character_transformer",
-                            "data_type": "plain_autocomplete_corpus",
-                            "corpus": str(args.corpus),
-                            "texts": len(texts),
-                            "tokens": len(token_ids),
-                            "vocabulary_size": len(tokenizer),
-                            "next_word_index": next_word_index,
-                            "epochs": args.epochs,
-                            "steps": global_step,
-                            "best_validation_loss": best_validation_loss,
-                        },
-                    )
+                if validation_loss is not None:
+                    log_message += f" val_loss={validation_loss:.4f}"
+                print(log_message)
+
+            if should_eval and validation_loss is not None and validation_loss < best_validation_loss:
+                best_validation_loss = validation_loss
+                save_checkpoint(
+                    args.output,
+                    model,
+                    tokenizer,
+                    config,
+                    {
+                        "architecture": "character_transformer",
+                        "data_type": "plain_autocomplete_corpus",
+                        "corpus": str(args.corpus),
+                        "texts": len(texts),
+                        "tokens": len(token_ids),
+                        "vocabulary_size": len(tokenizer),
+                        "next_word_index": next_word_index,
+                        "epochs": args.epochs,
+                        "steps": global_step,
+                        "best_validation_loss": best_validation_loss,
+                    },
+                )
 
             if max_steps is not None and global_step >= max_steps:
                 break

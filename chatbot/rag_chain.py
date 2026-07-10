@@ -1,13 +1,16 @@
-# 📝 rag_chain: retriever 생성 → prompt 구성 → LLM 호출 → 답변 생성
+# 📝 rag_chain: LangGraph 기반 retriever → relevance filter → answer generation
 # 📝 터미널 테스트: uv run python -m chatbot.rag_chain "RAG가 뭐야?"
 from __future__ import annotations
 
 import sys
 from dataclasses import dataclass, field
+from typing import Literal, TypedDict
 
 from .config import (
     CHROMA_DIR,
     COLLECTION_NAME,
+    EMBEDDING_CACHE_DIR,
+    EMBEDDING_LOCAL_FILES_ONLY,
     EMBEDDING_MODEL,
     MIN_RELEVANCE_SCORE,
     PROMPT_VERSION,
@@ -15,6 +18,8 @@ from .config import (
     USE_RERANKER,
 )
 from .providers import LLMRouter
+
+from langgraph.graph import END, START, StateGraph
 
 # 📝 프롬프트 버전: 실험(run_rag_experiments)에서 버전별 성능을 비교할 수 있다.
 #    기본은 v2. .env의 RAG_PROMPT_VERSION으로 바꿀 수 있다.
@@ -96,8 +101,18 @@ class RagAnswer:
         }
 
 
+class RagGraphState(TypedDict, total=False):
+    """LangGraph 노드들이 공유하는 RAG 상태."""
+
+    question: str
+    retrieved_chunks: list[RetrievedChunk]
+    relevant_chunks: list[RetrievedChunk]
+    route: Literal["generate", "no_answer"]
+    answer: RagAnswer
+
+
 class RagChain:
-    """질문을 받아 검색하고 답변을 생성하는 RAG 파이프라인.
+    """질문을 받아 검색하고 답변을 생성하는 LangGraph 기반 RAG 파이프라인.
 
     임베딩 모델과 벡터DB는 처음 질문이 들어올 때 한 번만 로드한다(lazy loading).
     """
@@ -113,11 +128,35 @@ class RagChain:
         self.top_k = top_k
         self.min_score = min_score
         self.collection_name = collection_name
+        self.prompt_version = prompt_version
         self.system_prompt = PROMPT_VERSIONS[prompt_version]
         self.use_reranker = use_reranker
         self._embedder = None
         self._collection = None
         self._router = LLMRouter()
+        self._graph = self._build_graph()
+
+    def _build_graph(self):
+        """RAG 실행 순서를 LangGraph StateGraph로 구성한다."""
+        graph = StateGraph(RagGraphState)
+        graph.add_node("retrieve", self._retrieve_node)
+        graph.add_node("filter_context", self._filter_context_node)
+        graph.add_node("generate", self._generate_node)
+        graph.add_node("no_answer", self._no_answer_node)
+
+        graph.add_edge(START, "retrieve")
+        graph.add_edge("retrieve", "filter_context")
+        graph.add_conditional_edges(
+            "filter_context",
+            self._route_after_filter,
+            {
+                "generate": "generate",
+                "no_answer": "no_answer",
+            },
+        )
+        graph.add_edge("generate", END)
+        graph.add_edge("no_answer", END)
+        return graph.compile()
 
     def _ensure_loaded(self) -> None:
         """임베딩 모델과 ChromaDB 컬렉션을 최초 1회만 로드한다."""
@@ -126,7 +165,21 @@ class RagChain:
         import chromadb
         from sentence_transformers import SentenceTransformer
 
-        self._embedder = SentenceTransformer(EMBEDDING_MODEL)
+        model_kwargs = {"local_files_only": EMBEDDING_LOCAL_FILES_ONLY}
+        if EMBEDDING_CACHE_DIR is not None:
+            model_kwargs["cache_folder"] = str(EMBEDDING_CACHE_DIR)
+        try:
+            self._embedder = SentenceTransformer(EMBEDDING_MODEL, **model_kwargs)
+        except Exception as exc:
+            if EMBEDDING_LOCAL_FILES_ONLY:
+                raise RuntimeError(
+                    "임베딩 모델을 로컬 캐시에서 찾지 못했습니다. "
+                    f"모델: {EMBEDDING_MODEL}, 캐시: {EMBEDDING_CACHE_DIR}. "
+                    "처음 1회는 네트워크가 되는 환경에서 "
+                    "`RAG_EMBEDDINGS_LOCAL_ONLY=0 uv run python -m chatbot.ingest`를 "
+                    "실행해 캐시를 만든 뒤 다시 실행하세요."
+                ) from exc
+            raise
         client = chromadb.PersistentClient(path=str(CHROMA_DIR))
         try:
             self._collection = client.get_collection(self.collection_name)
@@ -176,36 +229,83 @@ class RagChain:
             chunks = chunks[: self.top_k]
         return chunks
 
-    def ask(self, question: str) -> RagAnswer:
-        """검색 → 관련성 필터 → 프롬프트 구성 → LLM 호출까지 한 번에 수행한다."""
-        # 📝 1) 검색 후, 유사도가 기준(min_score) 이상인 청크만 근거로 쓴다.
-        relevant = [c for c in self.retrieve(question) if c.score >= self.min_score]
+    def _retrieve_node(self, state: RagGraphState) -> RagGraphState:
+        """질문과 관련된 청크 후보를 검색한다."""
+        return {"retrieved_chunks": self.retrieve(state["question"])}
 
-        # 📝 2) 근거 문서가 하나도 없으면 LLM을 호출하지 않고 바로 "확인 불가"로 답한다.
-        #       (문서 근거 없이 LLM 지식으로 답하는 환각을 막는 장치)
-        if not relevant:
-            return RagAnswer(question=question, answer=NO_ANSWER_TEXT)
+    def _filter_context_node(self, state: RagGraphState) -> RagGraphState:
+        """유사도 기준을 넘는 청크만 답변 근거로 남긴다."""
+        relevant = [
+            chunk
+            for chunk in state.get("retrieved_chunks", [])
+            if chunk.score >= self.min_score
+        ]
+        return {
+            "relevant_chunks": relevant,
+            "route": "generate" if relevant else "no_answer",
+        }
 
-        # 📝 3) 검색된 청크를 문서 컨텍스트로 넣어 답변을 생성한다.
+    @staticmethod
+    def _route_after_filter(state: RagGraphState) -> Literal["generate", "no_answer"]:
+        """근거 청크 유무에 따라 생성 또는 확인 불가 응답으로 분기한다."""
+        return state.get("route", "no_answer")
+
+    def _no_answer_node(self, state: RagGraphState) -> RagGraphState:
+        """근거 문서가 없으면 LLM을 호출하지 않고 고정 응답을 반환한다."""
+        return {
+            "answer": RagAnswer(
+                question=state["question"],
+                answer=NO_ANSWER_TEXT,
+            )
+        }
+
+    def _generate_node(self, state: RagGraphState) -> RagGraphState:
+        """검색된 근거 청크를 프롬프트에 넣어 LLM 답변을 생성한다."""
+        relevant = state.get("relevant_chunks", [])
         context = "\n\n".join(f"[{c.source}]\n{c.text}" for c in relevant)
-        prompt = RAG_PROMPT_TEMPLATE.format(context=context, question=question)
+        prompt = RAG_PROMPT_TEMPLATE.format(
+            context=context,
+            question=state["question"],
+        )
         result = self._router.generate(
-            prompt, system=self.system_prompt, max_tokens=800, temperature=0.2
+            prompt,
+            system=self.system_prompt,
+            max_tokens=800,
+            temperature=0.2,
         )
 
-        # 📝 4) 출처 문서명은 중복 없이 순서를 유지해서 모은다.
-        sources = list(dict.fromkeys(c.source for c in relevant))
-        return RagAnswer(
-            question=question,
-            answer=result.text,
-            sources=sources,
-            confidence=max(c.score for c in relevant),
-            retrieved_chunks=len(relevant),
-            message=GROUNDED_MESSAGE,
-            chunks=relevant,
-            provider=result.provider,
-            model=result.model,
+        sources = list(dict.fromkeys(chunk.source for chunk in relevant))
+        return {
+            "answer": RagAnswer(
+                question=state["question"],
+                answer=result.text,
+                sources=sources,
+                confidence=max(chunk.score for chunk in relevant),
+                retrieved_chunks=len(relevant),
+                message=GROUNDED_MESSAGE,
+                chunks=relevant,
+                provider=result.provider,
+                model=result.model,
+            )
+        }
+
+    def ask(self, question: str) -> RagAnswer:
+        """LangGraph 실행: 검색 → 필터 → 조건 분기 → 답변 생성."""
+        state = self._graph.invoke(
+            {"question": question},
+            config={
+                "run_name": "rag-chat",
+                "tags": ["rag", "chat", self.prompt_version],
+                "metadata": {
+                    "top_k": self.top_k,
+                    "min_score": self.min_score,
+                    "collection": self.collection_name,
+                    "prompt_version": self.prompt_version,
+                    "reranker": self.use_reranker,
+                },
+            },
         )
+        return state["answer"]
 
 
 if __name__ == "__main__":

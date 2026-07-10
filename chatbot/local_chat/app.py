@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -12,6 +14,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 
+from ..agent_graph import RagAgent
 from ..model import generate_text, load_checkpoint
 from ..providers import LLMRouter
 from ..qa_match import best_match
@@ -47,6 +50,9 @@ _router = LLMRouter()
 
 # 📝 RAG 체인: 첫 질문이 들어올 때 임베딩 모델과 벡터DB를 로드한다(lazy loading).
 _rag_chain = RagChain()
+_agent = RagAgent()
+
+ResponderMode = Literal["ai", "local", "qwen", "agent"]
 
 
 # ── 요청/응답 데이터 모양 ──────────────────────────────
@@ -62,18 +68,18 @@ class AuthResponse(BaseModel):
 
 class AskRequest(BaseModel):
     message: str = Field(min_length=1, max_length=2000)
-    responder: Literal["ai", "local"] = "ai"
+    responder: ResponderMode = "ai"
 
 
 class ChatAnswer(BaseModel):
-    responder: Literal["ai", "local"] = "ai"
+    responder: ResponderMode = "ai"
     answer: str | None = None
     error: str | None = None
 
 
 class AskResponse(BaseModel):
     question: str
-    responder: Literal["ai", "local"] = "ai"
+    responder: ResponderMode = "ai"
     answer: str | None = None
     error: str | None = None
 
@@ -161,22 +167,53 @@ def get_local_model_bundle():
 _QA_PROMPT_FORMAT = "질문: {q} 답변:"
 _LOCAL_FALLBACK_ANSWER = (
     "아직 배우지 못한 질문이에요. 저는 학습한 범위 안에서만 답할 수 있는 작은 모델이라, "
-    "이 질문은 AI 모드로 물어봐 주세요!"
+    "이 질문은 AI나 Qwen 모드로 물어봐 주세요!"
 )
+
+# 📝 학습 질문과의 유사도가 이 값보다 낮으면 생성도 하지 않고 솔직하게 모른다고 답함
+#    (엉뚱한 입력에 외운 답변을 내뱉는 것을 막는 장치)
+_GENERATION_MIN_SIMILARITY = 0.30
+
+_TIME_PATTERN = re.compile(r"몇\s*시|지금\s*시간|시간\s*(알려|좀|뭐)")
+_DATE_PATTERN = re.compile(r"며칠|몇\s*일이|무슨\s*요일|오늘\s*날짜|날짜\s*(알려|좀|뭐)")
+
+_WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
+
+
+def _dynamic_answer(prompt: str) -> str | None:
+    """시간/날짜처럼 실시간 정보가 필요한 질문은 datetime으로 직접 답한다."""
+    now = datetime.now()
+    if _TIME_PATTERN.search(prompt):
+        return f"지금은 {now.hour}시 {now.minute}분이에요."
+    if _DATE_PATTERN.search(prompt):
+        weekday = _WEEKDAYS[now.weekday()]
+        return f"오늘은 {now.year}년 {now.month}월 {now.day}일 {weekday}요일이에요."
+    return None
 
 
 def _local_llm_call(prompt: str) -> ChatAnswer:
     """로컬 학습 모델로 답변을 생성함. (질문 이어쓰기가 아니라 질문→답변 방식)
 
+    0차: 시간/날짜 질문은 datetime으로 실시간 답변
     1차: 학습한 QA 쌍과 직접 매칭 → 비슷한 질문이면 학습된 답변을 그대로 반환
-    2차: "질문: X 답변:" 형식으로 모델이 답변 생성
-    3차: 생성이 실패하거나 너무 짧으면 솔직한 안내 메시지
+    2차: 유사도가 어느 정도 있으면 "질문: X 답변:" 형식으로 모델이 답변 생성
+    3차: 유사도가 너무 낮거나 생성 실패면 솔직한 안내 메시지
     """
     try:
+        # 📝 0차: 실시간 정보(시간/날짜)는 코드로 직접 답함
+        dynamic = _dynamic_answer(prompt)
+        if dynamic is not None:
+            return ChatAnswer(responder="local", answer=dynamic)
+
         # 📝 1차: 아는 질문이면 정확한 답을 바로 돌려줌 (생성 오류 방지)
-        matched, _score = best_match(prompt)
+        matched, score = best_match(prompt)
         if matched is not None:
             return ChatAnswer(responder="local", answer=matched)
+
+        # 📝 배운 것과 전혀 다른 입력("ddd" 등)이면 생성하지 않고 모른다고 답함
+        #    작은 모델은 모르는 질문에도 외운 답을 자신 있게 내뱉기 때문
+        if score < _GENERATION_MIN_SIMILARITY:
+            return ChatAnswer(responder="local", answer=_LOCAL_FALLBACK_ANSWER)
 
         # 📝 2차: QA 형식으로 모델 생성 (질문을 그대로 이어쓰지 않게 함)
         model, tokenizer, config, metadata = get_local_model_bundle()
@@ -210,9 +247,48 @@ def _local_llm_call(prompt: str) -> ChatAnswer:
         )
 
 
-def _answer_for_mode(prompt: str, responder: Literal["ai", "local"]) -> ChatAnswer:
+def _qwen_call(prompt: str) -> ChatAnswer:
+    """로컬 Qwen 모델(사전학습 LLM)로 자유 대화 답변을 생성함."""
+    try:
+        from ..qwen_local import generate_answer
+
+        return ChatAnswer(responder="qwen", answer=generate_answer(prompt))
+    except ImportError:
+        return ChatAnswer(
+            responder="qwen",
+            error="transformers가 설치되지 않았습니다. `uv sync`를 실행하세요.",
+        )
+    except Exception as exc:
+        return ChatAnswer(
+            responder="qwen", error=f"{type(exc).__name__}: {str(exc)[:200]}"
+        )
+
+
+def _agent_call(prompt: str) -> ChatAnswer:
+    """LangGraph Agent로 질문 분석, 검색, 재검색, 자기검증까지 수행한다."""
+    try:
+        result = _agent.ask(prompt)
+        meta = (
+            f"\n\n[Agent]\n"
+            f"출처: {', '.join(result.sources) if result.sources else '없음'}\n"
+            f"재검색: {result.rewrites}회\n"
+            f"근거 검증: {'통과' if result.grounded else '미통과'}\n"
+            f"실행 경로: {' → '.join(result.trace)}"
+        )
+        return ChatAnswer(responder="agent", answer=result.answer + meta)
+    except Exception as exc:
+        return ChatAnswer(
+            responder="agent", error=f"{type(exc).__name__}: {str(exc)[:200]}"
+        )
+
+
+def _answer_for_mode(prompt: str, responder: ResponderMode) -> ChatAnswer:
     if responder == "local":
         return _local_llm_call(prompt)
+    if responder == "qwen":
+        return _qwen_call(prompt)
+    if responder == "agent":
+        return _agent_call(prompt)
     return _chatbot_call(prompt)
 
 

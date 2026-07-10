@@ -9,6 +9,8 @@ from .config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     COLLECTION_NAME,
+    EMBEDDING_CACHE_DIR,
+    EMBEDDING_LOCAL_FILES_ONLY,
     EMBEDDING_MODEL,
     RAG_DOCS_DIR,
 )
@@ -96,7 +98,21 @@ def build(
     log(f"      문서 {len(documents)}개 → 청크 {len(texts)}개")
 
     log(f"[3/4] 임베딩 생성: {EMBEDDING_MODEL}")
-    model = SentenceTransformer(EMBEDDING_MODEL)
+    model_kwargs = {"local_files_only": EMBEDDING_LOCAL_FILES_ONLY}
+    if EMBEDDING_CACHE_DIR is not None:
+        model_kwargs["cache_folder"] = str(EMBEDDING_CACHE_DIR)
+    try:
+        model = SentenceTransformer(EMBEDDING_MODEL, **model_kwargs)
+    except Exception as exc:
+        if EMBEDDING_LOCAL_FILES_ONLY:
+            raise RuntimeError(
+                "임베딩 모델을 로컬 캐시에서 찾지 못했습니다. "
+                f"모델: {EMBEDDING_MODEL}, 캐시: {EMBEDDING_CACHE_DIR}. "
+                "처음 1회는 네트워크가 되는 환경에서 "
+                "`RAG_EMBEDDINGS_LOCAL_ONLY=0 uv run python -m chatbot.ingest`를 "
+                "실행해 캐시를 만든 뒤 다시 실행하세요."
+            ) from exc
+        raise
     embeddings = model.encode(texts, show_progress_bar=not quiet).tolist()
 
     log(f"[4/4] ChromaDB 저장: {CHROMA_DIR} (컬렉션: {collection_name})")

@@ -13,8 +13,24 @@ dependencies = [
     "python-dotenv>=1.0,<2",
     "sentence-transformers>=3.0,<6",
     "torch>=2.2,<3",
+    "transformers>=4.45,<5",
+    "accelerate>=0.30,<2",
     "uvicorn[standard]>=0.27,<1",
+    "langgraph>=0.2,<1",
+    "langsmith>=0.4,<1",
+    "langchain>=0.3,<2",
+    "langchain-community>=0.3,<2",
+    "langchain-chroma>=0.1,<2",
+    "langchain-huggingface>=0.1,<2",
+    "langchain-text-splitters>=0.3,<2",
+    "peft>=0.11,<1",
+    "datasets>=2.19,<5",
 ]
+
+[project.optional-dependencies]
+# QLoRA(4bit)와 양자화 로딩용. CUDA GPU 환경(Colab 등)에서만 설치:
+#   uv sync --extra cuda   또는   pip install bitsandbytes
+cuda = ["bitsandbytes>=0.43"]
 
 [tool.uv]
 package = false

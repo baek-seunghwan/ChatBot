@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+from langsmith import trace
+
 
 DEFAULT_ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
 DEFAULT_GEMINI_MODEL = "gemini-2.5-flash-lite"
@@ -123,24 +125,71 @@ class LLMRouter:
         max_tokens: int = 256,
         temperature: float = 0.2,
     ) -> LLMResult:
-        errors: list[str] = []
-        for provider in self.provider_order:
-            try:
-                if provider == "anthropic":
-                    return self._anthropic_generate(
-                        prompt, system, max_tokens, temperature
+        # API 키가 없는 self 객체는 trace 입력에 넣지 않는다. 질문/프롬프트와
+        # 응답은 LangSmith 관측을 켠 경우에만 전송된다.
+        with trace(
+            "llm-router",
+            run_type="chain",
+            inputs={
+                "prompt": prompt,
+                "system": system,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            },
+            tags=["llm", "fallback-router"],
+            metadata={"provider_order": self.provider_order},
+        ) as router_run:
+            errors: list[str] = []
+            for provider in self.provider_order:
+                model = (
+                    self.anthropic_model if provider == "anthropic" else self.gemini_model
+                )
+                try:
+                    with trace(
+                        f"{provider}.generate",
+                        run_type="llm",
+                        inputs={
+                            "prompt": prompt,
+                            "system": system,
+                            "max_tokens": max_tokens,
+                            "temperature": temperature,
+                        },
+                        tags=[provider],
+                        metadata={"model": model},
+                    ) as provider_run:
+                        if provider == "anthropic":
+                            result = self._anthropic_generate(
+                                prompt, system, max_tokens, temperature
+                            )
+                        elif provider == "gemini":
+                            result = self._gemini_generate(
+                                prompt, system, max_tokens, temperature
+                            )
+                        else:
+                            raise RuntimeError(
+                                f"지원하지 않는 LLM 제공자입니다: {provider}"
+                            )
+                        provider_run.end(
+                            outputs={
+                                "text": result.text,
+                                "provider": result.provider,
+                                "model": result.model,
+                            }
+                        )
+                    router_run.end(
+                        outputs={
+                            "text": result.text,
+                            "provider": result.provider,
+                            "model": result.model,
+                        }
                     )
-                if provider == "gemini":
-                    return self._gemini_generate(
-                        prompt, system, max_tokens, temperature
-                    )
-                raise RuntimeError(f"지원하지 않는 LLM 제공자입니다: {provider}")
-            except Exception as exc:
-                # 오류 타입만 남기면 원인을 알 수 없으므로 메시지도 함께 보존
-                errors.append(f"{provider}: {type(exc).__name__}: {str(exc)[:200]}")
-        raise RuntimeError(
-            "사용 가능한 LLM API가 없습니다 (" + " | ".join(errors) + ")."
-        )
+                    return result
+                except Exception as exc:
+                    # 오류 타입만 남기면 원인을 알 수 없으므로 메시지도 함께 보존
+                    errors.append(f"{provider}: {type(exc).__name__}: {str(exc)[:200]}")
+            raise RuntimeError(
+                "사용 가능한 LLM API가 없습니다 (" + " | ".join(errors) + ")."
+            )
 
     def health(self) -> dict[str, dict[str, object]]:
         """각 제공자에 최소 호출을 보내 실제 연결 상태와 오류 원인을 확인한다."""

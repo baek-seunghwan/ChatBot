@@ -19,6 +19,7 @@
 | 웹 프레임워크 | FastAPI + uvicorn |
 | 벡터DB | ChromaDB (로컬 저장) |
 | 임베딩 모델 | sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 |
+| RAG 오케스트레이션 | LangGraph StateGraph |
 | LLM | Claude (우선) → Gemini (폴백), `chatbot/providers.py`의 LLMRouter |
 | 평가 | 자체 100점 점수표 + LLM 심사자(judge) |
 
@@ -33,11 +34,13 @@ rag_docs/ (txt/md/pdf)
 
 [질문 응답 단계 - rag_chain.py + main.py]
 사용자 질문 (POST /chat)
-    → 질문 임베딩
-    → 벡터DB에서 TOP_K=3 청크 검색
-    → 유사도 < 0.35 청크 제거
-    → 근거 없으면: "문서에서 확인할 수 없습니다" (LLM 호출 안 함)
-    → 근거 있으면: 문서 + 질문을 LLM에 전달 → 근거 기반 답변
+    → LangGraph START
+    → retrieve 노드: 질문 임베딩 + 벡터DB TOP_K 청크 검색
+    → filter_context 노드: 유사도 < 0.35 청크 제거
+    → 조건 분기
+        → no_answer 노드: 근거 없으면 "문서에서 확인할 수 없습니다" (LLM 호출 안 함)
+        → generate 노드: 근거 있으면 문서 + 질문을 LLM에 전달
+    → LangGraph END
     → JSON 반환 (answer, sources, confidence, retrieved_chunks)
 ```
 
@@ -49,7 +52,11 @@ ChatBot/
 │   ├── rag_docs/            # RAG에 넣을 문서 (txt/md/pdf)
 │   ├── config.py            # chunk_size, top_k 등 설정값 관리
 │   ├── ingest.py            # 문서 읽기 → 청크 → 임베딩 → 벡터DB 저장
-│   ├── rag_chain.py         # 검색 → 프롬프트 구성 → LLM 호출 → 답변
+│   ├── rag_chain.py         # LangGraph 기반 검색 → 필터 → 조건 분기 → 답변
+│   ├── rag_langchain.py     # LangChain 컴포넌트 기반 RAG
+│   ├── agent_graph.py       # LangGraph Agentic RAG
+│   ├── finetune_lora.py     # Qwen LoRA/QLoRA 파인튜닝
+│   ├── qwen_local.py        # Qwen 로컬 추론, LoRA/양자화 로딩
 │   ├── main.py              # RAG 전용 FastAPI 서버 (/chat)
 │   ├── eval.py              # 테스트 질문 실행, 점수 계산
 │   ├── eval_questions.jsonl # 평가 질문 30개
@@ -59,9 +66,10 @@ ChatBot/
 │   └── chatbot.txt, nextword.txt  # (서브) 기본 챗봇 학습 데이터
 ├── artifacts/
 │   ├── chroma_db/           # 벡터DB 저장 위치 (ingest 실행 시 생성)
+│   ├── lora_adapter/        # LoRA 학습 결과 어댑터
 │   └── chatbot.pt           # 직접 학습한 로컬 모델 체크포인트
-├── eval_result.csv          # 평가 결과 (eval 실행 시 생성)
-└── REPORT.md                # 프로젝트 보고서
+├── Dockerfile               # RAG API 서버 컨테이너 배포
+└── docker-compose.yml       # 로컬 Docker 실행 구성
 ```
 
 ## 5. 실행 방법
@@ -90,6 +98,38 @@ API 키는 프로젝트 루트의 `.env`에 둔다.
 ANTHROPIC_API_KEY=...
 GEMINI_API_KEY=...
 ```
+
+### LangSmith로 RAG 실행 추적하기 (선택)
+
+LangSmith를 켜면 `rag-chat` 또는 `rag-agent` trace 안에서 LangGraph 노드,
+검색/필터/생성 경로, Claude→Gemini 폴백, 지연시간과 오류를 확인할 수 있다.
+
+1. LangSmith에서 API 키를 만든다.
+2. `.env`에 다음 값을 추가한 뒤 서버를 다시 시작한다.
+
+```bash
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=lsv2_...
+LANGSMITH_PROJECT=leon-rag-chatbot
+```
+
+여러 workspace에 연결된 키는 `LANGSMITH_WORKSPACE_ID`를 추가한다. APAC 리전
+계정은 `LANGSMITH_ENDPOINT=https://apac.api.smith.langchain.com`도 설정한다.
+`GET /health`의 `langsmith` 항목에서 활성화 여부를 확인할 수 있다.
+
+주의: 추적을 켜면 사용자 질문, 검색된 문서 청크, LLM 프롬프트와 답변이
+LangSmith로 전송될 수 있다. 개인정보나 비공개 문서를 다룰 때는 추적을 끄거나
+별도의 마스킹 정책을 먼저 적용한다.
+
+현재 `eval/dataset.jsonl` 20문항을 LangSmith Dataset & Experiments에서 평가:
+
+```bash
+uv run python -m scripts.evaluate_rag_langsmith
+```
+
+이 평가는 검색 정밀도/재현율, 답변 가능 여부 판단, 규칙 기반 정답 포함률과
+문서 기반성을 기록한다. 기존의 같은 이름 LangSmith 데이터셋은 예전 프로젝트
+문서 기준이므로, 현재 평가에는 `chatbot-rag-eval-v2-20` 데이터셋을 사용한다.
 
 ## 6. API 사용 예시
 
@@ -216,21 +256,18 @@ uv run python -m chatbot.train --corpus chatbot/qa_corpus.txt \
 1. 문서가 5개(학습 노트 수준)로 적어 다양한 질문에 대응하기 어렵다.
 2. 청크 분할이 글자 수 기준이라 문장 중간에서 잘릴 수 있다.
 3. 유사도 임계값(0.35) 하나로 답변 가능 여부를 판단하므로 경계 질문에서 오판할 수 있다.
-4. LangChain 없이 직접 구현하여 학습에는 좋지만, 컴포넌트 교체 유연성은 떨어진다.
+4. 기본 `/chat` RAG는 직접 구현 체인이고, LangChain 버전은 별도 모듈(`rag_langchain.py`)로 분리되어 있다.
 5. LLM 심사자 채점은 실행할 때마다 점수가 약간 달라질 수 있다.
 
-## 10. 개선 방향
+## 10. 남은 보완 방향
 
-1. LangGraph를 활용한 Agentic RAG 적용
-2. 질문 재작성 Query Rewriting 적용
-3. 검색 결과 관련성 평가 단계 추가
-4. Hybrid Search 적용
-5. Parent-Child Chunking 적용
-6. LangSmith를 통한 실행 과정 추적
-7. RAGAS 기반 자동 평가 고도화
-8. Qwen/Gemma 기반 로컬 LLM 실험
-9. LoRA/QLoRA를 활용한 답변 형식 Fine-Tuning
-10. GGUF 변환 후 llama.cpp 추론 최적화
+1. Hybrid Search 적용
+2. Parent-Child Chunking 적용
+3. RAGAS 기반 자동 평가 고도화
+4. LangChain RAG와 Agent 경로를 같은 평가셋으로 비교
+5. LoRA/QLoRA 학습 결과 품질을 기준 질문으로 재평가
+6. GGUF 변환 결과를 실제 llama.cpp 추론으로 검증
+7. Docker 이미지 빌드와 `/chat`, `/agent` 엔드포인트 헬스체크 자동화
 
 ---
 
@@ -249,3 +286,80 @@ uv run uvicorn chatbot.local_chat.app:app --reload --port 8001
 직접 학습한 소형 모델은 [colab_train.ipynb](colab_train.ipynb)로 학습한다.
 `embedding_dim=384`, `num_layers=8`, `num_heads=8`, `block_size=256` 설정이며,
 학습 결과(`/content/chatbot.pt`)는 `artifacts/chatbot.pt`와 교체한다.
+
+---
+
+## 11. 고급 단계 (LangChain / Agent / LoRA / 양자화 / 배포)
+
+### 11-1. LangChain 기반 RAG (`chatbot/rag_langchain.py`)
+
+직접 구현 RAG와 동일한 흐름을 LangChain 표준 컴포넌트로 재구성한 버전.
+TextLoader → RecursiveCharacterTextSplitter → HuggingFaceEmbeddings → Chroma → LCEL 체인.
+
+```bash
+uv run python -m chatbot.rag_langchain --ingest   # 인덱스 생성 (컬렉션: rag_docs_langchain)
+uv run python -m chatbot.rag_langchain "RAG가 뭐야?"
+```
+
+### 11-2. LangGraph Agent (`chatbot/agent_graph.py`)
+
+스스로 판단하고 재시도하는 Agentic RAG.
+
+```
+analyze_question → (잡담이면 direct_answer로 종료)
+→ retrieve → grade_documents(LLM이 청크별 관련성 평가)
+→ 근거 부족 시 rewrite_question → retrieve 재시도 (최대 2회)
+→ generate → self_check(답변이 문서 근거인지 자기검증)
+```
+
+```bash
+uv run python -m chatbot.agent_graph "LoRA가 뭐야?"
+# API: POST /agent (uv run uvicorn chatbot.main:app --port 8002)
+# 통합 UI: uv run uvicorn chatbot.local_chat.app:app --port 8001
+# 채팅창 위 토글에서 "Agent가 답변" 선택
+```
+
+응답에 `rewrites`(재검색 횟수), `grounded`(자기검증 결과), `trace`(실행 경로)가 포함된다.
+
+### 11-3. LoRA / QLoRA 파인튜닝 (`chatbot/finetune_lora.py`)
+
+`qa_corpus.txt`의 QA 쌍으로 Qwen에 LoRA 어댑터를 학습한다.
+답변 부분만 loss에 반영하도록 프롬프트 토큰은 -100으로 마스킹한다.
+
+```bash
+uv run python -m chatbot.finetune_lora                # Mac/CPU: LoRA
+python -m chatbot.finetune_lora --qlora               # Colab/CUDA: QLoRA(4bit, bitsandbytes)
+uv run python -m chatbot.finetune_lora --merge        # 어댑터를 원본에 병합 → artifacts/qwen_merged
+```
+
+학습된 어댑터 적용:
+
+```bash
+QWEN_LORA_ADAPTER=artifacts/lora_adapter uv run python -m chatbot.qwen_local "이름 알려줘"
+```
+
+### 11-4. 양자화 및 GGUF 변환
+
+```bash
+# bitsandbytes 양자화 로딩 (CUDA 전용)
+QWEN_QUANT=4bit python -m chatbot.qwen_local "안녕"   # 메모리 약 1/4
+QWEN_QUANT=8bit python -m chatbot.qwen_local "안녕"   # 메모리 약 1/2
+
+# GGUF 변환 + Q4_K_M 양자화 (llama.cpp, Mac에서도 동작)
+bash scripts/convert_gguf.sh
+```
+
+### 11-5. Docker 배포
+
+```bash
+docker compose up --build      # http://localhost:8002/docs
+```
+
+API 키는 `.env`에서 주입되고, 벡터DB(`artifacts/chroma_db`)는 볼륨으로 연결된다.
+
+### 11-6. 신규 의존성 설치
+
+```bash
+uv sync                        # langchain 계열 + peft + datasets
+uv sync --extra cuda           # (CUDA 환경) bitsandbytes 추가
+```

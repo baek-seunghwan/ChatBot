@@ -1,0 +1,15 @@
+.venv
+.git
+__pycache__
+*.pyc
+.env
+local_chat.db
+artifacts/chatbot.pt
+artifacts/hf_cache
+artifacts/llama.cpp
+artifacts/gguf
+artifacts/lora_checkpoints
+artifacts/qwen_merged
+colab_qa_train.zip
+*.ipynb
+eval_result.csv
