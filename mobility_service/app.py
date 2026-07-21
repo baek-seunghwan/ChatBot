@@ -10,6 +10,7 @@ from fastapi import Body, FastAPI, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, JSONResponse
 
 from .agent import DeliveryAgent
+from .bundle import bundle_quote
 from .client import KakaoApiError, KakaoMobilityClient
 from .config import Settings
 from .conversation_store import ConversationStore
@@ -18,11 +19,15 @@ from .local_responder import local_model_reply
 from .models import (
     AgentChatRequest,
     ApiEnvelope,
+    BundleQuoteRequest,
     CallbackBody,
+    CarpoolPlanRequest,
     CreateDeliveryRequest,
     DeliveryDraft,
 )
+from .rideshare import carpool_plan
 from .orders import cancel_order_by_id, get_order_status, place_order
+from .pool_store import PoolStore
 from .store import MobilityStore
 from .web import INDEX_HTML
 
@@ -35,14 +40,17 @@ def create_app(
     geocoder: KakaoGeocodeClient | None = None,
     conversations: ConversationStore | None = None,
     agent: DeliveryAgent | None = None,
+    pool_store: PoolStore | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings.from_env()
     resolved_store = store or MobilityStore(resolved_settings.database_path)
     resolved_client = client or KakaoMobilityClient(resolved_settings)
     resolved_geocoder = geocoder or KakaoGeocodeClient(resolved_settings)
     resolved_conversations = conversations or ConversationStore(resolved_settings.database_path)
+    resolved_pools = pool_store or PoolStore(resolved_settings.database_path)
     resolved_agent = agent or DeliveryAgent(
-        resolved_client, resolved_geocoder, resolved_store, resolved_conversations
+        resolved_client, resolved_geocoder, resolved_store, resolved_conversations,
+        pools=resolved_pools,
     )
     owns_client = client is None
     owns_geocoder = geocoder is None
@@ -231,6 +239,70 @@ def create_app(
             )
         result = await resolved_agent.achat(session_id=session_id, message=request.message)
         return ApiEnvelope(data=result.to_dict())
+
+    @application.post("/api/bundle/quote", response_model=ApiEnvelope)
+    async def bundle_quote_route(request: BundleQuoteRequest) -> ApiEnvelope:
+        try:
+            result = await bundle_quote(
+                resolved_client,
+                resolved_geocoder,
+                request.pickup_address,
+                request.dropoff_addresses,
+                product_size=request.product_size.value,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        return ApiEnvelope(data=result)
+
+    @application.post("/api/carpool/plan", response_model=ApiEnvelope)
+    async def carpool_plan_route(request: CarpoolPlanRequest) -> ApiEnvelope:
+        origin = await resolved_geocoder.search_address(request.origin_address)
+        if origin is None:
+            raise HTTPException(
+                status_code=422, detail=f"출발지 주소를 찾지 못했습니다: {request.origin_address}"
+            )
+        passengers = []
+        for passenger in request.passengers:
+            location = await resolved_geocoder.search_address(passenger.address)
+            if location is None:
+                raise HTTPException(
+                    status_code=422, detail=f"목적지 주소를 찾지 못했습니다: {passenger.address}"
+                )
+            passengers.append({"name": passenger.name, "location": location})
+        try:
+            plan = carpool_plan(origin, passengers)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc))
+        return ApiEnvelope(data=plan)
+
+    @application.get("/api/pool/requests", response_model=ApiEnvelope)
+    async def list_pool_requests() -> ApiEnvelope:
+        """합승 대기 보드: 진행 중인 합승 요청 목록 (개인정보 제외 요약)."""
+        board = [
+            {
+                "id": request["id"],
+                "pickupAddress": request["pickup"]["address"],
+                "dropoffAddress": request["dropoff"]["address"],
+                "productName": request["product"].get("productName", "물품"),
+                "soloPrice": request["soloPrice"],
+                "createdAt": request["createdAt"],
+            }
+            for request in resolved_pools.list_open()
+        ]
+        return ApiEnvelope(data=board)
+
+    @application.delete("/api/pool/requests/{request_id}", response_model=ApiEnvelope)
+    async def cancel_pool_request(
+        request_id: int,
+        x_session_id: str | None = Header(default=None, alias="X-Session-Id"),
+    ) -> ApiEnvelope:
+        if not x_session_id:
+            raise HTTPException(status_code=422, detail="X-Session-Id 헤더가 필요합니다.")
+        if not resolved_pools.cancel_request(request_id, x_session_id):
+            raise HTTPException(
+                status_code=404, detail="취소할 수 있는 합승 요청을 찾지 못했습니다."
+            )
+        return ApiEnvelope(data={"canceled": request_id})
 
     return application
 
