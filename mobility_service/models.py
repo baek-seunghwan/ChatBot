@@ -120,3 +120,21 @@ class AgentChatRequest(CamelModel):
     message: str = Field(min_length=1, max_length=1000)
     mode: str = Field(default="ai", pattern=r"^(ai|local)$")
 
+
+class BundleQuoteRequest(CamelModel):
+    pickup_address: str = Field(alias="pickupAddress", min_length=2, max_length=200)
+    dropoff_addresses: list[str] = Field(
+        alias="dropoffAddresses", min_length=2, max_length=5
+    )
+    product_size: ProductSize = Field(default=ProductSize.XS, alias="productSize")
+
+
+class CarpoolPassenger(CamelModel):
+    name: str | None = Field(default=None, max_length=50)
+    address: str = Field(min_length=2, max_length=200)
+
+
+class CarpoolPlanRequest(CamelModel):
+    origin_address: str = Field(alias="originAddress", min_length=2, max_length=200)
+    passengers: list[CarpoolPassenger] = Field(min_length=2, max_length=4)
+

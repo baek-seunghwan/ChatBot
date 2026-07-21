@@ -26,3 +26,4 @@ def local_model_reply(prompt: str) -> str:
         "MoveOps 로컬 모드는 일반 잡담 모델을 포함하지 않습니다. "
         "배송 요청은 기본 AI 모드로 출발지/도착지/물품 정보를 알려주세요."
     )
+
