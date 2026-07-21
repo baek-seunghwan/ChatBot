@@ -1,0 +1,316 @@
+<title>퀵 합승 — 기능 설명</title>
+<style>
+  :root {
+    --bg: #f7f6f2;
+    --panel: #ffffff;
+    --ink: #191919;
+    --muted: #716f65;
+    --line: #e6e4da;
+    --yellow: #fee500;
+    --yellow-soft: #fff7bf;
+    --on-yellow: #191919;
+    --blue: #315efb;
+    --red: #c43c35;
+    --green: #0f7a49;
+    --green-soft: #e7f4ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16150f; --panel: #201f18; --ink: #f1efe6; --muted: #a4a293;
+      --line: #37352a; --yellow: #fee500; --yellow-soft: #3a350e; --on-yellow: #191919;
+      --blue: #86a0ff; --red: #e57e75; --green: #57c491; --green-soft: #12301f;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f7f6f2; --panel: #ffffff; --ink: #191919; --muted: #716f65;
+    --line: #e6e4da; --yellow: #fee500; --yellow-soft: #fff7bf; --on-yellow: #191919;
+    --blue: #315efb; --red: #c43c35; --green: #0f7a49; --green-soft: #e7f4ec;
+  }
+  :root[data-theme="dark"] {
+    --bg: #16150f; --panel: #201f18; --ink: #f1efe6; --muted: #a4a293;
+    --line: #37352a; --yellow: #fee500; --yellow-soft: #3a350e; --on-yellow: #191919;
+    --blue: #86a0ff; --red: #e57e75; --green: #57c491; --green-soft: #12301f;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0;
+    font-family: "SUIT Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 20px 72px; display: flex; flex-direction: column; gap: 36px; }
+
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 800; letter-spacing: .08em;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .eyebrow::before { content: ""; width: 22px; height: 10px; border-radius: 5px; background: var(--yellow); }
+  h1 {
+    margin: 10px 0 6px; font-size: clamp(28px, 5.5vw, 42px);
+    font-weight: 900; letter-spacing: -0.02em; text-wrap: balance; line-height: 1.15;
+  }
+  .lede { margin: 0; max-width: 36em; color: var(--muted); font-size: 16px; }
+  .lede b { color: var(--ink); }
+
+  /* ── 기능 섹션: 큰 카드 2개 ─────────────────────── */
+  .feature {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 20px; padding: 28px 28px 26px;
+  }
+  .feature-label {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-size: 12px; font-weight: 900; letter-spacing: .1em; color: var(--on-yellow);
+    background: var(--yellow); border-radius: 999px; padding: 5px 14px;
+  }
+  .feature > h2 { margin: 14px 0 4px; font-size: 24px; font-weight: 900; letter-spacing: -0.015em; }
+  .feature > .desc { margin: 0; color: var(--muted); font-size: 14.5px; max-width: 44em; }
+  .feature > .desc b { color: var(--ink); }
+
+  h3.sec {
+    margin: 30px 0 12px; padding-top: 20px; border-top: 1px solid var(--line);
+    font-size: 15px; font-weight: 850; letter-spacing: -0.01em;
+  }
+  h3.sec small { font-weight: 600; color: var(--muted); margin-left: 8px; font-size: 12.5px; }
+
+  /* 비교 */
+  .versus { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .route-box { border: 1px solid var(--line); border-radius: 14px; padding: 16px 16px 12px; position: relative; }
+  .route-box.win { border-color: var(--yellow); box-shadow: 0 0 0 3px var(--yellow-soft); }
+  .route-tag { font-size: 12px; font-weight: 800; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; }
+  .route-box.win .route-tag { color: var(--ink); }
+  .badge-save {
+    position: absolute; top: -12px; right: 14px;
+    background: var(--yellow); color: var(--on-yellow);
+    font-size: 12px; font-weight: 900; padding: 4px 10px; border-radius: 999px;
+  }
+  .price-line { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .price { font-size: 25px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .price.strike { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; font-size: 19px; font-weight: 750; }
+  .price-note { font-size: 12.5px; color: var(--muted); }
+  .route-svg { width: 100%; height: auto; display: block; }
+  .route-svg text { font-family: inherit; font-size: 11px; font-weight: 700; fill: var(--ink); }
+  .route-svg .dim { fill: var(--muted); font-weight: 600; }
+
+  /* 분담: 카드 대신 가벼운 행 */
+  .pay-rows { display: flex; flex-direction: column; }
+  .pay-row {
+    display: grid; grid-template-columns: auto 1fr auto auto; gap: 12px; align-items: baseline;
+    padding: 10px 2px; border-bottom: 1px dashed var(--line);
+    font-size: 14px;
+  }
+  .pay-row:last-of-type { border-bottom: none; }
+  .pay-row .who { font-weight: 800; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .dot.a { background: var(--blue); }
+  .dot.b { background: var(--red); }
+  .pay-row .path { color: var(--muted); font-size: 13px; }
+  .pay-row .amount { font-weight: 900; font-variant-numeric: tabular-nums; font-size: 17px; white-space: nowrap; }
+  .pay-row .save { color: var(--green); font-weight: 800; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .rule-note { margin: 10px 0 0; font-size: 13px; color: var(--muted); }
+  .rule-note b { color: var(--ink); }
+
+  /* 시스템 상세 단계 */
+  .steps { display: flex; flex-direction: column; counter-reset: step; }
+  .step { display: grid; grid-template-columns: 34px 1fr; gap: 14px; position: relative; padding-bottom: 18px; }
+  .step:last-child { padding-bottom: 0; }
+  .step::before {
+    counter-increment: step; content: counter(step);
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-size: 13px; font-weight: 900;
+    display: grid; place-items: center; z-index: 1;
+  }
+  .step:not(:last-child)::after {
+    content: ""; position: absolute; left: 13.5px; top: 28px; bottom: 0;
+    width: 1.5px; background: var(--line);
+  }
+  .step.hot::before { background: var(--yellow); color: var(--on-yellow); }
+  .step h4 { margin: 2px 0 2px; font-size: 14.5px; font-weight: 800; }
+  .step p { margin: 0; color: var(--muted); font-size: 13.5px; max-width: 48em; }
+  .step p b { color: var(--ink); }
+  .step .chat {
+    display: inline-block; margin-top: 6px; padding: 7px 12px;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 12px 12px 12px 3px;
+    font-size: 12.5px; color: var(--ink);
+  }
+  .step code {
+    font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px;
+  }
+
+  .kicker {
+    margin: 26px 0 0; padding: 13px 16px; border-radius: 12px;
+    background: var(--yellow-soft); border: 1px solid var(--yellow);
+    font-size: 13.5px; font-weight: 700; color: var(--ink);
+  }
+
+  footer { color: var(--muted); font-size: 12px; text-align: center; }
+
+  @media (max-width: 640px) {
+    .versus { grid-template-columns: 1fr; }
+    .pay-row { grid-template-columns: auto 1fr; }
+    .pay-row .amount, .pay-row .save { grid-column: 2; justify-self: end; }
+    .badge-save { top: -10px; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">MoveOps · 카카오모빌리티 API + AI 챗봇</span>
+    <h1>새로 추가한 기능은 두 가지입니다</h1>
+    <p class="lede"><b>① 퀵 합승</b> — 모르는 사람끼리 물건을 한 차에 묶어 요금을 나누는 배송 시스템(실제 주문까지 동작). <b>② 택시 동승</b> — 같은 원리를 사람에 적용한 하차 순서·요금 분배 계산. 두 기능 모두 접수와 판단을 AI 챗봇이 처리합니다.</p>
+  </header>
+
+  <!-- ══════════════ 기능 1 ══════════════ -->
+  <section class="feature">
+    <span class="feature-label">기능 01 · 퀵 합승</span>
+    <h2>같은 방향이면, 모르는 사람끼리도 한 차로</h2>
+    <p class="desc">서울→대전 퀵 한 건은 10만 원이 넘습니다. 카카오 퀵의 "경유지 추가 혜택"은 <b>한 사람</b> 물건만 묶을 수 있지만, 이 시스템은 <b>서로 다른 발송인</b>의 물건을 AI가 방향으로 매칭해 한 차로 묶습니다. 기사님은 한 번만 달리고, 요금은 나눠 냅니다.</p>
+
+    <h3 class="sec">요금이 이렇게 달라집니다 <small>Sandbox 실제 견적으로 검증</small></h3>
+    <div class="versus">
+      <div class="route-box">
+        <div class="route-tag">지금 방식 — 차량 2대, 요금 2번</div>
+        <svg class="route-svg" viewBox="0 0 360 120" role="img" aria-label="따로 보낼 때: 두 차량이 각각 대전까지 이동">
+          <line x1="24" y1="34" x2="336" y2="34" stroke="var(--blue)" stroke-width="2.5" stroke-dasharray="6 5"/>
+          <circle cx="24" cy="34" r="6" fill="var(--blue)"/>
+          <circle cx="336" cy="34" r="6" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+          <text x="24" y="16" text-anchor="start">A · 강남역</text>
+          <text x="336" y="16" text-anchor="end">대전 유성구</text>
+          <text x="180" y="52" text-anchor="middle" class="dim">100,100원</text>
+          <line x1="24" y1="92" x2="336" y2="92" stroke="var(--red)" stroke-width="2.5" stroke-dasharray="6 5"/>
+          <circle cx="24" cy="92" r="6" fill="var(--red)"/>
+          <circle cx="336" cy="92" r="6" fill="none" stroke="var(--red)" stroke-width="2.5"/>
+          <text x="24" y="74" text-anchor="start">B · 잠실역</text>
+          <text x="336" y="74" text-anchor="end">대전 서구</text>
+          <text x="180" y="110" text-anchor="middle" class="dim">102,200원</text>
+        </svg>
+        <div class="price-line">
+          <span class="price">202,300원</span>
+          <span class="price-note">두 사람 요금 합계</span>
+        </div>
+      </div>
+      <div class="route-box win">
+        <span class="badge-save">42% 절약</span>
+        <div class="route-tag">퀵 합승 — 차량 1대, 요금 나눔</div>
+        <svg class="route-svg" viewBox="0 0 360 120" role="img" aria-label="합승: 한 차량이 강남, 잠실에서 싣고 대전 두 곳에 내림">
+          <polyline points="24,88 118,40 242,40 336,88" fill="none" stroke="var(--yellow)" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          <polyline points="24,88 118,40 242,40 336,88" fill="none" stroke="var(--ink)" stroke-width="1.5" stroke-dasharray="2 7" stroke-linecap="round"/>
+          <circle cx="24" cy="88" r="6.5" fill="var(--blue)"/>
+          <circle cx="118" cy="40" r="6.5" fill="var(--red)"/>
+          <circle cx="242" cy="40" r="6.5" fill="none" stroke="var(--red)" stroke-width="2.5"/>
+          <circle cx="336" cy="88" r="6.5" fill="none" stroke="var(--blue)" stroke-width="2.5"/>
+          <text x="24" y="110" text-anchor="start">① 강남 픽업</text>
+          <text x="118" y="22" text-anchor="middle">② 잠실 픽업</text>
+          <text x="242" y="22" text-anchor="middle">③ 서구 하차</text>
+          <text x="336" y="110" text-anchor="end">④ 유성 하차</text>
+        </svg>
+        <div class="price-line">
+          <span class="price">118,000원</span>
+          <span class="price strike">202,300원</span>
+        </div>
+      </div>
+    </div>
+    <div class="pay-rows" style="margin-top:14px">
+      <div class="pay-row">
+        <span class="who"><span class="dot a"></span>A 분담</span>
+        <span class="path">강남역 → 대전 유성구 · 서류</span>
+        <span class="amount">58,400원</span>
+        <span class="save">−41,700원</span>
+      </div>
+      <div class="pay-row">
+        <span class="who"><span class="dot b"></span>B 분담</span>
+        <span class="path">잠실역 → 대전 서구 · 상자</span>
+        <span class="amount">59,600원</span>
+        <span class="save">−42,600원</span>
+      </div>
+    </div>
+    <p class="rule-note">분배 규칙: 합승 요금 118,000원을 <b>각자 단독 견적 비율(100,100 : 102,200)</b>로 나눔. 멀리 보내는 사람이 조금 더 내되, 둘 다 혼자보다 훨씬 쌉니다.</p>
+
+    <h3 class="sec">합승 시스템은 이렇게 굴러갑니다</h3>
+    <div class="steps">
+      <div class="step">
+        <div>
+          <h4>채팅 한 줄로 접수</h4>
+          <p>AI가 문장에서 <b>출발지·도착지·물품·연락처</b>를 추출하고, 카카오 로컬 API로 주소를 좌표로 바꾼 뒤, 단독 견적부터 조회해둡니다. 정보가 빠지면 그 항목만 되묻습니다.</p>
+          <span class="chat">"강남역에서 대전 유성구로 서류 하나, 합승으로 싸게 보내줘"</span>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h4>대기 보드에 등록</h4>
+          <p>아직 같은 방향이 없으면 <b>합승 대기 보드</b>에 올라갑니다. 이때 "매칭되면 확인 없이 바로 진행해도 될까요?"라고 물어 <b>사전 동의</b>를 받아둡니다 — 나중에 상대가 나타났을 때 자리를 비워도 합승이 성립되게 하는 장치입니다.</p>
+        </div>
+      </div>
+      <div class="step hot">
+        <div>
+          <h4>새 요청이 들어올 때마다 매칭 판정</h4>
+          <p>두 조건을 <b>모두</b> 통과해야 합승이 성립합니다: ① 두 배송의 진행 <b>방위각 차이 ≤ 30°</b> (같은 방향인가) ② 한 차로 도는 총 주행거리가 각자 따로 갈 때 합의 <b>85% 이하</b> (묶어서 실익이 있는가). 반대 방향이거나 우회가 커지면 매칭하지 않습니다.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h4>경유 동선 설계</h4>
+          <p>차량은 <b>픽업을 전부 마친 뒤 하차</b>하는 순서로 돕니다. 픽업들과 하차들 각각을 가까운 곳부터 방문하는 순서로 정렬해 동선을 만듭니다 (강남 픽업 → 잠실 픽업 → 서구 하차 → 유성 하차).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h4>요금 비교표 → 명시적 확정</h4>
+          <p>"따로 202,300원 vs 합승 118,000원, 내 분담금 59,600원"을 보여주고 사용자가 <b>'네'라고 답해야만</b> 주문이 실행됩니다. 같은 제안에 '네'를 두 번 보내도 주문번호가 결정론적으로 생성되어 <b>중복 접수가 차단</b>됩니다.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div>
+          <h4>카카오모빌리티 API로 실주문은 1건</h4>
+          <p>픽업 2곳→하차 2곳을 경유지로 엮은 실제 퀵 주문이 생성되고(<code>pool-412a4789b02c</code>, Sandbox 검증), 두 사람 모두 자기 채팅에서 "내 합승 어떻게 됐어?"로 매칭 결과·분담금·배송 상태를 확인합니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="kicker">카카오가 안 만드는 이유: 주문 2건 받을 요금이 1건으로 줄어드는 기능이라, 매출 구조상 플랫폼이 먼저 만들 이유가 없는 자리입니다.</p>
+  </section>
+
+  <!-- ══════════════ 기능 2 ══════════════ -->
+  <section class="feature">
+    <span class="feature-label">기능 02 · 택시 동승</span>
+    <h2>같은 원리를 사람에게 — 하차 순서와 요금 분배</h2>
+    <p class="desc">"강남역에서 A는 잠실, B는 건대 가는데 요금 어떻게 나눠?" — AI가 <b>모든 방문 순서를 비교해 총 이동이 가장 짧은 하차 순서</b>를 정하고, 요금은 각자 혼자 탔을 때 요금에 비례해 나눕니다.</p>
+
+    <h3 class="sec">검증 예시</h3>
+    <svg class="route-svg" viewBox="0 0 720 74" role="img" aria-label="동승 경로: 강남역 출발, 건대입구 먼저 하차, 잠실 마지막 하차">
+      <polyline points="30,40 360,40 690,40" fill="none" stroke="var(--yellow)" stroke-width="5" stroke-linecap="round"/>
+      <circle cx="30" cy="40" r="7" fill="var(--ink)"/>
+      <circle cx="360" cy="40" r="7" fill="var(--red)"/>
+      <circle cx="690" cy="40" r="7" fill="var(--blue)"/>
+      <text x="30" y="20" text-anchor="start">출발 · 강남역</text>
+      <text x="360" y="20" text-anchor="middle">① B 하차 · 건대입구</text>
+      <text x="690" y="20" text-anchor="end">② A 하차 · 잠실</text>
+      <text x="360" y="64" text-anchor="middle" class="dim">순서를 바꿔 계산해보고 총 13.0km 최단 경로 선택</text>
+    </svg>
+    <div class="pay-rows" style="margin-top:8px">
+      <div class="pay-row">
+        <span class="who"><span class="dot b"></span>B 분담</span>
+        <span class="path">건대입구 · 먼저 하차 (혼자 타면 9,700원)</span>
+        <span class="amount">6,700원</span>
+        <span class="save">−3,000원</span>
+      </div>
+      <div class="pay-row">
+        <span class="who"><span class="dot a"></span>A 분담</span>
+        <span class="path">잠실 · 끝까지 탑승 (혼자 타면 10,400원)</span>
+        <span class="amount">7,200원</span>
+        <span class="save">−3,200원</span>
+      </div>
+    </div>
+    <p class="rule-note">총 요금 13,900원을 <b>단독 요금 비례</b>로 분배 — 멀리 가는 사람이 더 내되 전원이 이득. 택시는 공개 API가 없어 <b>거리 기반 추정 요금</b>으로 계산합니다 (실호출 없음).</p>
+
+    <p class="kicker">카카오가 안 만드는 이유: 카카오는 2019년 카풀 서비스를 택시업계 반발로 접었습니다. 기술이 아니라 이해관계 때문에 비어 있는 영역입니다.</p>
+  </section>
+
+  <footer>MoveOps 개인 프로젝트 · 배송 금액은 카카오모빌리티 Sandbox 실제 견적, 택시 요금은 거리 기반 추정치</footer>
+
+</div>
