@@ -14,7 +14,7 @@ os.environ.setdefault("LANGSMITH_TRACING", "false")
 from langgraph.graph import END, START, StateGraph
 from pydantic import ValidationError
 
-from chatbot.providers import LLMRouter
+from .providers import LLMRouter
 
 from .client import KakaoApiError, KakaoMobilityClient
 from .config import Settings

@@ -18,7 +18,7 @@ class LLMResult:
 
 
 class LLMRouter:
-    """Call the primary LLM first and use the fallback only on API failure."""
+    """Call the primary LLM first and use fallback only on API failure."""
 
     def __init__(
         self,
@@ -39,9 +39,7 @@ class LLMRouter:
             else os.getenv("ANTHROPIC_API_KEY")
         )
         self.gemini_api_key = (
-            gemini_api_key
-            if gemini_api_key is not None
-            else os.getenv("GEMINI_API_KEY")
+            gemini_api_key if gemini_api_key is not None else os.getenv("GEMINI_API_KEY")
         )
         self.anthropic_model = anthropic_model or os.getenv(
             "ANTHROPIC_MODEL", DEFAULT_ANTHROPIC_MODEL
@@ -80,7 +78,9 @@ class LLMRouter:
             messages=[{"role": "user", "content": prompt}],
         )
         text = "".join(
-            block.text for block in message.content if getattr(block, "type", "") == "text"
+            block.text
+            for block in message.content
+            if getattr(block, "type", "") == "text"
         ).strip()
         if not text:
             raise RuntimeError("Anthropic이 빈 응답을 반환했습니다.")
@@ -125,8 +125,6 @@ class LLMRouter:
         max_tokens: int = 256,
         temperature: float = 0.2,
     ) -> LLMResult:
-        # API 키가 없는 self 객체는 trace 입력에 넣지 않는다. 질문/프롬프트와
-        # 응답은 LangSmith 관측을 켠 경우에만 전송된다.
         with trace(
             "llm-router",
             run_type="chain",
@@ -141,9 +139,7 @@ class LLMRouter:
         ) as router_run:
             errors: list[str] = []
             for provider in self.provider_order:
-                model = (
-                    self.anthropic_model if provider == "anthropic" else self.gemini_model
-                )
+                model = self.anthropic_model if provider == "anthropic" else self.gemini_model
                 try:
                     with trace(
                         f"{provider}.generate",
@@ -166,9 +162,7 @@ class LLMRouter:
                                 prompt, system, max_tokens, temperature
                             )
                         else:
-                            raise RuntimeError(
-                                f"지원하지 않는 LLM 제공자입니다: {provider}"
-                            )
+                            raise RuntimeError(f"지원하지 않는 LLM 제공자입니다: {provider}")
                         provider_run.end(
                             outputs={
                                 "text": result.text,
@@ -185,31 +179,7 @@ class LLMRouter:
                     )
                     return result
                 except Exception as exc:
-                    # 오류 타입만 남기면 원인을 알 수 없으므로 메시지도 함께 보존
                     errors.append(f"{provider}: {type(exc).__name__}: {str(exc)[:200]}")
             raise RuntimeError(
                 "사용 가능한 LLM API가 없습니다 (" + " | ".join(errors) + ")."
             )
-
-    def health(self) -> dict[str, dict[str, object]]:
-        """각 제공자에 최소 호출을 보내 실제 연결 상태와 오류 원인을 확인한다."""
-        report: dict[str, dict[str, object]] = {}
-        for provider in self.provider_order:
-            try:
-                if provider == "anthropic":
-                    result = self._anthropic_generate(
-                        "ping", system="'pong'이라고만 답하세요.", max_tokens=8, temperature=0.0
-                    )
-                elif provider == "gemini":
-                    result = self._gemini_generate(
-                        "ping", system="'pong'이라고만 답하세요.", max_tokens=8, temperature=0.0
-                    )
-                else:
-                    raise RuntimeError(f"지원하지 않는 LLM 제공자입니다: {provider}")
-                report[provider] = {"ok": True, "model": result.model}
-            except Exception as exc:
-                report[provider] = {
-                    "ok": False,
-                    "error": f"{type(exc).__name__}: {str(exc)[:300]}",
-                }
-        return report
