@@ -42,6 +42,8 @@ RAG_DOCS_DIR = Path(os.getenv("RAG_DOCS_DIR", REPO_ROOT / "chatbot" / "rag_docs"
 
 # 📝 벡터DB(ChromaDB) 저장 위치
 CHROMA_DIR = Path(os.getenv("RAG_CHROMA_DIR", REPO_ROOT / "artifacts" / "chroma_db"))
+FAISS_DIR = Path(os.getenv("RAG_FAISS_DIR", REPO_ROOT / "artifacts" / "faiss"))
+BM25_DIR = Path(os.getenv("RAG_BM25_DIR", REPO_ROOT / "artifacts" / "bm25"))
 COLLECTION_NAME = "rag_docs"
 
 # 📝 청크 설정
@@ -52,7 +54,23 @@ CHUNK_SIZE = int(os.getenv("RAG_CHUNK_SIZE", "300"))
 CHUNK_OVERLAP = int(os.getenv("RAG_CHUNK_OVERLAP", "50"))
 TOP_K = int(os.getenv("RAG_TOP_K", "3"))
 
-# 📝 이 점수(코사인 유사도)보다 낮은 청크는 근거로 쓰지 않는다.
+# 검색 백엔드: 하나만 쓰거나 쉼표로 여러 개를 지정해 하이브리드 검색한다.
+RETRIEVAL_BACKENDS = tuple(
+    item.strip().lower()
+    for item in os.getenv("RAG_RETRIEVAL_BACKENDS", "chroma,faiss,bm25").split(",")
+    if item.strip()
+)
+HYBRID_CANDIDATE_MULTIPLIER = int(
+    os.getenv("RAG_HYBRID_CANDIDATE_MULTIPLIER", "3")
+)
+HYBRID_RRF_K = int(os.getenv("RAG_HYBRID_RRF_K", "60"))
+RETRIEVAL_WEIGHTS = {
+    "chroma": float(os.getenv("RAG_CHROMA_WEIGHT", "0.25")),
+    "faiss": float(os.getenv("RAG_FAISS_WEIGHT", "0.25")),
+    "bm25": float(os.getenv("RAG_BM25_WEIGHT", "0.50")),
+}
+
+# 📝 이 통합 관련도 점수보다 낮은 청크는 근거로 쓰지 않는다.
 #    관련 문서가 하나도 없으면 "문서에서 확인할 수 없습니다"로 답한다.
 MIN_RELEVANCE_SCORE = float(os.getenv("RAG_MIN_RELEVANCE_SCORE", "0.35"))
 

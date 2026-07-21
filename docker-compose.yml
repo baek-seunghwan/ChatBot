@@ -8,8 +8,10 @@ services:
     env_file:
       - .env            # ANTHROPIC_API_KEY, GEMINI_API_KEY
     volumes:
-      # 📝 벡터DB를 볼륨으로 연결하면 이미지를 다시 빌드하지 않고도 인덱스 갱신 가능
+      # 📝 검색 인덱스를 볼륨으로 연결하면 이미지 재빌드 없이 갱신 가능
       - ./artifacts/chroma_db:/app/artifacts/chroma_db
+      - ./artifacts/faiss:/app/artifacts/faiss
+      - ./artifacts/bm25:/app/artifacts/bm25
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/')"]

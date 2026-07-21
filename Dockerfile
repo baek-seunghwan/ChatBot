@@ -23,6 +23,8 @@ RUN uv sync --no-dev --no-install-project || uv sync --no-dev
 COPY chatbot ./chatbot
 COPY scripts ./scripts
 COPY artifacts/chroma_db ./artifacts/chroma_db
+COPY artifacts/faiss ./artifacts/faiss
+COPY artifacts/bm25 ./artifacts/bm25
 
 # 📝 임베딩 모델을 이미지 빌드 시점에 미리 다운로드 (컨테이너 첫 요청 지연 방지)
 RUN uv run python -c "from sentence_transformers import SentenceTransformer; \

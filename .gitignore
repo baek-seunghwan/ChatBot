@@ -6,9 +6,13 @@ __pycache__/
 .env
 .env.*
 !.env.example
+mobility_service/data/*.db
+mobility_service/data/*.db-*
 
 artifacts/*backup*.pt
 artifacts/chroma_db/
+artifacts/faiss/
+artifacts/bm25/
 eval_result.csv
 eval/results/
 chatbot/qa_corpus.txt

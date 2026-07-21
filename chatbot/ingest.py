@@ -1,27 +1,32 @@
-# 📝 ingest: 문서 읽기 → chunk 분할 → embedding → ChromaDB 저장
-# 📝 실행: uv run python -m chatbot.ingest
+"""문서 로딩 → 청킹 → 임베딩 → Chroma/FAISS/BM25 인덱스 생성."""
+
 from __future__ import annotations
 
 from pathlib import Path
 
+from .chunking import DocumentChunker
 from .config import (
+    BM25_DIR,
     CHROMA_DIR,
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     COLLECTION_NAME,
-    EMBEDDING_CACHE_DIR,
-    EMBEDDING_LOCAL_FILES_ONLY,
-    EMBEDDING_MODEL,
+    FAISS_DIR,
     RAG_DOCS_DIR,
+    RETRIEVAL_BACKENDS,
 )
+from .embeddings import Embedder, SentenceTransformerEmbedder
+from .indexes import BM25Index, ChromaIndex, FaissIndex, parse_backends
+from .rag_types import SourceDocument
+
+SUPPORTED_SUFFIXES = (".txt", ".md", ".pdf")
 
 
 def read_document(path: Path) -> str:
-    """txt / md / pdf 파일에서 텍스트를 읽는다."""
+    """UTF-8 텍스트/Markdown 또는 PDF에서 텍스트를 읽는다."""
     if path.suffix.lower() in (".txt", ".md"):
         return path.read_text(encoding="utf-8")
     if path.suffix.lower() == ".pdf":
-        # 📝 PDF는 pypdf가 설치된 경우에만 지원 (uv add pypdf)
         from pypdf import PdfReader
 
         reader = PdfReader(str(path))
@@ -30,39 +35,26 @@ def read_document(path: Path) -> str:
 
 
 def load_documents(docs_dir: Path) -> list[tuple[str, str]]:
-    """문서 폴더에서 (파일이름, 내용) 목록을 읽는다."""
-    documents = []
-    for path in sorted(docs_dir.iterdir()):
-        if path.suffix.lower() in (".txt", ".md", ".pdf"):
-            documents.append((path.name, read_document(path)))
+    """기존 API 호환용: 문서 폴더를 (파일명, 본문) 목록으로 읽는다."""
+    if not docs_dir.exists():
+        raise FileNotFoundError(f"문서 폴더가 없습니다: {docs_dir}")
+    documents = [
+        (path.name, read_document(path))
+        for path in sorted(docs_dir.iterdir())
+        if path.is_file() and path.suffix.lower() in SUPPORTED_SUFFIXES
+    ]
     if not documents:
         raise FileNotFoundError(f"{docs_dir}에 txt/md/pdf 문서가 없습니다.")
     return documents
 
 
 def split_into_chunks(text: str, chunk_size: int, chunk_overlap: int) -> list[str]:
-    """문서를 청크(작은 덩어리)로 나눈다.
-
-    1) 빈 줄 기준으로 문단을 먼저 나누고
-    2) 문단이 chunk_size보다 길면 chunk_overlap만큼 겹치게 잘라낸다.
-    문서를 통째로 임베딩하면 여러 주제가 섞여 검색이 잘 안 되기 때문이다.
-    """
-    chunks: list[str] = []
-    for paragraph in text.split("\n\n"):
-        paragraph = paragraph.strip()
-        if not paragraph:
-            continue
-        if len(paragraph) <= chunk_size:
-            chunks.append(paragraph)
-            continue
-        # 📝 긴 문단은 chunk_size 간격으로, 앞부분을 chunk_overlap만큼 겹쳐서 자른다.
-        start = 0
-        while start < len(paragraph):
-            piece = paragraph[start : start + chunk_size].strip()
-            if piece:
-                chunks.append(piece)
-            start += chunk_size - chunk_overlap
-    return chunks
+    """기존 API 호환용: 경계 인식 청커로 본문 문자열만 반환한다."""
+    chunker = DocumentChunker(chunk_size, chunk_overlap)
+    return [
+        chunk.text
+        for chunk in chunker.split(SourceDocument(source="document", text=text))
+    ]
 
 
 def build(
@@ -70,65 +62,74 @@ def build(
     chunk_overlap: int | None = None,
     collection_name: str | None = None,
     quiet: bool = False,
+    *,
+    backends: str | tuple[str, ...] | list[str] | None = None,
+    docs_dir: Path | None = None,
+    embedder: Embedder | None = None,
 ) -> int:
-    """문서 전체를 임베딩해서 ChromaDB에 저장하고, 저장한 청크 수를 돌려준다.
+    """선택한 모든 검색 인덱스를 같은 청크/임베딩으로 생성한다.
 
-    chunk_size / chunk_overlap / collection_name을 넘기면 기본 설정 대신 그 값을 쓴다.
-    (실험 스크립트가 여러 설정의 인덱스를 나란히 만들 때 사용)
+    반환값은 기존 호출부와 호환되도록 저장한 청크 수이다.
     """
-    # 📝 무거운 라이브러리는 함수 안에서 import (앱 시작 속도를 위해)
-    import chromadb
-    from sentence_transformers import SentenceTransformer
-
-    chunk_size = chunk_size or CHUNK_SIZE
-    chunk_overlap = chunk_overlap if chunk_overlap is not None else CHUNK_OVERLAP
-    collection_name = collection_name or COLLECTION_NAME
-    log = (lambda *a: None) if quiet else print
-
-    log(f"[1/4] 문서 로딩: {RAG_DOCS_DIR}")
-    documents = load_documents(RAG_DOCS_DIR)
-
-    log(f"[2/4] 청크 분리 (CHUNK_SIZE={chunk_size}, CHUNK_OVERLAP={chunk_overlap})")
-    ids, texts, metadatas = [], [], []
-    for filename, text in documents:
-        for i, chunk in enumerate(split_into_chunks(text, chunk_size, chunk_overlap)):
-            ids.append(f"{filename}-{i}")
-            texts.append(chunk)
-            metadatas.append({"source": filename, "chunk_index": i})
-    log(f"      문서 {len(documents)}개 → 청크 {len(texts)}개")
-
-    log(f"[3/4] 임베딩 생성: {EMBEDDING_MODEL}")
-    model_kwargs = {"local_files_only": EMBEDDING_LOCAL_FILES_ONLY}
-    if EMBEDDING_CACHE_DIR is not None:
-        model_kwargs["cache_folder"] = str(EMBEDDING_CACHE_DIR)
-    try:
-        model = SentenceTransformer(EMBEDDING_MODEL, **model_kwargs)
-    except Exception as exc:
-        if EMBEDDING_LOCAL_FILES_ONLY:
-            raise RuntimeError(
-                "임베딩 모델을 로컬 캐시에서 찾지 못했습니다. "
-                f"모델: {EMBEDDING_MODEL}, 캐시: {EMBEDDING_CACHE_DIR}. "
-                "처음 1회는 네트워크가 되는 환경에서 "
-                "`RAG_EMBEDDINGS_LOCAL_ONLY=0 uv run python -m chatbot.ingest`를 "
-                "실행해 캐시를 만든 뒤 다시 실행하세요."
-            ) from exc
-        raise
-    embeddings = model.encode(texts, show_progress_bar=not quiet).tolist()
-
-    log(f"[4/4] ChromaDB 저장: {CHROMA_DIR} (컬렉션: {collection_name})")
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    # 📝 다시 실행해도 깨끗하게 새로 만들도록 기존 컬렉션은 지운다.
-    try:
-        client.delete_collection(collection_name)
-    except Exception:
-        pass
-    collection = client.create_collection(
-        collection_name, metadata={"hnsw:space": "cosine"}
+    chunk_size = chunk_size if chunk_size is not None else CHUNK_SIZE
+    chunk_overlap = (
+        chunk_overlap if chunk_overlap is not None else CHUNK_OVERLAP
     )
-    collection.add(ids=ids, documents=texts, embeddings=embeddings, metadatas=metadatas)
+    collection_name = collection_name or COLLECTION_NAME
+    docs_dir = docs_dir or RAG_DOCS_DIR
+    backend_names = parse_backends(backends or RETRIEVAL_BACKENDS)
+    log = (lambda *args: None) if quiet else print
 
-    log(f"완료: 청크 {collection.count()}개 저장됨")
-    return collection.count()
+    log(f"[1/4] 문서 로딩: {docs_dir}")
+    source_documents = [
+        SourceDocument(source=filename, text=text)
+        for filename, text in load_documents(docs_dir)
+    ]
+
+    log(
+        f"[2/4] 청크 분리 (CHUNK_SIZE={chunk_size}, "
+        f"CHUNK_OVERLAP={chunk_overlap})"
+    )
+    chunks = DocumentChunker(chunk_size, chunk_overlap).split_documents(
+        source_documents
+    )
+    if not chunks:
+        raise ValueError("문서에서 인덱싱할 텍스트를 찾지 못했습니다.")
+    log(f"      문서 {len(source_documents)}개 → 청크 {len(chunks)}개")
+
+    vector_backends = set(backend_names) & {"chroma", "faiss"}
+    embeddings = None
+    active_embedder = embedder
+    if vector_backends:
+        active_embedder = active_embedder or SentenceTransformerEmbedder(
+            show_progress=not quiet
+        )
+        log(f"[3/4] 임베딩 생성: 청크 {len(chunks)}개")
+        embeddings = active_embedder.embed_documents([chunk.text for chunk in chunks])
+    else:
+        log("[3/4] 임베딩 생략: BM25만 선택됨")
+
+    log(f"[4/4] 인덱스 저장: {', '.join(backend_names)}")
+    counts: dict[str, int] = {}
+    for backend in backend_names:
+        if backend == "chroma":
+            assert active_embedder is not None and embeddings is not None
+            counts[backend] = ChromaIndex(
+                CHROMA_DIR, collection_name, active_embedder
+            ).build(chunks, embeddings)
+        elif backend == "faiss":
+            assert active_embedder is not None and embeddings is not None
+            counts[backend] = FaissIndex(
+                FAISS_DIR, collection_name, active_embedder
+            ).build(chunks, embeddings)
+        elif backend == "bm25":
+            counts[backend] = BM25Index(BM25_DIR, collection_name).build(chunks)
+        log(f"      {backend}: {counts[backend]}개")
+
+    if len(set(counts.values())) != 1:
+        raise RuntimeError(f"인덱스별 저장 개수가 일치하지 않습니다: {counts}")
+    log(f"완료: 청크 {len(chunks)}개 × 인덱스 {len(counts)}개")
+    return len(chunks)
 
 
 if __name__ == "__main__":

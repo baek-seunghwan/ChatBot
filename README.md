@@ -17,7 +17,7 @@
 |---|---|
 | 언어 | Python 3.10+ |
 | 웹 프레임워크 | FastAPI + uvicorn |
-| 벡터DB | ChromaDB (로컬 저장) |
+| 검색 인덱스 | ChromaDB + FAISS 벡터 검색 + BM25 키워드 검색 |
 | 임베딩 모델 | sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 |
 | RAG 오케스트레이션 | LangGraph StateGraph |
 | LLM | Claude (우선) → Gemini (폴백), `chatbot/providers.py`의 LLMRouter |
@@ -28,14 +28,14 @@
 ```
 [문서 준비 단계 - ingest.py]
 rag_docs/ (txt/md/pdf)
-    → 청크 분할 (CHUNK_SIZE=300, OVERLAP=50)
+    → 문단/문장 경계 우선 청크 분할 (CHUNK_SIZE=300, OVERLAP=50)
     → 임베딩 (sentence-transformers)
-    → ChromaDB 저장 (artifacts/chroma_db/)
+    → ChromaDB + FAISS 저장, BM25 역색인 생성
 
 [문서 질문 단계 - rag_chain.py + local_chat/app.py]
 사용자 질문 (POST /api/rag/ask)
     → LangGraph START
-    → retrieve 노드: 질문 임베딩 + 벡터DB TOP_K 청크 검색
+    → retrieve 노드: Chroma/FAISS/BM25 후보 검색 + 하이브리드 순위 융합
     → filter_context 노드: 유사도 < 0.35 청크 제거
     → 조건 분기
         → no_answer 노드: 근거 없으면 "문서에서 확인할 수 없습니다" (LLM 호출 안 함)
@@ -51,7 +51,10 @@ ChatBot/
 ├── chatbot/
 │   ├── rag_docs/            # RAG에 넣을 문서 (txt/md/pdf)
 │   ├── config.py            # chunk_size, top_k 등 설정값 관리
-│   ├── ingest.py            # 문서 읽기 → 청크 → 임베딩 → 벡터DB 저장
+│   ├── chunking.py          # 문단/문장 경계와 overlap을 보존하는 청커
+│   ├── embeddings.py        # 배치 임베딩 생성과 벡터 정규화
+│   ├── indexes.py           # Chroma/FAISS/BM25 + 하이브리드 검색
+│   ├── ingest.py            # 문서 읽기 → 청크 → 임베딩 → 전체 인덱스 저장
 │   ├── rag_chain.py         # LangGraph 기반 검색 → 필터 → 조건 분기 → 답변
 │   ├── rag_langchain.py     # LangChain 컴포넌트 기반 RAG
 │   ├── main.py              # 기존 명령 호환용 앱 진입점
@@ -63,6 +66,8 @@ ChatBot/
 │   └── chatbot.txt, nextword.txt  # 기본 챗봇 학습 데이터
 ├── artifacts/
 │   ├── chroma_db/           # 벡터DB 저장 위치 (ingest 실행 시 생성)
+│   ├── faiss/               # FAISS 인덱스와 청크 메타데이터
+│   ├── bm25/                # BM25 역색인과 청크 메타데이터
 │   └── chatbot.pt           # 직접 학습한 로컬 모델 체크포인트
 ├── Dockerfile               # 로그인형 웹 챗봇 컨테이너 배포
 └── docker-compose.yml       # 로컬 Docker 실행 구성
@@ -74,8 +79,11 @@ ChatBot/
 cd ~/Documents/GitHub/ChatBot
 uv sync                                  # 의존성 설치
 
-# 1) 문서를 임베딩해서 벡터DB에 저장 (문서를 바꾸면 다시 실행)
+# 1) 문서를 청킹하고 세 검색 인덱스에 저장 (문서를 바꾸면 다시 실행)
 uv run python -m chatbot.ingest
+
+# 필요한 인덱스만 선택할 수도 있음
+uv run python -m scripts.build_rag_index --backends faiss,bm25
 
 # 2) 터미널에서 RAG 질문 테스트
 uv run python -m chatbot.rag_chain "RAG가 뭐야?"
@@ -88,6 +96,10 @@ uv run uvicorn chatbot.local_chat.app:app --reload --port 8001
 # 4) 답변 품질 평가 → eval_result.csv 생성
 uv run python -m chatbot.eval
 ```
+
+기본 하이브리드 비중은 Chroma 0.25, FAISS 0.25, BM25 0.50이다.
+`.env`의 `RAG_CHROMA_WEIGHT`, `RAG_FAISS_WEIGHT`, `RAG_BM25_WEIGHT`로
+조정할 수 있다. 검색 백엔드를 하나만 지정하면 해당 점수를 그대로 사용한다.
 
 API 키는 프로젝트 루트의 `.env`에 둔다.
 
@@ -138,6 +150,27 @@ uv run python -m scripts.evaluate_rag_langsmith
 - 상태 확인: `GET /health`
 
 채팅 화면에는 `AI가 답변`과 `로컬 LLM이 답변` 두 모드만 제공한다.
+
+## 6.1 MoveOps: 카카오 T 퀵·도보 배송 FastAPI
+
+카카오 T 퀵·도보 배송 Sandbox를 연동한 별도 웹 서비스가
+`mobility_service/`에 포함되어 있다. 기존 챗봇과 독립적으로 실행된다.
+
+```bash
+uv sync
+uv run uvicorn mobility_service.app:app --reload --port 8002
+```
+
+- 웹 화면: `http://127.0.0.1:8002`
+- API 문서: `http://127.0.0.1:8002/docs`
+- 인증 확인: `GET /api/kakao/auth-check`
+- 가격/시간 조회: `POST /api/deliveries/price`, `POST /api/deliveries/estimate`
+- 주문/조회/취소: `POST /api/orders`, `GET /api/orders/{id}`,
+  `PATCH /api/orders/{id}/cancel`
+- 카카오 콜백: `PUT /api/v1/callback/orders/{id}/{event}`
+
+환경변수, 공개 콜백 URL과 테스트 방법은
+[`mobility_service/README.md`](mobility_service/README.md)를 참고한다.
 
 ## 6.5 평가 + 개선 + 재평가 자동화 파이프라인
 
@@ -228,14 +261,14 @@ uv run python -m chatbot.train --corpus chatbot/qa_corpus.txt \
 ## 9. 한계점
 
 1. 문서가 5개(학습 노트 수준)로 적어 다양한 질문에 대응하기 어렵다.
-2. 청크 분할이 글자 수 기준이라 문장 중간에서 잘릴 수 있다.
+2. 한국어 BM25는 외부 형태소 분석기 없이 어절과 글자 부분어를 함께 사용한다.
 3. 유사도 임계값(0.35) 하나로 답변 가능 여부를 판단하므로 경계 질문에서 오판할 수 있다.
 4. 기본 `/chat` RAG는 직접 구현 체인이고, LangChain 버전은 별도 모듈(`rag_langchain.py`)로 분리되어 있다.
 5. LLM 심사자 채점은 실행할 때마다 점수가 약간 달라질 수 있다.
 
 ## 10. 남은 보완 방향
 
-1. Hybrid Search 적용
+1. 도메인별 검색 백엔드 가중치와 관련도 임계값 튜닝
 2. Parent-Child Chunking 적용
 3. RAGAS 기반 자동 평가 고도화
 4. 임계값과 TOP_K를 별도 테스트셋으로 검증
@@ -275,7 +308,7 @@ uv run python -m chatbot.rag_langchain "RAG가 뭐야?"
 docker compose up --build      # http://localhost:8001
 ```
 
-API 키는 `.env`에서 주입되고, 벡터DB(`artifacts/chroma_db`)는 볼륨으로 연결된다.
+API 키는 `.env`에서 주입되고, Chroma/FAISS/BM25 인덱스는 각각 볼륨으로 연결된다.
 
 ### 11-3. 의존성 설치
 
