@@ -405,6 +405,19 @@
       border: 1px solid var(--line);
       color: var(--ink);
       border-bottom-left-radius: 4px;
+      white-space: normal;
+    }
+    .chat-bubble.bot p { margin: 0; }
+    .chat-bubble.bot p + p { margin-top: 8px; }
+    .chat-bubble.bot ul,
+    .chat-bubble.bot ol { margin: 6px 0; padding-left: 20px; }
+    .chat-bubble.bot li + li { margin-top: 3px; }
+    .chat-bubble.bot code {
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: var(--surface);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: .92em;
     }
     .chat-widget-form {
       display: flex;
@@ -1116,10 +1129,72 @@
       });
     }
 
+    function appendInlineMarkdown(parent, text) {
+      const tokenPattern = /(\*\*[^*\n]+?\*\*|`[^`\n]+?`)/g;
+      let cursor = 0;
+
+      for (const match of text.matchAll(tokenPattern)) {
+        parent.append(document.createTextNode(text.slice(cursor, match.index)));
+        const token = match[0];
+        const element = document.createElement(token.startsWith("**") ? "strong" : "code");
+        element.textContent = token.startsWith("**") ? token.slice(2, -2) : token.slice(1, -1);
+        parent.append(element);
+        cursor = match.index + token.length;
+      }
+
+      parent.append(document.createTextNode(text.slice(cursor)));
+    }
+
+    function renderBotMarkdown(bubble, text) {
+      const lines = String(text).replace(/\r\n?/g, "\n").split("\n");
+      let paragraphLines = [];
+      let list = null;
+
+      function flushParagraph() {
+        if (!paragraphLines.length) return;
+        const paragraph = document.createElement("p");
+        paragraphLines.forEach((line, index) => {
+          if (index) paragraph.append(document.createElement("br"));
+          appendInlineMarkdown(paragraph, line);
+        });
+        bubble.append(paragraph);
+        paragraphLines = [];
+      }
+
+      for (const line of lines) {
+        const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+        const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+        const listItem = unordered || ordered;
+
+        if (listItem) {
+          flushParagraph();
+          const listTag = ordered ? "ol" : "ul";
+          if (!list || list.tagName.toLowerCase() !== listTag) {
+            list = document.createElement(listTag);
+            bubble.append(list);
+          }
+          const item = document.createElement("li");
+          appendInlineMarkdown(item, listItem[1]);
+          list.append(item);
+          continue;
+        }
+
+        list = null;
+        if (!line.trim()) {
+          flushParagraph();
+          continue;
+        }
+        paragraphLines.push(line);
+      }
+
+      flushParagraph();
+    }
+
     function appendChatBubble(role, text) {
       const bubble = document.createElement("div");
       bubble.className = `chat-bubble ${role}`;
-      bubble.textContent = text;
+      if (role === "bot") renderBotMarkdown(bubble, text);
+      else bubble.textContent = text;
       const log = byId("chatLog");
       log.appendChild(bubble);
       log.scrollTop = log.scrollHeight;
