@@ -1,7 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256">
-  <!-- MOVB 로고: 두 출발점(파랑·빨강)이 한 경로로 만나는 M — "합승" -->
-  <rect width="64" height="64" rx="14" fill="#fee500"/>
-  <polyline points="15,45 15,21 32,41 49,21 49,45" fill="none" stroke="#191919" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="15" cy="21" r="5.5" fill="#315efb" stroke="#fee500" stroke-width="2"/>
-  <circle cx="49" cy="21" r="5.5" fill="#c43c35" stroke="#fee500" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="256" height="256" fill="none">
+  <path d="M16 46V18l16 18 16-18v28" stroke="#10254d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="22" y="53" width="20" height="6" rx="3" fill="#ffcc00"/>
 </svg>
