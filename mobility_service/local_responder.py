@@ -7,6 +7,7 @@ from datetime import datetime
 import httpx
 
 from .knowledge import SERVICE_FACTS
+from .my_model import own_model_reply
 
 # 로컬 챗봇: Ollama(http://localhost:11434)로 답한다.
 # 시간/날짜 같은 실시간 질문은 모델 없이 코드로 즉답하고,
@@ -40,8 +41,13 @@ def _dynamic_answer(prompt: str) -> str | None:
     return None
 
 
-def local_model_reply(prompt: str) -> str:
-    """'내 로컬 채팅' 모드 응답. 동기 함수라 호출부에서 asyncio.to_thread로 감싼다."""
+def local_model_reply(prompt: str, engine: str = "ollama") -> str:
+    """'내 로컬 채팅' 모드 응답. 동기 함수라 호출부에서 asyncio.to_thread로 감싼다.
+
+    engine:
+      - "ollama": Ollama(gemma4) 사용. 꺼져 있으면 나만의 모델로 자동 폴백.
+      - "own": 나만의 모델(자체 QA 매칭)만 사용 — 외부 서버 불필요.
+    """
     text = (prompt or "").strip()
     if not text:
         return "메시지를 입력해주세요."
@@ -49,6 +55,9 @@ def local_model_reply(prompt: str) -> str:
     dynamic = _dynamic_answer(text)
     if dynamic is not None:
         return dynamic
+
+    if engine == "own":
+        return own_model_reply(text)
 
     try:
         response = httpx.post(
@@ -70,10 +79,8 @@ def local_model_reply(prompt: str) -> str:
         response.raise_for_status()
         body = response.json()
     except httpx.ConnectError:
-        return (
-            "로컬 모델 서버(Ollama)가 꺼져 있어요. 터미널에서 `ollama serve`를 실행한 뒤 "
-            "다시 시도해주세요. 급하시면 'AI 채팅' 모드를 이용하세요."
-        )
+        # Ollama가 꺼져 있으면 나만의 모델로 자동 전환한다.
+        return "🔌 Ollama가 꺼져 있어 나만의 모델로 답했어요.\n" + own_model_reply(text)
     except httpx.TimeoutException:
         return "로컬 모델 응답이 너무 오래 걸려요. 잠시 후 다시 시도해주세요."
     except (httpx.HTTPError, ValueError) as exc:

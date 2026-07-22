@@ -37,9 +37,7 @@
       width: 42px;
       height: 42px;
       border-radius: 14px;
-      background: var(--yellow);
-      color: var(--ink);
-      font-weight: 950;
+      background: transparent;
     }
     .brand strong { display: block; font-size: 16px; }
     .brand span { display: block; margin-top: 2px; color: #bdbdbd; font-size: 11px; }
@@ -109,7 +107,12 @@
 </head>
 <body>
   <header>
-    <div class="mark">M</div>
+    <div class="mark" aria-label="MOVB 로고">
+      <svg width="30" height="30" viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M16 46V18l16 18 16-18v28" fill="none" stroke="#10254d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="22" y="53" width="20" height="6" rx="3" fill="#ffcc00"/>
+      </svg>
+    </div>
     <div class="brand"><strong>MOVB 관리자</strong><span>운영 현황 및 사용자 관리</span></div>
     <div class="header-actions">
       <a class="home-link" href="/">서비스 홈</a>

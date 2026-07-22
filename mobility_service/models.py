@@ -119,6 +119,10 @@ class AgentChatRequest(CamelModel):
     session_id: str | None = Field(default=None, alias="sessionId")
     message: str = Field(min_length=1, max_length=1000)
     mode: str = Field(default="ai", pattern=r"^(ai|local)$")
+    # 로컬 모드 엔진: ollama(기본) 또는 own(나만의 모델, 외부 서버 불필요)
+    local_engine: str = Field(
+        default="ollama", alias="localEngine", pattern=r"^(ollama|own)$"
+    )
 
 
 class BundleQuoteRequest(CamelModel):

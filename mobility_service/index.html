@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>MOVB 택시·퀵</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23fee500'/%3E%3Cpolyline%20points='15,45%2015,21%2032,41%2049,21%2049,45'%20fill='none'%20stroke='%23191919'%20stroke-width='7'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Ccircle%20cx='15'%20cy='21'%20r='5.5'%20fill='%23315efb'%20stroke='%23fee500'%20stroke-width='2'/%3E%3Ccircle%20cx='49'%20cy='21'%20r='5.5'%20fill='%23c43c35'%20stroke='%23fee500'%20stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23fff'/%3E%3Cpath%20d='M16%2046V18l16%2018%2016-18v28'%20fill='none'%20stroke='%2310254d'%20stroke-width='10'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Crect%20x='22'%20y='53'%20width='20'%20height='6'%20rx='3'%20fill='%23ffcc00'/%3E%3C/svg%3E">
   <style>
     :root {
       --yellow: #fee500;
@@ -66,9 +66,7 @@
       width: 46px;
       height: 46px;
       border-radius: 15px;
-      background: var(--yellow);
-      color: var(--ink);
-      font-weight: 900;
+      background: transparent;
     }
     .primary-nav { display: flex; align-items: center; gap: 6px; }
     .nav-item,
@@ -631,6 +629,45 @@
     }
     .chat-mode-btn:hover { transform: none; box-shadow: none; }
     .chat-mode-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
+    .chat-engine-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px 0;
+      background: var(--surface);
+      font-size: 12px;
+    }
+    .chat-engine-row.hidden { display: none; }
+    .engine-label { font-weight: 800; color: var(--ink); }
+    .chat-engine-row small { color: var(--muted); }
+    .switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      border-radius: 999px;
+      background: #cfcfca;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      box-shadow: none;
+      transition: background .15s ease;
+      flex: 0 0 auto;
+    }
+    .switch:hover { transform: none; box-shadow: none; }
+    .switch::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: white;
+      transition: left .15s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+    }
+    .switch.on { background: var(--success); }
+    .switch.on::after { left: 21px; }
     @media (max-width: 900px) {
       .site-header { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
       .brand-mark { width: 42px; height: 42px; }
@@ -657,14 +694,13 @@
   <header class="site-header">
     <a class="brand" href="#top" aria-label="MOVB 홈">
       <div class="brand-mark" aria-label="MOVB 로고">
-        <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
-          <polyline points="15,45 15,21 32,41 49,21 49,45" fill="none" stroke="#191919" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
-          <circle cx="15" cy="21" r="5.5" fill="#315efb" stroke="#fee500" stroke-width="2"/>
-          <circle cx="49" cy="21" r="5.5" fill="#c43c35" stroke="#fee500" stroke-width="2"/>
+        <svg width="32" height="32" viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M16 46V18l16 18 16-18v28" fill="none" stroke="#10254d" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="22" y="53" width="20" height="6" rx="3" fill="#ffcc00"/>
         </svg>
       </div>
       <div class="brand-copy">
-        <span>MOVB 택시 · 퀵</span>
+        <span>MOVB 택시_퀵</span>
         <small>모브 (MOVB)</small>
       </div>
     </a>

@@ -389,7 +389,9 @@ def create_app(
     ) -> ApiEnvelope:
         session_id = request.session_id or x_session_id or f"sess-{uuid4().hex}"
         if request.mode == "local":
-            reply = await asyncio.to_thread(local_model_reply, request.message)
+            reply = await asyncio.to_thread(
+                local_model_reply, request.message, request.local_engine
+            )
             return ApiEnvelope(
                 data={
                     "sessionId": session_id,
@@ -398,7 +400,7 @@ def create_app(
                     "slots": {},
                     "quote": None,
                     "order": None,
-                    "trace": ["local_model"],
+                    "trace": [f"local_model:{request.local_engine}"],
                 }
             )
         result = await resolved_agent.achat(session_id=session_id, message=request.message)
