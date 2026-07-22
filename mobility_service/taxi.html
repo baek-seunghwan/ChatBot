@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MOVB 택시 합승</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23fee500'/%3E%3Cpolyline%20points='15,45%2015,21%2032,41%2049,21%2049,45'%20fill='none'%20stroke='%23191919'%20stroke-width='7'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Ccircle%20cx='15'%20cy='21'%20r='5.5'%20fill='%23315efb'%20stroke='%23fee500'%20stroke-width='2'/%3E%3Ccircle%20cx='49'%20cy='21'%20r='5.5'%20fill='%23c43c35'%20stroke='%23fee500'%20stroke-width='2'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --yellow: #fee500;
+      --ink: #191919;
+      --muted: #747474;
+      --line: #ececea;
+      --surface: #f7f7f5;
+      --panel: #fff;
+      --danger: #c43c35;
+      --blue: #315efb;
+      --green: #0f7a49;
+      --green-soft: #e7f4ec;
+    }
+    * { box-sizing: border-box; }
+    html { background: #232227; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "SUIT Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+      color: var(--ink);
+      background: #232227;
+      display: flex;
+      justify-content: center;
+    }
+    /* 폰 화면 프레임: 데스크톱에서도 모바일 앱처럼 보이게 */
+    .phone {
+      width: min(430px, 100%);
+      min-height: 100vh;
+      min-height: 100dvh;
+      background: var(--surface);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      box-shadow: 0 0 60px rgba(0, 0, 0, .45);
+    }
+    .app-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 16px;
+      background: linear-gradient(110deg, #111111, #24203f 68%, #131313);
+      color: white;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .app-bar .mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 11px;
+      background: var(--yellow);
+      flex: 0 0 auto;
+    }
+    .app-bar h1 { margin: 0; font-size: 16px; font-weight: 850; }
+    .app-bar p { margin: 1px 0 0; font-size: 11px; color: #bdbdbd; }
+    .app-bar a.quick-link {
+      margin-left: auto;
+      color: #e8e8ee;
+      font-size: 12px;
+      font-weight: 750;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, .28);
+      border-radius: 999px;
+      padding: 7px 12px;
+      white-space: nowrap;
+    }
+    .app-bar a.quick-link:hover { background: rgba(255, 255, 255, .1); }
+
+    .screen { flex: 1; padding: 18px 16px 120px; display: flex; flex-direction: column; gap: 14px; }
+
+    .hello { margin: 4px 2px 2px; }
+    .hello h2 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.015em; }
+    .hello p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(20, 18, 36, .06);
+    }
+    .card h3 { margin: 0 0 10px; font-size: 13px; font-weight: 800; color: #4d4d4d; }
+
+    .field { display: flex; align-items: center; gap: 10px; }
+    .field + .field { margin-top: 10px; }
+    .pin { width: 12px; height: 12px; border-radius: 50%; flex: 0 0 auto; }
+    .pin.origin { background: var(--ink); }
+    .pin.p0 { background: var(--blue); }
+    .pin.p1 { background: var(--danger); }
+    .pin.p2 { background: #8a36c9; }
+    .pin.p3 { background: #0f8a73; }
+    input {
+      width: 100%;
+      border: 1px solid #dcdcd8;
+      border-radius: 12px;
+      padding: 12px 13px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      outline: none;
+      min-width: 0;
+    }
+    input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(25, 25, 25, .08); }
+    input::placeholder { color: #ababab; }
+    .name-input { flex: 0 0 76px; }
+
+    .remove-btn {
+      flex: 0 0 auto;
+      border: 0;
+      background: transparent;
+      color: #b3b3ae;
+      font-size: 16px;
+      padding: 4px 6px;
+      cursor: pointer;
+      border-radius: 8px;
+    }
+    .remove-btn:hover { color: var(--danger); background: #fff0ef; }
+
+    .add-passenger {
+      margin-top: 12px;
+      width: 100%;
+      border: 1.5px dashed #d4d4cf;
+      border-radius: 12px;
+      background: transparent;
+      color: var(--muted);
+      font: inherit;
+      font-size: 13px;
+      font-weight: 750;
+      padding: 11px;
+      cursor: pointer;
+    }
+    .add-passenger:hover { border-color: var(--ink); color: var(--ink); }
+    .add-passenger:disabled { opacity: .4; cursor: default; }
+
+    .cta-dock {
+      position: fixed;
+      bottom: 0;
+      width: min(430px, 100%);
+      padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+      background: linear-gradient(to top, var(--surface) 68%, transparent);
+      z-index: 10;
+    }
+    .cta {
+      width: 100%;
+      border: 0;
+      border-radius: 14px;
+      padding: 15px;
+      font: inherit;
+      font-size: 15px;
+      font-weight: 850;
+      background: linear-gradient(120deg, #ffe665, #fee500 66%);
+      color: var(--ink);
+      cursor: pointer;
+      box-shadow: 0 10px 24px rgba(229, 207, 0, .35);
+      transition: transform .15s ease;
+    }
+    .cta:hover { transform: translateY(-1px); }
+    .cta:disabled { opacity: .55; cursor: wait; transform: none; }
+
+    .notice {
+      display: none;
+      padding: 11px 13px;
+      border-radius: 12px;
+      background: #fff0ef;
+      border: 1px solid #f2c8c4;
+      color: var(--danger);
+      font-size: 13px;
+      font-weight: 650;
+    }
+    .notice.visible { display: block; }
+
+    /* 결과 */
+    #planResult { display: none; }
+    #planResult.visible { display: flex; flex-direction: column; gap: 14px; }
+    .total-card {
+      background: var(--ink);
+      color: white;
+      border-radius: 18px;
+      padding: 18px 16px;
+    }
+    .total-card .label { font-size: 12px; color: #c9c9cf; font-weight: 700; }
+    .total-card .amount { font-size: 30px; font-weight: 900; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .total-card .saving {
+      display: inline-block;
+      margin-top: 10px;
+      background: var(--yellow);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 4px 11px;
+      font-size: 12.5px;
+      font-weight: 850;
+      font-variant-numeric: tabular-nums;
+    }
+    .total-card .meta { margin-top: 10px; font-size: 11.5px; color: #a9a9b2; }
+
+    .stop {
+      display: grid;
+      grid-template-columns: 30px 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 4px;
+    }
+    .stop + .stop { border-top: 1px dashed var(--line); }
+    .stop-order {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 900;
+      color: white;
+    }
+    .stop-info b { display: block; font-size: 14px; }
+    .stop-info span { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .stop-pay { text-align: right; }
+    .stop-pay b { display: block; font-size: 16px; font-weight: 900; font-variant-numeric: tabular-nums; }
+    .stop-pay span {
+      display: inline-block;
+      margin-top: 4px;
+      background: var(--green-soft);
+      color: var(--green);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11.5px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+    .fineprint { color: #8b8b85; font-size: 11.5px; text-align: center; margin: 0; }
+
+    button:focus-visible, input:focus-visible, a:focus-visible {
+      outline: 3px solid rgba(49, 94, 251, .5);
+      outline-offset: 1px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <header class="app-bar">
+      <div class="mark" aria-label="MOVB 로고">
+        <svg width="20" height="20" viewBox="0 0 64 64" aria-hidden="true">
+          <polyline points="15,45 15,21 32,41 49,21 49,45" fill="none" stroke="#191919" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="15" cy="21" r="5.5" fill="#315efb" stroke="#fee500" stroke-width="2"/>
+          <circle cx="49" cy="21" r="5.5" fill="#c43c35" stroke="#fee500" stroke-width="2"/>
+        </svg>
+      </div>
+      <div>
+        <h1>택시 합승</h1>
+        <p>MOVB · 같이 타면 나눠 내요</p>
+      </div>
+      <a class="quick-link" href="/">퀵 접수 →</a>
+    </header>
+
+    <main class="screen">
+      <div class="hello">
+        <h2>어디서 출발하세요?</h2>
+        <p>같은 곳에서 출발해 각자 다른 곳에 내리는 일행의 하차 순서와 요금 분담을 계산해드려요.</p>
+      </div>
+
+      <section class="card">
+        <h3>출발지</h3>
+        <div class="field">
+          <span class="pin origin"></span>
+          <input id="originAddress" placeholder="공통 출발지 (예: 강남역)" autocomplete="off">
+        </div>
+      </section>
+
+      <section class="card">
+        <h3>탑승자와 목적지 <small style="font-weight:600;color:#9a9a94">(2~4명)</small></h3>
+        <div id="passengerRows"></div>
+        <button type="button" class="add-passenger" id="addPassengerBtn" onclick="addPassenger()">+ 탑승자 추가</button>
+      </section>
+
+      <div class="notice" id="taxiNotice"></div>
+
+      <section id="planResult">
+        <div class="total-card">
+          <div class="label">합승 예상 총 요금</div>
+          <div class="amount" id="totalFare">-</div>
+          <span class="saving" id="groupSaving"></span>
+          <div class="meta" id="planMeta"></div>
+        </div>
+        <div class="card" id="stopList"></div>
+        <p class="fineprint">직선거리 기반 추정 요금으로 실제 미터기 요금과 다를 수 있어요.</p>
+      </section>
+    </main>
+
+    <div class="cta-dock">
+      <button type="button" class="cta" id="planBtn" onclick="computePlan(this)">합승 요금 계산하기</button>
+    </div>
+  </div>
+
+  <script>
+    const byId = (id) => document.getElementById(id);
+    const PIN_CLASSES = ["p0", "p1", "p2", "p3"];
+    const DEFAULT_NAMES = ["A", "B", "C", "D"];
+    let passengers = [
+      {name: "A", address: ""},
+      {name: "B", address: ""}
+    ];
+
+    function renderPassengers() {
+      const wrap = byId("passengerRows");
+      wrap.innerHTML = "";
+      passengers.forEach((passenger, index) => {
+        const row = document.createElement("div");
+        row.className = "field";
+        const pin = document.createElement("span");
+        pin.className = `pin ${PIN_CLASSES[index]}`;
+        const nameInput = document.createElement("input");
+        nameInput.className = "name-input";
+        nameInput.placeholder = "이름";
+        nameInput.value = passenger.name;
+        nameInput.setAttribute("aria-label", `탑승자 ${index + 1} 이름`);
+        nameInput.addEventListener("input", () => { passenger.name = nameInput.value; });
+        const addressInput = document.createElement("input");
+        addressInput.placeholder = `목적지 (예: ${index === 0 ? "잠실역" : "건대입구역"})`;
+        addressInput.value = passenger.address;
+        addressInput.setAttribute("aria-label", `탑승자 ${index + 1} 목적지`);
+        addressInput.addEventListener("input", () => { passenger.address = addressInput.value; });
+        row.append(pin, nameInput, addressInput);
+        if (passengers.length > 2) {
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "remove-btn";
+          remove.textContent = "✕";
+          remove.setAttribute("aria-label", `탑승자 ${index + 1} 삭제`);
+          remove.addEventListener("click", () => {
+            passengers.splice(index, 1);
+            renderPassengers();
+          });
+          row.append(remove);
+        }
+        wrap.append(row);
+      });
+      byId("addPassengerBtn").disabled = passengers.length >= 4;
+    }
+
+    function addPassenger() {
+      if (passengers.length >= 4) return;
+      passengers.push({name: DEFAULT_NAMES[passengers.length] || "", address: ""});
+      renderPassengers();
+    }
+
+    function showNotice(text) {
+      const notice = byId("taxiNotice");
+      notice.textContent = text;
+      notice.classList.add("visible");
+    }
+
+    function clearNotice() {
+      byId("taxiNotice").classList.remove("visible");
+    }
+
+    function won(value) {
+      return `${Number(value || 0).toLocaleString("ko-KR")}원`;
+    }
+
+    async function computePlan(button) {
+      clearNotice();
+      const origin = byId("originAddress").value.trim();
+      const filled = passengers
+        .map(p => ({name: p.name.trim() || null, address: p.address.trim()}))
+        .filter(p => p.address);
+      if (!origin) { showNotice("공통 출발지를 입력해주세요."); return; }
+      if (filled.length < 2) { showNotice("목적지를 2곳 이상 입력해주세요."); return; }
+
+      button.disabled = true;
+      button.textContent = "계산 중...";
+      try {
+        const response = await fetch("/api/carpool/plan", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({originAddress: origin, passengers: filled})
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const detail = body.message || body.detail || `HTTP ${response.status}`;
+          throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+        }
+        renderPlan(body.data);
+      } catch (error) {
+        showNotice(error.message);
+        byId("planResult").classList.remove("visible");
+      } finally {
+        button.disabled = false;
+        button.textContent = "합승 요금 계산하기";
+      }
+    }
+
+    const STOP_COLORS = ["#315efb", "#c43c35", "#8a36c9", "#0f8a73"];
+
+    function renderPlan(plan) {
+      byId("totalFare").textContent = won(plan.sharedFare);
+      byId("groupSaving").textContent = `다 같이 ${won(plan.groupSaving)} 절약`;
+      byId("planMeta").textContent = `총 이동 약 ${plan.totalKm}km · 따로 타면 ${won(plan.soloFareTotal)}`;
+      const list = byId("stopList");
+      list.innerHTML = "";
+      plan.stops.forEach((stop, index) => {
+        const row = document.createElement("div");
+        row.className = "stop";
+        const order = document.createElement("span");
+        order.className = "stop-order";
+        order.style.background = STOP_COLORS[index % STOP_COLORS.length];
+        order.textContent = stop.dropOrder;
+        const info = document.createElement("div");
+        info.className = "stop-info";
+        const name = document.createElement("b");
+        name.textContent = `${stop.name} 하차`;
+        const address = document.createElement("span");
+        address.textContent = `${stop.address} · 여기까지 ${stop.cumulativeKm}km`;
+        info.append(name, address);
+        const pay = document.createElement("div");
+        pay.className = "stop-pay";
+        const share = document.createElement("b");
+        share.textContent = won(stop.share);
+        const saving = document.createElement("span");
+        saving.textContent = `혼자면 ${won(stop.soloFare)} · ${won(stop.saving)} 절약`;
+        pay.append(share, saving);
+        row.append(order, info, pay);
+        list.append(row);
+      });
+      const result = byId("planResult");
+      result.classList.add("visible");
+      result.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+
+    renderPassengers();
+  </script>
+</body>
+</html>
