@@ -6,8 +6,18 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from fastapi import Body, FastAPI, Header, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import (
+    Body,
+    Cookie,
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from .agent import DeliveryAgent
 from .bundle import bundle_quote
@@ -24,12 +34,18 @@ from .models import (
     CarpoolPlanRequest,
     CreateDeliveryRequest,
     DeliveryDraft,
+    LoginRequest,
+    RegisterRequest,
 )
 from .rideshare import carpool_plan
 from .orders import cancel_order_by_id, get_order_status, place_order
 from .pool_store import PoolStore
 from .store import MobilityStore
-from .web import INDEX_HTML, TAXI_HTML
+from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
+from .web import ADMIN_HTML, INDEX_HTML, TAXI_HTML
+
+
+SESSION_COOKIE_NAME = "movb_session"
 
 
 def create_app(
@@ -41,6 +57,7 @@ def create_app(
     conversations: ConversationStore | None = None,
     agent: DeliveryAgent | None = None,
     pool_store: PoolStore | None = None,
+    user_store: UserStore | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings.from_env()
     resolved_store = store or MobilityStore(resolved_settings.database_path)
@@ -48,6 +65,12 @@ def create_app(
     resolved_geocoder = geocoder or KakaoGeocodeClient(resolved_settings)
     resolved_conversations = conversations or ConversationStore(resolved_settings.database_path)
     resolved_pools = pool_store or PoolStore(resolved_settings.database_path)
+    resolved_users = user_store or UserStore(resolved_settings.database_path)
+    if resolved_settings.admin_configured:
+        resolved_users.ensure_admin(
+            username=resolved_settings.admin_username,
+            password=resolved_settings.admin_password,
+        )
     resolved_agent = agent or DeliveryAgent(
         resolved_client, resolved_geocoder, resolved_store, resolved_conversations,
         pools=resolved_pools,
@@ -75,6 +98,37 @@ def create_app(
     application.state.geocoder = resolved_geocoder
     application.state.conversations = resolved_conversations
     application.state.agent = resolved_agent
+    application.state.users = resolved_users
+
+    def set_session_cookie(response: Response, request: Request, token: str) -> None:
+        response.set_cookie(
+            key=SESSION_COOKIE_NAME,
+            value=token,
+            max_age=SESSION_TTL_SECONDS,
+            httponly=True,
+            secure=request.url.scheme == "https",
+            samesite="lax",
+            path="/",
+        )
+
+    def require_current_user(
+        session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
+    ) -> dict[str, Any]:
+        user = (
+            resolved_users.get_user_by_session(session_token)
+            if session_token
+            else None
+        )
+        if user is None:
+            raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+        return user
+
+    def require_admin(
+        user: dict[str, Any] = Depends(require_current_user),
+    ) -> dict[str, Any]:
+        if user.get("role") != "ADMIN":
+            raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다.")
+        return user
 
     @application.exception_handler(KakaoApiError)
     async def kakao_api_error_handler(
@@ -97,6 +151,24 @@ def create_app(
     async def taxi_page() -> str:
         return TAXI_HTML
 
+    @application.get(
+        "/admin",
+        response_class=HTMLResponse,
+        response_model=None,
+        include_in_schema=False,
+    )
+    async def admin_page(
+        session_token: str | None = Cookie(default=None, alias=SESSION_COOKIE_NAME),
+    ) -> Response:
+        user = (
+            resolved_users.get_user_by_session(session_token)
+            if session_token
+            else None
+        )
+        if user is None or user.get("role") != "ADMIN":
+            return RedirectResponse(url="/?admin=1", status_code=303)
+        return HTMLResponse(ADMIN_HTML)
+
     @application.get("/health")
     async def health() -> dict[str, Any]:
         return {
@@ -104,6 +176,7 @@ def create_app(
             "service": "moveops",
             "kakaoConfigured": resolved_settings.configured,
             "mapConfigured": resolved_settings.map_configured,
+            "adminConfigured": resolved_settings.admin_configured,
             "sandbox": True,
         }
 
@@ -130,6 +203,89 @@ def create_app(
     @application.get("/api/kakao/auth-check", response_model=ApiEnvelope)
     async def auth_check() -> ApiEnvelope:
         return ApiEnvelope(data=await resolved_client.auth_check())
+
+    @application.post(
+        "/api/auth/register", response_model=ApiEnvelope, status_code=201
+    )
+    async def register(
+        payload: RegisterRequest,
+        request: Request,
+        response: Response,
+    ) -> ApiEnvelope:
+        try:
+            user = resolved_users.create_user(
+                name=payload.name,
+                email=payload.email,
+                password=payload.password,
+            )
+        except DuplicateEmailError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        token = resolved_users.create_session(user["id"])
+        set_session_cookie(response, request, token)
+        return ApiEnvelope(data={"user": user}, message="회원가입이 완료되었습니다.")
+
+    @application.post("/api/auth/login", response_model=ApiEnvelope)
+    async def login(
+        payload: LoginRequest,
+        request: Request,
+        response: Response,
+    ) -> ApiEnvelope:
+        user = resolved_users.authenticate(
+            identifier=payload.identifier,
+            password=payload.password,
+        )
+        if user is None:
+            raise HTTPException(
+                status_code=401,
+                detail="아이디·이메일 또는 비밀번호가 올바르지 않습니다.",
+            )
+        token = resolved_users.create_session(user["id"])
+        set_session_cookie(response, request, token)
+        return ApiEnvelope(data={"user": user}, message="로그인되었습니다.")
+
+    @application.get("/api/auth/me", response_model=ApiEnvelope)
+    async def current_user(
+        user: dict[str, Any] = Depends(require_current_user),
+    ) -> ApiEnvelope:
+        return ApiEnvelope(data={"user": user})
+
+    @application.post("/api/auth/logout", response_model=ApiEnvelope)
+    async def logout(
+        response: Response,
+        session_token: str | None = Cookie(
+            default=None, alias=SESSION_COOKIE_NAME
+        ),
+    ) -> ApiEnvelope:
+        if session_token:
+            resolved_users.revoke_session(session_token)
+        response.delete_cookie(key=SESSION_COOKIE_NAME, path="/")
+        return ApiEnvelope(message="로그아웃되었습니다.")
+
+    @application.get("/api/admin/summary", response_model=ApiEnvelope)
+    async def admin_summary(
+        _: dict[str, Any] = Depends(require_admin),
+    ) -> ApiEnvelope:
+        return ApiEnvelope(
+            data={
+                "users": resolved_users.user_counts(),
+                "orders": resolved_store.order_counts(),
+                "openPoolRequests": len(resolved_pools.list_open()),
+            }
+        )
+
+    @application.get("/api/admin/users", response_model=ApiEnvelope)
+    async def admin_users(
+        limit: int = Query(default=100, ge=1, le=500),
+        _: dict[str, Any] = Depends(require_admin),
+    ) -> ApiEnvelope:
+        return ApiEnvelope(data=resolved_users.list_users(limit))
+
+    @application.get("/api/admin/orders", response_model=ApiEnvelope)
+    async def admin_orders(
+        limit: int = Query(default=100, ge=1, le=500),
+        _: dict[str, Any] = Depends(require_admin),
+    ) -> ApiEnvelope:
+        return ApiEnvelope(data=resolved_store.list_orders(limit))
 
     @application.post("/api/deliveries/estimate", response_model=ApiEnvelope)
     async def estimate(request: DeliveryDraft) -> ApiEnvelope:

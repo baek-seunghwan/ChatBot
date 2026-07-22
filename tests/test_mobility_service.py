@@ -19,7 +19,13 @@ from mobility_service.models import DeliveryDraft
 from mobility_service.store import MobilityStore
 
 
-def settings(root: Path, *, map_key: str = "") -> Settings:
+def settings(
+    root: Path,
+    *,
+    map_key: str = "",
+    admin_username: str = "",
+    admin_password: str = "",
+) -> Settings:
     return Settings(
         api_key="test-api-key",
         vendor_id="TEST-VENDOR",
@@ -27,6 +33,8 @@ def settings(root: Path, *, map_key: str = "") -> Settings:
         callback_base_url="https://callback.example.test",
         database_path=root / "test.db",
         kakao_javascript_key=map_key,
+        admin_username=admin_username,
+        admin_password=admin_password,
     )
 
 
@@ -209,6 +217,105 @@ class MobilityApiTests(unittest.TestCase):
         self.assertEqual(data["kakaoJavascriptKey"], "public-javascript-key")
         self.assertNotIn("apiKey", data)
         self.assertNotIn("vendorId", data)
+
+    def test_register_creates_session_and_logout_revokes_it(self) -> None:
+        registered = self.client.post(
+            "/api/auth/register",
+            json={
+                "name": "홍길동",
+                "email": "USER@example.com",
+                "password": "safe-pass-1234",
+            },
+        )
+
+        self.assertEqual(registered.status_code, 201)
+        self.assertEqual(registered.json()["data"]["user"]["email"], "user@example.com")
+        self.assertNotIn("password", registered.text)
+        self.assertIn("HttpOnly", registered.headers["set-cookie"])
+
+        me = self.client.get("/api/auth/me")
+        self.assertEqual(me.status_code, 200)
+        self.assertEqual(me.json()["data"]["user"]["name"], "홍길동")
+
+        logged_out = self.client.post("/api/auth/logout")
+        self.assertEqual(logged_out.status_code, 200)
+        self.assertEqual(self.client.get("/api/auth/me").status_code, 401)
+
+    def test_login_validates_credentials_and_duplicate_email(self) -> None:
+        payload = {
+            "name": "테스트 사용자",
+            "email": "test@example.com",
+            "password": "correct-pass-1234",
+        }
+        self.assertEqual(
+            self.client.post("/api/auth/register", json=payload).status_code,
+            201,
+        )
+        self.assertEqual(
+            self.client.post("/api/auth/register", json=payload).status_code,
+            409,
+        )
+        self.client.cookies.clear()
+
+        wrong = self.client.post(
+            "/api/auth/login",
+            json={"email": payload["email"], "password": "wrong-pass-1234"},
+        )
+        self.assertEqual(wrong.status_code, 401)
+
+        correct = self.client.post(
+            "/api/auth/login",
+            json={"email": payload["email"], "password": payload["password"]},
+        )
+        self.assertEqual(correct.status_code, 200)
+        self.assertEqual(correct.json()["data"]["user"]["email"], payload["email"])
+
+    def test_admin_bootstrap_and_role_protected_endpoints(self) -> None:
+        root = Path(self.temporary.name) / "admin"
+        admin_app = create_app(
+            settings=settings(
+                root,
+                admin_username="admin",
+                admin_password="admin-test-pass-1234",
+            ),
+            client=FakeKakaoClient(),  # type: ignore[arg-type]
+            store=MobilityStore(root / "test.db"),
+        )
+        with TestClient(admin_app) as admin_client:
+            self.assertEqual(
+                admin_client.get("/api/admin/summary").status_code,
+                401,
+            )
+
+            logged_in = admin_client.post(
+                "/api/auth/login",
+                json={"identifier": "admin", "password": "admin-test-pass-1234"},
+            )
+            self.assertEqual(logged_in.status_code, 200)
+            self.assertEqual(logged_in.json()["data"]["user"]["role"], "ADMIN")
+            self.assertEqual(admin_client.get("/admin").status_code, 200)
+
+            summary = admin_client.get("/api/admin/summary")
+            self.assertEqual(summary.status_code, 200)
+            self.assertEqual(summary.json()["data"]["users"]["admins"], 1)
+
+            admin_client.post("/api/auth/logout")
+            admin_client.post(
+                "/api/auth/register",
+                json={
+                    "name": "일반 사용자",
+                    "email": "regular@example.com",
+                    "password": "regular-pass-1234",
+                },
+            )
+            self.assertEqual(
+                admin_client.get("/api/admin/users").status_code,
+                403,
+            )
+            self.assertEqual(
+                admin_client.get("/admin", follow_redirects=False).status_code,
+                303,
+            )
 
 
 if __name__ == "__main__":

@@ -97,6 +97,11 @@
       border: 1px solid rgba(255, 255, 255, .28);
       color: white;
     }
+    .login-button.logged-in {
+      border-color: rgba(254, 229, 0, .55);
+      background: rgba(254, 229, 0, .12);
+      color: var(--yellow);
+    }
     .visually-hidden {
       position: absolute;
       width: 1px;
@@ -108,6 +113,85 @@
       white-space: nowrap;
       border: 0;
     }
+    body.auth-open { overflow: hidden; }
+    .auth-backdrop {
+      position: fixed;
+      z-index: 100;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(10, 10, 14, .66);
+      backdrop-filter: blur(7px);
+    }
+    .auth-backdrop.hidden { display: none; }
+    .auth-card {
+      width: min(420px, 100%);
+      border: 1px solid rgba(255, 255, 255, .55);
+      border-radius: 24px;
+      padding: 24px;
+      background: white;
+      box-shadow: 0 28px 70px rgba(0, 0, 0, .3);
+    }
+    .auth-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .auth-head h2 { margin: 0 0 5px; }
+    .auth-head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .auth-close {
+      padding: 7px 10px;
+      background: #f0f0f0;
+      color: var(--ink);
+      box-shadow: none;
+      font-size: 17px;
+    }
+    .auth-close:hover { transform: none; box-shadow: none; }
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 18px;
+      padding: 5px;
+      border-radius: 14px;
+      background: #f1f2f6;
+    }
+    .auth-tab {
+      padding: 10px;
+      background: transparent;
+      color: var(--muted);
+      box-shadow: none;
+    }
+    .auth-tab:hover { transform: none; box-shadow: none; }
+    .auth-tab.active { background: white; color: var(--ink); box-shadow: 0 3px 10px rgba(25, 25, 25, .08); }
+    .auth-form { display: grid; gap: 13px; }
+    .auth-form button[type="submit"] { margin-top: 4px; background: var(--yellow); color: var(--ink); }
+    .auth-error {
+      display: none;
+      margin: 0;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #fff0ef;
+      color: var(--danger);
+      font-size: 12px;
+    }
+    .auth-error.visible { display: block; }
+    .account-view { display: grid; gap: 16px; }
+    .account-view.hidden, .auth-form-view.hidden, .register-name.hidden { display: none; }
+    .account-profile {
+      padding: 18px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff9cf, #fffef2);
+      border: 1px solid #f0df78;
+    }
+    .account-profile strong { display: block; font-size: 19px; }
+    .account-profile span { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; }
+    .account-actions { display: flex; gap: 8px; }
+    .account-actions button { flex: 1; }
+    .account-actions .hidden { display: none; }
     .sandbox {
       padding: 10px 20px;
       background: #fff8cd;
@@ -494,6 +578,30 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: .92em;
     }
+    .chat-bubble.typing {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12.5px;
+    }
+    .typing-dots { display: inline-flex; gap: 4px; }
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #b9b9b3;
+      animation: typing-bounce 1.2s infinite ease-in-out;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: .15s; }
+    .typing-dots span:nth-child(3) { animation-delay: .3s; }
+    @keyframes typing-bounce {
+      0%, 60%, 100% { transform: translateY(0); opacity: .45; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .typing-dots span { animation: none; opacity: .8; }
+    }
     .chat-widget-form {
       display: flex;
       gap: 8px;
@@ -564,9 +672,53 @@
       <button type="button" class="nav-item active" data-nav="quick" onclick="goToSection('quickRequest', 'quick')">퀵 접수하기</button>
       <button type="button" class="nav-item" data-nav="history" onclick="goToSection('history', 'history')">이용 내역</button>
     </nav>
-    <button type="button" class="login-button" onclick="showLoginNotice()">로그인</button>
+    <button type="button" class="login-button" id="loginButton" onclick="openAuthModal()">로그인</button>
     <span class="visually-hidden" id="status" aria-live="polite">연동 상태 확인 중</span>
   </header>
+
+  <div class="auth-backdrop hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" onclick="closeAuthFromBackdrop(event)">
+    <section class="auth-card">
+      <div class="auth-head">
+        <div>
+          <h2 id="authTitle">MOVB 로그인</h2>
+          <p>택시·퀵 접수 내역을 한 곳에서 관리하세요.</p>
+        </div>
+        <button type="button" class="auth-close" onclick="closeAuthModal()" aria-label="로그인 창 닫기">✕</button>
+      </div>
+
+      <div class="auth-form-view" id="authFormView">
+        <div class="auth-tabs" aria-label="로그인 방식">
+          <button type="button" class="auth-tab active" data-auth-mode="login" onclick="setAuthMode('login')">로그인</button>
+          <button type="button" class="auth-tab" data-auth-mode="register" onclick="setAuthMode('register')">회원가입</button>
+        </div>
+        <form class="auth-form" id="authForm" onsubmit="submitAuth(event)">
+          <label class="register-name hidden" id="registerNameField">이름
+            <input id="authName" autocomplete="name" maxlength="40" placeholder="이름을 입력하세요">
+          </label>
+          <label id="authIdentifierLabel">이메일 또는 아이디
+            <input id="authEmail" autocomplete="username" required maxlength="254" placeholder="you@example.com 또는 admin">
+          </label>
+          <label>비밀번호
+            <input id="authPassword" type="password" autocomplete="current-password" required minlength="8" maxlength="128" placeholder="8자 이상 입력하세요">
+          </label>
+          <p class="auth-error" id="authError" role="alert"></p>
+          <button type="submit" id="authSubmit">로그인</button>
+        </form>
+      </div>
+
+      <div class="account-view hidden" id="accountView">
+        <div class="account-profile">
+          <strong id="accountName"></strong>
+          <span id="accountEmail"></span>
+        </div>
+        <div class="account-actions">
+          <button type="button" class="primary hidden" id="adminPanelButton" onclick="goToAdmin()">관리자 화면</button>
+          <button type="button" class="secondary" onclick="goToAccountHistory()">이용 내역</button>
+          <button type="button" class="danger" onclick="logoutUser()">로그아웃</button>
+        </div>
+      </div>
+    </section>
+  </div>
   <div class="sandbox">Sandbox 환경입니다. 실제 개인정보 대신 테스트용 이름·전화번호를 사용하세요.</div>
 
   <main>
@@ -758,9 +910,129 @@
       openChatWithPrompt("묶음 퀵 견적을 보고 싶어요. 판교역에서 정자역과 서현역으로 서류를 보내요.");
     }
 
-    function showLoginNotice() {
-      alert("로그인 기능은 화면 구성만 준비되어 있고, 인증 연동은 아직 연결 전입니다.");
+    let currentUser = null;
+    let authMode = "login";
+
+    function updateAuthUi() {
+      const button = byId("loginButton");
+      button.textContent = currentUser ? `${currentUser.name}님` : "로그인";
+      button.classList.toggle("logged-in", Boolean(currentUser));
+      byId("authFormView").classList.toggle("hidden", Boolean(currentUser));
+      byId("accountView").classList.toggle("hidden", !currentUser);
+      if (currentUser) {
+        byId("authTitle").textContent = "내 계정";
+        byId("accountName").textContent = currentUser.name;
+        byId("accountEmail").textContent = currentUser.username || currentUser.email;
+        byId("adminPanelButton").classList.toggle("hidden", currentUser.role !== "ADMIN");
+      } else {
+        byId("authTitle").textContent = authMode === "register" ? "MOVB 회원가입" : "MOVB 로그인";
+        byId("adminPanelButton").classList.add("hidden");
+      }
     }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      document.querySelectorAll(".auth-tab").forEach(button => {
+        button.classList.toggle("active", button.dataset.authMode === mode);
+      });
+      const registering = mode === "register";
+      byId("registerNameField").classList.toggle("hidden", !registering);
+      byId("authName").required = registering;
+      byId("authPassword").autocomplete = registering ? "new-password" : "current-password";
+      byId("authEmail").type = registering ? "email" : "text";
+      byId("authEmail").autocomplete = registering ? "email" : "username";
+      byId("authIdentifierLabel").firstChild.textContent = registering ? "이메일\n            " : "이메일 또는 아이디\n            ";
+      byId("authEmail").placeholder = registering ? "you@example.com" : "you@example.com 또는 admin";
+      byId("authSubmit").textContent = registering ? "회원가입" : "로그인";
+      byId("authTitle").textContent = registering ? "MOVB 회원가입" : "MOVB 로그인";
+      byId("authError").classList.remove("visible");
+    }
+
+    function openAuthModal() {
+      updateAuthUi();
+      byId("authModal").classList.remove("hidden");
+      document.body.classList.add("auth-open");
+      if (!currentUser) {
+        setAuthMode(authMode);
+        setTimeout(() => byId("authEmail").focus(), 0);
+      }
+    }
+
+    function closeAuthModal() {
+      byId("authModal").classList.add("hidden");
+      document.body.classList.remove("auth-open");
+      byId("authError").classList.remove("visible");
+    }
+
+    function closeAuthFromBackdrop(event) {
+      if (event.target === byId("authModal")) closeAuthModal();
+    }
+
+    async function submitAuth(event) {
+      event.preventDefault();
+      const submit = byId("authSubmit");
+      const error = byId("authError");
+      const identifier = byId("authEmail").value.trim();
+      const payload = {password: byId("authPassword").value};
+      if (authMode === "register") {
+        payload.name = byId("authName").value.trim();
+        payload.email = identifier;
+      } else {
+        payload.identifier = identifier;
+      }
+
+      submit.disabled = true;
+      error.classList.remove("visible");
+      try {
+        const result = await api(`/api/auth/${authMode}`, {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        currentUser = result.data.user;
+        byId("authForm").reset();
+        updateAuthUi();
+        closeAuthModal();
+      } catch (requestError) {
+        error.textContent = requestError.message;
+        error.classList.add("visible");
+      } finally {
+        submit.disabled = false;
+      }
+    }
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch("/api/auth/me", {headers: {"Accept": "application/json"}});
+        if (!response.ok) throw new Error("guest");
+        const result = await response.json();
+        currentUser = result.data.user;
+      } catch {
+        currentUser = null;
+      }
+      updateAuthUi();
+    }
+
+    async function logoutUser() {
+      await api("/api/auth/logout", {method: "POST", body: "{}"});
+      currentUser = null;
+      updateAuthUi();
+      closeAuthModal();
+    }
+
+    function goToAccountHistory() {
+      closeAuthModal();
+      goToSection("history", "history");
+    }
+
+    function goToAdmin() {
+      location.href = "/admin";
+    }
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && !byId("authModal").classList.contains("hidden")) {
+        closeAuthModal();
+      }
+    });
 
     let deliveryMap = null;
     let pickupMarker = null;
@@ -1211,6 +1483,11 @@
     }
 
     async function createOrder(button) {
+      if (!currentUser) {
+        showResult("로그인 필요", "주문을 접수하려면 먼저 로그인해주세요.", true);
+        openAuthModal();
+        return;
+      }
       if (!confirm("Sandbox 테스트 주문만 허용됩니다. 계속할까요?")) return;
 
       const pickupPhone = byId("pickupPhone").value.trim();
@@ -1390,23 +1667,45 @@
       log.scrollTop = log.scrollHeight;
     }
 
+    function appendLoadingBubble(mode) {
+      const bubble = document.createElement("div");
+      bubble.className = "chat-bubble bot typing";
+      const label = document.createElement("span");
+      label.textContent = mode === "local" ? "로컬 모델 답변 준비 중" : "답변 준비 중";
+      const dots = document.createElement("span");
+      dots.className = "typing-dots";
+      for (let i = 0; i < 3; i += 1) dots.append(document.createElement("span"));
+      bubble.append(label, dots);
+      const log = byId("chatLog");
+      log.appendChild(bubble);
+      log.scrollTop = log.scrollHeight;
+      return bubble;
+    }
+
     async function sendChatMessage() {
       const input = byId("chatInput");
       const message = input.value.trim();
       if (!message) return;
       appendChatBubble("user", message);
       input.value = "";
+      const sendButton = document.querySelector("#chatForm button");
+      const loading = appendLoadingBubble(chatMode);
+      sendButton.disabled = true;
       try {
         const result = await api("/api/agent/chat", {
           method: "POST",
           headers: {"X-Session-Id": chatSessionId},
           body: JSON.stringify({message, mode: chatMode})
         });
+        loading.remove();
         appendChatBubble("bot", result.data?.reply || "응답을 받았지만 표시할 내용이 없어요.");
         loadPoolBoard();
         if (result.data?.order) loadOrders();
       } catch (error) {
+        loading.remove();
         appendChatBubble("bot", `연결에 문제가 있었어요: ${error.message}. 잠시 후 다시 시도하거나 왼쪽 폼으로 접수해보세요.`);
+      } finally {
+        sendButton.disabled = false;
       }
     }
 
@@ -1441,6 +1740,14 @@
     }
 
     async function initialize() {
+      await loadCurrentUser();
+      if (new URLSearchParams(location.search).get("admin") === "1") {
+        if (currentUser?.role === "ADMIN") {
+          location.replace("/admin");
+          return;
+        }
+        openAuthModal();
+      }
       try {
         const config = await api("/api/config");
         byId("status").innerHTML = config.data.configured

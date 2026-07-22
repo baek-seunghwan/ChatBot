@@ -47,6 +47,8 @@ class Settings:
     database_path: Path
     kakao_javascript_key: str = ""
     kakao_rest_api_key: str = ""
+    admin_username: str = ""
+    admin_password: str = ""
     request_timeout_seconds: float = 10.0
 
     @property
@@ -60,6 +62,10 @@ class Settings:
     @property
     def geocoding_configured(self) -> bool:
         return bool(self.kakao_rest_api_key.strip())
+
+    @property
+    def admin_configured(self) -> bool:
+        return bool(self.admin_username.strip() and self.admin_password)
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -92,6 +98,8 @@ class Settings:
                 or os.getenv("KAKAO_MAP_KEY", "")
             ).strip(),
             kakao_rest_api_key=os.getenv("KAKAO_REST_API_KEY", "").strip(),
+            admin_username=os.getenv("MOVB_ADMIN_USERNAME", "").strip(),
+            admin_password=os.getenv("MOVB_ADMIN_PASSWORD", ""),
             request_timeout_seconds=float(
                 os.getenv("KAKAO_MOBILITY_TIMEOUT_SECONDS", "10")
             ),

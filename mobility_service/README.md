@@ -5,8 +5,12 @@
 ## 제공 기능
 
 - API 키 인증 상태 확인
+- 이메일 회원가입·로그인·로그아웃과 30일 세션 유지
+- PBKDF2 비밀번호 해시 및 HttpOnly 세션 쿠키
+- 환경변수 기반 최초 관리자 계정과 역할 기반 접근 제어
+- 관리자 전용 회원·주문·합승 현황 대시보드
 - 배송 예상 시간 조회 & 배송 가격 조회
-- 
+- 카카오 지도 출발지·도착지 표시
 - 주소 검색 및 지도 클릭 좌표 입력
 - Sandbox 주문 생성
 - 주문 조회 및 카카오 상태 동기화
@@ -36,6 +40,10 @@ KAKAO_MOBILITY_CALLBACK_BASE_URL=https://api.example.com
 
 # 카카오 지도에는 JavaScript 키를 사용합니다.
 KAKAO_JAVASCRIPT_KEY=발급받은_JAVASCRIPT_KEY
+
+# 관리자 계정 — 비밀번호는 .env에만 저장합니다.
+MOVB_ADMIN_USERNAME=관리자_아이디
+MOVB_ADMIN_PASSWORD=8자_이상_비밀번호
 ```
 
 `.env`는 Git에서 제외됩니다. 키나 실제 연락처를 저장소에 커밋하지 마세요.
@@ -59,6 +67,7 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 - API 문서: <http://127.0.0.1:8002/docs>
 - 상태 확인: <http://127.0.0.1:8002/health>
 - 카카오 인증 확인: <http://127.0.0.1:8002/api/kakao/auth-check>
+- 관리자 화면: <http://127.0.0.1:8002/admin>
 
 화면에 기본으로 입력된 주소와 연락처는 Sandbox 테스트용 예시입니다.
 실제 개인정보를 입력하지 마세요.
@@ -97,3 +106,6 @@ uv run python -m unittest tests.test_mobility_service -v
 - 동일 주문 ID의 멱등성
 - 콜백 중복 제거
 - 역순 콜백에 의한 상태 후퇴 방지
+- 회원가입·로그인·로그아웃 세션 수명주기
+- 중복 이메일 및 잘못된 비밀번호 거부
+- 일반 사용자와 관리자의 접근 권한 분리
