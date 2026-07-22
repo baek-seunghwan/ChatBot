@@ -42,7 +42,7 @@ from .orders import cancel_order_by_id, get_order_status, place_order
 from .pool_store import PoolStore
 from .store import MobilityStore
 from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
-from .web import ADMIN_HTML, INDEX_HTML, TAXI_HTML
+from .web import ADMIN_HTML, FEATURES_HTML, INDEX_HTML, TAXI_HTML
 
 
 SESSION_COOKIE_NAME = "movb_session"
@@ -150,6 +150,10 @@ def create_app(
     @application.get("/taxi", response_class=HTMLResponse, include_in_schema=False)
     async def taxi_page() -> str:
         return TAXI_HTML
+
+    @application.get("/features", response_class=HTMLResponse, include_in_schema=False)
+    async def features_page() -> str:
+        return FEATURES_HTML
 
     @application.get(
         "/admin",

@@ -79,6 +79,7 @@
       background: transparent;
       color: #dfdfe5;
       box-shadow: none;
+      text-decoration: none;
       white-space: nowrap;
     }
     .nav-item:hover,
@@ -668,6 +669,7 @@
       </div>
     </a>
     <nav class="primary-nav" aria-label="주요 메뉴">
+      <a class="nav-item" href="/features">기능 소개</a>
       <button type="button" class="nav-item" data-nav="taxi" onclick="startTaxiRequest()">택시 접수하기</button>
       <button type="button" class="nav-item active" data-nav="quick" onclick="goToSection('quickRequest', 'quick')">퀵 접수하기</button>
       <button type="button" class="nav-item" data-nav="history" onclick="goToSection('history', 'history')">이용 내역</button>
