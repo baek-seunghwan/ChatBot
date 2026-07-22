@@ -624,12 +624,13 @@
 
       <h3 class="section-title">출발지</h3>
       <div class="grid">
-        <label>주소검색 / 상세주소
+        <label>주소검색
           <span class="address-input">
             <input id="pickupAddress" placeholder="주소검색 (예: 판교역로 152, 백현동 532)">
             <button type="button" onclick="searchAddress('pickup')">검색</button>
           </span>
         </label>
+        <label>상세주소<input id="pickupDetailAddress" placeholder="상세주소 (예: 3층, 101동 1203호)"></label>
       </div>
       <div class="grid" style="margin-top:13px">
         <label>이름<input id="pickupName" placeholder="이름 (예: 홍길동)"></label>
@@ -638,12 +639,13 @@
 
       <h3 class="section-title">도착지</h3>
       <div class="grid">
-        <label>주소검색 / 상세주소
+        <label>주소검색
           <span class="address-input">
-            <input id="dropoffAddress" placeholder="상세주소 (예: 3층, 101동 1203호)">
+            <input id="dropoffAddress" placeholder="주소검색 (예: 정자동 49-4, 판교로 235)">
             <button type="button" onclick="searchAddress('dropoff')">검색</button>
           </span>
         </label>
+        <label>상세주소<input id="dropoffDetailAddress" placeholder="상세주소 (예: 3층, 101동 1203호)"></label>
       </div>
       <div class="grid" style="margin-top:13px">
         <label>이름<input id="dropoffName" placeholder="이름 (예: 김철수)"></label>
@@ -987,19 +989,23 @@
     function draft() {
       const pickup = locationValue("pickup");
       const dropoff = locationValue("dropoff");
+      const pickupAddress = byId("pickupAddress").value.trim();
+      const pickupDetailAddress = byId("pickupDetailAddress").value.trim();
+      const dropoffAddress = byId("dropoffAddress").value.trim();
+      const dropoffDetailAddress = byId("dropoffDetailAddress").value.trim();
       const payload = {
         orderType: byId("orderType").value,
         productSize: byId("productSize").value,
         pickup: {
           location: {
-            basicAddress: byId("pickupAddress").value.trim() || "지도에서 선택한 출발지",
+            basicAddress: [pickupAddress, pickupDetailAddress].filter(Boolean).join(" ") || "지도에서 선택한 출발지",
             latitude: pickup.latitude,
             longitude: pickup.longitude
           }
         },
         dropoff: {
           location: {
-            basicAddress: byId("dropoffAddress").value.trim() || "지도에서 선택한 도착지",
+            basicAddress: [dropoffAddress, dropoffDetailAddress].filter(Boolean).join(" ") || "지도에서 선택한 도착지",
             latitude: dropoff.latitude,
             longitude: dropoff.longitude
           }
