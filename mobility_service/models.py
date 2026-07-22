@@ -3,7 +3,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 
 class CamelModel(BaseModel):
@@ -138,3 +138,21 @@ class CarpoolPlanRequest(CamelModel):
     origin_address: str = Field(alias="originAddress", min_length=2, max_length=200)
     passengers: list[CarpoolPassenger] = Field(min_length=2, max_length=4)
 
+
+class RegisterRequest(CamelModel):
+    name: str = Field(min_length=1, max_length=40)
+    email: str = Field(
+        min_length=5,
+        max_length=254,
+        pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+    )
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(CamelModel):
+    identifier: str = Field(
+        validation_alias=AliasChoices("identifier", "email"),
+        min_length=3,
+        max_length=254,
+    )
+    password: str = Field(min_length=8, max_length=128)

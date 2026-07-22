@@ -242,6 +242,18 @@ class MobilityStore:
             for row in rows
         ]
 
+    def order_counts(self) -> dict[str, Any]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT status, COUNT(*) AS count
+                FROM delivery_orders
+                GROUP BY status
+                """
+            ).fetchall()
+        by_status = {row["status"]: row["count"] for row in rows}
+        return {"total": sum(by_status.values()), "byStatus": by_status}
+
     def record_callback(
         self, partner_order_id: str, event: str, body: dict[str, Any]
     ) -> dict[str, bool]:
