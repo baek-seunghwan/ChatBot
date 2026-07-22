@@ -29,7 +29,7 @@ from .rideshare import carpool_plan
 from .orders import cancel_order_by_id, get_order_status, place_order
 from .pool_store import PoolStore
 from .store import MobilityStore
-from .web import INDEX_HTML
+from .web import INDEX_HTML, TAXI_HTML
 
 
 def create_app(
@@ -92,6 +92,10 @@ def create_app(
     @application.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def index() -> str:
         return INDEX_HTML
+
+    @application.get("/taxi", response_class=HTMLResponse, include_in_schema=False)
+    async def taxi_page() -> str:
+        return TAXI_HTML
 
     @application.get("/health")
     async def health() -> dict[str, Any]:

@@ -31,30 +31,83 @@
         radial-gradient(circle at 88% 88%, rgba(15, 138, 115, .08), transparent 26%),
         var(--surface);
     }
-    header {
+    .site-header {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      padding: 18px clamp(20px, 5vw, 72px);
+      gap: 26px;
+      min-height: 76px;
+      padding: 14px clamp(20px, 5vw, 72px);
       background: linear-gradient(110deg, #111111, #24203f 68%, #131313);
       color: white;
       border-bottom: 1px solid rgba(255, 255, 255, .08);
     }
-    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand {
+      display: flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 12px;
+      color: inherit;
+      text-decoration: none;
+    }
+    .brand-copy {
+      display: grid;
+      gap: 2px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .brand-copy small {
+      color: rgba(255, 255, 255, .72);
+      font-size: 12px;
+      font-weight: 650;
+    }
     .brand-mark {
       display: grid;
       place-items: center;
-      width: 40px;
-      height: 40px;
-      border-radius: 14px;
+      width: 46px;
+      height: 46px;
+      border-radius: 15px;
       background: var(--yellow);
       color: var(--ink);
       font-weight: 900;
     }
-    .brand h1 { margin: 0; font-size: 19px; }
-    .brand p { margin: 3px 0 0; color: #bdbdbd; font-size: 12px; }
-    .status { font-size: 13px; color: #ddd; }
-    .status b { color: var(--yellow); }
+    .primary-nav { display: flex; align-items: center; gap: 6px; }
+    .nav-item,
+    .login-button {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 14px;
+      background: transparent;
+      color: #dfdfe5;
+      box-shadow: none;
+      white-space: nowrap;
+    }
+    .nav-item:hover,
+    .login-button:hover {
+      transform: none;
+      background: rgba(255, 255, 255, .09);
+      color: white;
+      box-shadow: none;
+    }
+    .nav-item.active {
+      background: rgba(254, 229, 0, .14);
+      color: var(--yellow);
+    }
+    .login-button {
+      margin-left: auto;
+      border: 1px solid rgba(255, 255, 255, .28);
+      color: white;
+    }
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
     .sandbox {
       padding: 10px 20px;
       background: #fff8cd;
@@ -149,6 +202,24 @@
     .route-dot.dropoff { background: var(--danger); }
     h2 { margin: 0 0 6px; font-size: 21px; }
     .description { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
+    .quick-options {
+      display: flex;
+      gap: 8px;
+      margin: -6px 0 22px;
+      padding: 5px;
+      border-radius: 14px;
+      background: #f1f2f6;
+    }
+    .quick-option {
+      flex: 1;
+      padding: 10px 12px;
+      background: transparent;
+      color: #656b78;
+      box-shadow: none;
+    }
+    .quick-option:hover { transform: none; box-shadow: none; background: white; }
+    .quick-option.active { background: white; color: var(--ink); box-shadow: 0 3px 10px rgba(25, 25, 25, .08); }
+    #quickRequest, #history { scroll-margin-top: 18px; }
     .section-title {
       margin: 24px 0 12px;
       padding-top: 20px;
@@ -181,6 +252,9 @@
     input:focus, select:focus {
       border-color: var(--ink);
       box-shadow: 0 0 0 3px rgba(25, 25, 25, .08);
+    }
+    input::placeholder {
+      color: #a4a4a4;
     }
     .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
     .safety-note {
@@ -449,9 +523,18 @@
     .chat-mode-btn:hover { transform: none; box-shadow: none; }
     .chat-mode-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
     @media (max-width: 900px) {
+      .site-header { flex-wrap: wrap; gap: 10px; padding: 12px 16px; }
+      .brand-mark { width: 42px; height: 42px; }
+      .login-button { margin-left: auto; }
+      .primary-nav {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 2px;
+      }
+      .nav-item { flex: 0 0 auto; }
       main { grid-template-columns: 1fr; }
       .grid, .grid.three { grid-template-columns: 1fr; }
-      .status { display: none; }
       .map-header { display: grid; }
       .map-tools { justify-content: flex-start; }
       #map, .map-stage { height: 340px; min-height: 340px; }
@@ -461,9 +544,9 @@
     }
   </style>
 </head>
-<body>
-  <header>
-    <div class="brand">
+<body id="top">
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="MOVB 홈">
       <div class="brand-mark" aria-label="MOVB 로고">
         <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true">
           <polyline points="15,45 15,21 32,41 49,21 49,45" fill="none" stroke="#191919" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -471,9 +554,18 @@
           <circle cx="49" cy="21" r="5.5" fill="#c43c35" stroke="#fee500" stroke-width="2"/>
         </svg>
       </div>
-      <div><h1>모브 (MOVB)</h1><p>택시·퀵 통합 관제</p></div>
-    </div>
-    <div class="status" id="status">연동 상태 확인 중</div>
+      <div class="brand-copy">
+        <span>MOVB 택시 · 퀵</span>
+        <small>모브 (MOVB)</small>
+      </div>
+    </a>
+    <nav class="primary-nav" aria-label="주요 메뉴">
+      <button type="button" class="nav-item" data-nav="taxi" onclick="startTaxiRequest()">택시 접수하기</button>
+      <button type="button" class="nav-item active" data-nav="quick" onclick="goToSection('quickRequest', 'quick')">퀵 접수하기</button>
+      <button type="button" class="nav-item" data-nav="history" onclick="goToSection('history', 'history')">이용 내역</button>
+    </nav>
+    <button type="button" class="login-button" onclick="showLoginNotice()">로그인</button>
+    <span class="visually-hidden" id="status" aria-live="polite">연동 상태 확인 중</span>
   </header>
   <div class="sandbox">Sandbox 환경입니다. 실제 개인정보 대신 테스트용 이름·전화번호를 사용하세요.</div>
 
@@ -502,9 +594,14 @@
       </div>
     </section>
 
-    <section class="panel">
-      <h2>배송 요청</h2>
+    <section class="panel" id="quickRequest">
+      <h2>퀵 접수하기</h2>
       <p class="description">출발지와 도착지를 입력해 예상 시간과 가격을 확인하세요.</p>
+
+      <div class="quick-options" aria-label="퀵 접수 방식">
+        <button type="button" class="quick-option active" data-quick-mode="single" onclick="selectQuickMode('single')">일반 퀵</button>
+        <button type="button" class="quick-option" data-quick-mode="bundle" onclick="startBundleRequest()">묶음 퀵</button>
+      </div>
 
       <div class="grid">
         <label>배송 상품
@@ -526,41 +623,37 @@
       </div>
 
       <h3 class="section-title">출발지</h3>
-      <div class="grid three">
-        <label>주소
+      <div class="grid">
+        <label>주소검색 / 상세주소
           <span class="address-input">
-            <input id="pickupAddress" value="경기도 성남시 분당구 판교역로 152">
+            <input id="pickupAddress" placeholder="주소검색 (예: 판교역로 152, 백현동 532)">
             <button type="button" onclick="searchAddress('pickup')">검색</button>
           </span>
         </label>
-        <label>위도<input id="pickupLat" type="number" step="any" value="37.3946095"></label>
-        <label>경도<input id="pickupLng" type="number" step="any" value="127.1118735"></label>
       </div>
       <div class="grid" style="margin-top:13px">
-        <label>보내는 사람<input id="pickupName" value="테스트발송자"></label>
-        <label>테스트 전화번호<input id="pickupPhone" value="010-1000-0001"></label>
+        <label>이름<input id="pickupName" placeholder="이름 (예: 홍길동)"></label>
+        <label>연락처<input id="pickupPhone" placeholder="연락처 (예: 010-1234-5678)"></label>
       </div>
 
       <h3 class="section-title">도착지</h3>
-      <div class="grid three">
-        <label>주소
+      <div class="grid">
+        <label>주소검색 / 상세주소
           <span class="address-input">
-            <input id="dropoffAddress" value="경기도 성남시 분당구 정자동 49-4">
+            <input id="dropoffAddress" placeholder="상세주소 (예: 3층, 101동 1203호)">
             <button type="button" onclick="searchAddress('dropoff')">검색</button>
           </span>
         </label>
-        <label>위도<input id="dropoffLat" type="number" step="any" value="37.3595316"></label>
-        <label>경도<input id="dropoffLng" type="number" step="any" value="127.1052133"></label>
       </div>
       <div class="grid" style="margin-top:13px">
-        <label>받는 사람<input id="dropoffName" value="테스트수신자"></label>
-        <label>테스트 전화번호<input id="dropoffPhone" value="010-1000-0002"></label>
+        <label>이름<input id="dropoffName" placeholder="이름 (예: 김철수)"></label>
+        <label>연락처<input id="dropoffPhone" placeholder="연락처 (예: 010-1234-5678)"></label>
       </div>
 
       <h3 class="section-title">물품 정보</h3>
       <div class="grid">
-        <label>물품명<input id="productName" value="테스트 서류"></label>
-        <label>신고 가격<input id="declaredValue" type="number" min="0" value="10000"></label>
+        <label>물품명<input id="productName" placeholder="물품명 (예: 서류, 소형 박스)"></label>
+        <label>신고 가격<input id="declaredValue" type="number" min="0" placeholder="신고 가격 (예: 10000)"></label>
       </div>
 
       <div class="actions">
@@ -579,8 +672,8 @@
       </div>
     </section>
 
-    <aside class="panel">
-      <h2>주문 추적</h2>
+    <aside class="panel" id="history">
+      <h2>이용 내역</h2>
       <p class="description">저장된 주문과 수신한 콜백 상태를 확인합니다.</p>
       <div class="tracking">
         <input id="trackingId" placeholder="partnerOrderId">
@@ -627,6 +720,46 @@
 
   <script>
     const byId = (id) => document.getElementById(id);
+
+    function setActiveNav(name) {
+      document.querySelectorAll(".nav-item").forEach(button => {
+        button.classList.toggle("active", button.dataset.nav === name);
+      });
+    }
+
+    function goToSection(sectionId, navName) {
+      setActiveNav(navName);
+      byId(sectionId)?.scrollIntoView({behavior: "smooth", block: "start"});
+    }
+
+    function openChatWithPrompt(promptText) {
+      byId("chatWidget").classList.remove("hidden");
+      setChatMode("ai");
+      const input = byId("chatInput");
+      input.value = promptText;
+      input.focus();
+    }
+
+    function startTaxiRequest() {
+      location.href = "/taxi";
+    }
+
+    function selectQuickMode(mode) {
+      document.querySelectorAll(".quick-option").forEach(button => {
+        button.classList.toggle("active", button.dataset.quickMode === mode);
+      });
+      goToSection("quickRequest", "quick");
+    }
+
+    function startBundleRequest() {
+      selectQuickMode("bundle");
+      openChatWithPrompt("묶음 퀵 견적을 보고 싶어요. 판교역에서 정자역과 서현역으로 서류를 보내요.");
+    }
+
+    function showLoginNotice() {
+      alert("로그인 기능은 화면 구성만 준비되어 있고, 인증 연동은 아직 연결 전입니다.");
+    }
+
     let deliveryMap = null;
     let pickupMarker = null;
     let dropoffMarker = null;
@@ -635,11 +768,14 @@
     let routeLine = null;
     let geocoder = null;
     let mapMode = "pickup";
+    let pickupLocation = {latitude: 37.3946095, longitude: 127.1118735};
+    let dropoffLocation = {latitude: 37.3595316, longitude: 127.1052133};
 
     function locationValue(kind) {
+      const location = kind === "pickup" ? pickupLocation : dropoffLocation;
       return {
-        latitude: Number(byId(`${kind}Lat`).value),
-        longitude: Number(byId(`${kind}Lng`).value)
+        latitude: location.latitude,
+        longitude: location.longitude
       };
     }
 
@@ -708,8 +844,12 @@
     }
 
     function updateLocation(kind, latitude, longitude, address = "") {
-      byId(`${kind}Lat`).value = Number(latitude).toFixed(7);
-      byId(`${kind}Lng`).value = Number(longitude).toFixed(7);
+      const location = {latitude: Number(latitude), longitude: Number(longitude)};
+      if (kind === "pickup") {
+        pickupLocation = location;
+      } else {
+        dropoffLocation = location;
+      }
       if (address) byId(`${kind}Address`).value = address;
       renderRoute(false);
     }
@@ -725,21 +865,33 @@
     }
 
     function searchAddress(kind) {
-      if (!geocoder) {
-        showResult("지도 검색 실패", "카카오 지도가 아직 준비되지 않았습니다.", true);
+      // postcode.v2.js는 버전에 따라 daum.Postcode 또는 kakao.Postcode로 노출된다.
+      const Postcode = window.daum?.Postcode || window.kakao?.Postcode;
+      if (!Postcode) {
+        showResult("주소 검색 실패", "카카오 주소 검색 스크립트를 아직 불러오지 못했습니다.", true);
         return;
       }
-      const address = byId(`${kind}Address`).value.trim();
-      if (!address) return;
-      geocoder.addressSearch(address, (results, status) => {
-        if (status !== kakao.maps.services.Status.OK || !results.length) {
-          showResult("주소 검색 실패", `"${address}" 주소를 찾지 못했습니다.`, true);
-          return;
+
+      new Postcode({
+        oncomplete: function(data) {
+          const address = data.roadAddress || data.address || "";
+          byId(`${kind}Address`).value = address;
+          setMapMode(kind);
+
+          if (!geocoder || !address) {
+            return;
+          }
+
+          geocoder.addressSearch(address, (results, status) => {
+            if (status !== kakao.maps.services.Status.OK || !results.length) {
+              showResult("주소 좌표 변환 실패", `"${address}" 주소의 좌표를 찾지 못했습니다.`, true);
+              return;
+            }
+            updateLocation(kind, Number(results[0].y), Number(results[0].x), results[0].address_name);
+            renderRoute(true);
+          });
         }
-        updateLocation(kind, Number(results[0].y), Number(results[0].x), results[0].address_name);
-        setMapMode(kind);
-        renderRoute(true);
-      });
+      }).open();
     }
 
     function loadKakaoMapSdk(key) {
@@ -757,6 +909,21 @@
       });
     }
 
+    function loadKakaoPostcodeSdk() {
+      return new Promise((resolve, reject) => {
+        if (window.daum?.Postcode || window.kakao?.Postcode) {
+          resolve();
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js";
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error("카카오 주소 검색 SDK를 불러오지 못했습니다."));
+        document.head.appendChild(script);
+      });
+    }
+
     async function initializeMap(key) {
       const message = byId("mapMessage");
       if (!key) {
@@ -766,6 +933,7 @@
       }
       try {
         await loadKakaoMapSdk(key);
+        await loadKakaoPostcodeSdk();
         const pickup = locationValue("pickup");
         const dropoff = locationValue("dropoff");
         const pickupPosition = new kakao.maps.LatLng(pickup.latitude, pickup.longitude);
@@ -810,37 +978,46 @@
       }
     }
 
+    function contactValue(kind) {
+      const name = byId(`${kind}Name`).value.trim();
+      const phone = byId(`${kind}Phone`).value.trim();
+      return name && phone ? {name, phone} : null;
+    }
+
     function draft() {
-      return {
+      const pickup = locationValue("pickup");
+      const dropoff = locationValue("dropoff");
+      const payload = {
         orderType: byId("orderType").value,
         productSize: byId("productSize").value,
         pickup: {
           location: {
-            basicAddress: byId("pickupAddress").value.trim(),
-            latitude: Number(byId("pickupLat").value),
-            longitude: Number(byId("pickupLng").value)
-          },
-          contact: {
-            name: byId("pickupName").value.trim(),
-            phone: byId("pickupPhone").value.trim()
+            basicAddress: byId("pickupAddress").value.trim() || "지도에서 선택한 출발지",
+            latitude: pickup.latitude,
+            longitude: pickup.longitude
           }
         },
         dropoff: {
           location: {
-            basicAddress: byId("dropoffAddress").value.trim(),
-            latitude: Number(byId("dropoffLat").value),
-            longitude: Number(byId("dropoffLng").value)
-          },
-          contact: {
-            name: byId("dropoffName").value.trim(),
-            phone: byId("dropoffPhone").value.trim()
+            basicAddress: byId("dropoffAddress").value.trim() || "지도에서 선택한 도착지",
+            latitude: dropoff.latitude,
+            longitude: dropoff.longitude
           }
         },
-        productName: byId("productName").value.trim(),
-        declaredValue: Number(byId("declaredValue").value),
         paymentType: "CARD",
         waypoints: []
       };
+      const pickupContact = contactValue("pickup");
+      if (pickupContact) payload.pickup.contact = pickupContact;
+      const dropoffContact = contactValue("dropoff");
+      if (dropoffContact) payload.dropoff.contact = dropoffContact;
+      const productName = byId("productName").value.trim();
+      if (productName) payload.productName = productName;
+      const declaredRaw = byId("declaredValue").value.trim();
+      if (declaredRaw && Number.isFinite(Number(declaredRaw))) {
+        payload.declaredValue = Number(declaredRaw);
+      }
+      return payload;
     }
 
     async function api(path, options = {}) {
@@ -1254,10 +1431,7 @@
     }
 
     function startPoolChat() {
-      byId("chatWidget").classList.remove("hidden");
-      const input = byId("chatInput");
-      input.value = "합승으로 싸게 보내고 싶어요. 강남역에서 대전 유성구로 서류, 보내는 사람 홍길동 010-1000-0001, 받는 사람 김철수 010-1000-0002";
-      input.focus();
+      openChatWithPrompt("합승으로 싸게 보내고 싶어요. 강남역에서 대전 유성구로 서류, 보내는 사람 홍길동 010-1000-0001, 받는 사람 김철수 010-1000-0002");
     }
 
     async function initialize() {
@@ -1274,9 +1448,6 @@
       await loadOrders();
       await loadPoolBoard();
     }
-    ["pickupLat", "pickupLng", "dropoffLat", "dropoffLng"].forEach(id => {
-      byId(id).addEventListener("change", () => renderRoute(false));
-    });
     updateDistance();
     initialize();
   </script>
