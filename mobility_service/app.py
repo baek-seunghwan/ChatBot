@@ -64,8 +64,8 @@ def create_app(
             await resolved_geocoder.close()
 
     application = FastAPI(
-        title="MoveOps — 카카오 T 배송 관제",
-        description="카카오 T 퀵·도보 배송 Sandbox를 연동한 FastAPI 웹 서비스",
+        title="모브 (MOVB)",
+        description="Kakao Mobility Sandbox API를 연동한 FastAPI 백엔드 서비스",
         version="1.0.0",
         lifespan=lifespan,
     )
