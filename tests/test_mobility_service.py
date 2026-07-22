@@ -162,6 +162,20 @@ class MobilityApiTests(unittest.TestCase):
         self.client.close()
         self.temporary.cleanup()
 
+    def test_feature_intro_page_is_linked_from_home(self) -> None:
+        home = self.client.get("/")
+        features = self.client.get("/features")
+
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('href="/features"', home.text)
+        self.assertLess(
+            home.text.index('href="/features"'),
+            home.text.index("택시 접수하기"),
+        )
+        self.assertEqual(features.status_code, 200)
+        self.assertIn("새로 추가한 기능은 두 가지입니다", features.text)
+        self.assertIn("기능 소개", features.text)
+
     def test_create_order_is_idempotent(self) -> None:
         payload = sample_order("same-order")
 
