@@ -8,6 +8,7 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --no-dev --frozen
 
 COPY mobility_service ./mobility_service
+COPY pool-feature-diagram.html ./pool-feature-diagram.html
 COPY .env.example ./.env.example
 
 EXPOSE 8002
