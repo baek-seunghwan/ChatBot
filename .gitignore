@@ -1,6 +1,5 @@
 .DS_Store
 .venv/
-.txt
 __pycache__/
 *.pyc
 *.db
@@ -19,3 +18,6 @@ eval_result.csv
 eval/results/
 chatbot/qa_corpus.txt
 colab_train_bundle.zip
+
+# 개인 메모와 학습/발표 문서 (로컬에서만 보관)
+/private/
