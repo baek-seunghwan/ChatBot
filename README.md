@@ -1,7 +1,7 @@
-# MoveOps Backend
+# 모브 (MOVB) 백엔드
 
-MoveOps is a FastAPI backend for Kakao T quick/walking delivery sandbox orchestration.
-This `main` branch is intentionally trimmed to MoveOps-only code.
+이 프로젝트는 Kakao Mobility Sandbox API 연동을 위한 FastAPI 백엔드입니다.
+현재 `main` 브랜치는 모브 (MOVB) 백엔드 코드만 남긴 상태입니다.
 
 ## Features
 
@@ -47,5 +47,5 @@ Optional for LLM assistant mode:
 
 ## Branch strategy
 
-- `main`: MoveOps-only backend
+- `main`: 택시·퀵 관제 백엔드 전용
 - `legacy-chatbot-full`: previous full repository snapshot (chatbot + RAG + training assets)
