@@ -25,6 +25,7 @@ def settings(
     root: Path,
     *,
     map_key: str = "",
+    rest_key: str = "",
     admin_username: str = "",
     admin_password: str = "",
 ) -> Settings:
@@ -35,6 +36,7 @@ def settings(
         callback_base_url="https://callback.example.test",
         database_path=root / "test.db",
         kakao_javascript_key=map_key,
+        kakao_rest_api_key=rest_key,
         admin_username=admin_username,
         admin_password=admin_password,
     )
@@ -117,6 +119,7 @@ class KakaoClientTests(unittest.IsolatedAsyncioTestCase):
 class FakeKakaoClient:
     def __init__(self) -> None:
         self.create_calls = 0
+        self.sandbox_status_calls: list[tuple[str, str, str | None]] = []
 
     async def auth_check(self) -> dict[str, bool]:
         return {"authenticated": True}
@@ -138,6 +141,9 @@ class FakeKakaoClient:
         return {
             "partnerOrderId": partner_order_id,
             "receipt": {"status": "MATCHED"},
+            "pickup": {"stepId": "pickup-step"},
+            "waypoints": [{"stepId": "waypoint-step"}],
+            "dropoff": {"stepId": "dropoff-step"},
         }
 
     async def get_picker(self, partner_order_id: str) -> dict[str, Any]:
@@ -145,6 +151,28 @@ class FakeKakaoClient:
 
     async def cancel_order(self, partner_order_id: str) -> dict[str, Any]:
         return {"partnerOrderId": partner_order_id, "status": "CANCELED"}
+
+    async def get_step(
+        self, partner_order_id: str, step_id: str
+    ) -> dict[str, Any]:
+        return {
+            "stepId": step_id,
+            "status": "waiting",
+            "estimatedEndedAt": "2026-07-23T18:00:00+09:00",
+            "location": {"basicAddress": f"{step_id} 주소"},
+        }
+
+    async def change_sandbox_status(
+        self,
+        partner_order_id: str,
+        order_status: str,
+        *,
+        cancel_by: str | None = None,
+    ) -> dict[str, Any]:
+        self.sandbox_status_calls.append(
+            (partner_order_id, order_status, cancel_by)
+        )
+        return {"changed": True}
 
 
 class MobilityApiTests(unittest.TestCase):

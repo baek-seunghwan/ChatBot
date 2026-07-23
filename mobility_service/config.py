@@ -47,6 +47,7 @@ class Settings:
     database_path: Path
     kakao_javascript_key: str = ""
     kakao_rest_api_key: str = ""
+    directions_base_url: str = "https://apis-navi.kakaomobility.com"
     admin_username: str = ""
     admin_password: str = ""
     request_timeout_seconds: float = 10.0
@@ -61,6 +62,10 @@ class Settings:
 
     @property
     def geocoding_configured(self) -> bool:
+        return bool(self.kakao_rest_api_key.strip())
+
+    @property
+    def directions_configured(self) -> bool:
         return bool(self.kakao_rest_api_key.strip())
 
     @property
@@ -98,6 +103,10 @@ class Settings:
                 or os.getenv("KAKAO_MAP_KEY", "")
             ).strip(),
             kakao_rest_api_key=os.getenv("KAKAO_REST_API_KEY", "").strip(),
+            directions_base_url=os.getenv(
+                "KAKAO_DIRECTIONS_BASE_URL",
+                "https://apis-navi.kakaomobility.com",
+            ).rstrip("/"),
             admin_username=os.getenv("MOVB_ADMIN_USERNAME", "").strip(),
             admin_password=os.getenv("MOVB_ADMIN_PASSWORD", ""),
             request_timeout_seconds=float(

@@ -24,6 +24,25 @@ class ProductSize(str, Enum):
     L = "L"
 
 
+class Fleet(str, Enum):
+    MOTORCYCLE = "MOTORCYCLE"
+    JIMBAJI_MOTORCYCLE = "JIMBAJI_MOTORCYCLE"
+    PASSENGER_CAR = "PASSENGER_CAR"
+    DAMAS = "DAMAS"
+    LABO = "LABO"
+    TON = "TON"
+
+
+class FleetDispatchType(str, Enum):
+    MINIMUM = "MINIMUM"
+    REQUIRED = "REQUIRED"
+
+
+class FleetOption(CamelModel):
+    fleet: Fleet
+    type: FleetDispatchType = FleetDispatchType.REQUIRED
+
+
 class PaymentType(str, Enum):
     CARD = "CARD"
     CASH_ON_PICKUP = "CASH_ON_PICKUP"
@@ -63,6 +82,7 @@ class DeliveryDraft(CamelModel):
     quantity: str = Field(default="1", max_length=20)
     declared_value: int | None = Field(default=None, alias="declaredValue", ge=0)
     payment_type: PaymentType = Field(default=PaymentType.CARD, alias="paymentType")
+    fleet_option: FleetOption | None = Field(default=None, alias="fleetOption")
 
     @model_validator(mode="after")
     def validate_constraints(self) -> "DeliveryDraft":
@@ -73,6 +93,18 @@ class DeliveryDraft(CamelModel):
             raise ValueError("도보 배송과 퀵 이코노미는 경유지를 지원하지 않습니다.")
         if self.waypoints and self.payment_type != PaymentType.CARD:
             raise ValueError("경유지가 있는 주문은 카드 결제만 지원합니다.")
+        if self.order_type == OrderType.DOBO and self.fleet_option is not None:
+            raise ValueError("도보 배송에서는 차량을 선택할 수 없습니다.")
+        if (
+            self.order_type in {
+                OrderType.QUICK,
+                OrderType.QUICK_ECONOMY,
+                OrderType.QUICK_EXPRESS,
+            }
+            and self.product_size == ProductSize.L
+            and self.fleet_option is None
+        ):
+            raise ValueError("대형(L) 퀵 배송은 차량을 선택해야 합니다.")
         return self
 
 
@@ -141,6 +173,38 @@ class CarpoolPassenger(CamelModel):
 class CarpoolPlanRequest(CamelModel):
     origin_address: str = Field(alias="originAddress", min_length=2, max_length=200)
     passengers: list[CarpoolPassenger] = Field(min_length=2, max_length=4)
+
+
+class RouteSummaryRequest(CamelModel):
+    origin: Location
+    destination: Location
+    waypoints: list[Location] = Field(default_factory=list, max_length=30)
+    departure_time: str | None = Field(default=None, alias="departureTime")
+
+
+class SandboxOrderStatus(str, Enum):
+    ABORT = "ABORT"
+    MATCH_PICKER = "MATCH_PICKER"
+    CANCEL = "CANCEL"
+    PICKUP_COMPLETED = "PICKUP_COMPLETED"
+    DROPOFF_COMPLETED = "DROPOFF_COMPLETED"
+
+
+class SandboxStatusChange(CamelModel):
+    order_status: SandboxOrderStatus = Field(alias="orderStatus")
+    cancel_by: str | None = Field(
+        default=None,
+        alias="cancelBy",
+        pattern=r"^(PICKER|ADMIN)$",
+    )
+
+    @model_validator(mode="after")
+    def validate_cancel_by(self) -> "SandboxStatusChange":
+        if self.order_status == SandboxOrderStatus.CANCEL and not self.cancel_by:
+            self.cancel_by = "ADMIN"
+        elif self.order_status != SandboxOrderStatus.CANCEL:
+            self.cancel_by = None
+        return self
 
 
 class RegisterRequest(CamelModel):

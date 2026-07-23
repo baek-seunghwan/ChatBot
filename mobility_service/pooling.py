@@ -4,6 +4,7 @@ import math
 from typing import Any
 
 from .client import KakaoMobilityClient
+from .directions import RoutePlanner
 from .models import (
     Contact,
     CreateDeliveryRequest,
@@ -65,15 +66,29 @@ def combined_route(requests: list[dict[str, Any]]) -> list[tuple[str, dict[str, 
     return ordered
 
 
-def route_km(requests: list[dict[str, Any]]) -> float:
+async def route_km(
+    requests: list[dict[str, Any]],
+    route_planner: RoutePlanner | None = None,
+) -> float:
     stops = combined_route(requests)
+    if route_planner and len(stops) >= 2:
+        summary = await route_planner.route_summary(
+            _location(stops[0][1]),
+            _location(stops[-1][1]),
+            waypoints=[_location(stop) for _, stop in stops[1:-1]],
+        )
+        return float(summary["distanceKm"])
     total = 0.0
     for (_, current), (_, nxt) in zip(stops, stops[1:]):
         total += road_km(_location(current), _location(nxt))
     return total
 
 
-def is_compatible(request_a: dict[str, Any], request_b: dict[str, Any]) -> bool:
+async def is_compatible(
+    request_a: dict[str, Any],
+    request_b: dict[str, Any],
+    route_planner: RoutePlanner | None = None,
+) -> bool:
     """두 배송 요청을 한 차량에 합승시킬 실익이 있는지 판정한다."""
     bearing_a = bearing_deg(_location(request_a["pickup"]), _location(request_a["dropoff"]))
     bearing_b = bearing_deg(_location(request_b["pickup"]), _location(request_b["dropoff"]))
@@ -81,13 +96,25 @@ def is_compatible(request_a: dict[str, Any], request_b: dict[str, Any]) -> bool:
     if min(diff, 360 - diff) > MAX_BEARING_DIFF_DEG:
         return False
 
-    solo_sum = sum(
-        road_km(_location(r["pickup"]), _location(r["dropoff"]))
-        for r in (request_a, request_b)
-    )
+    if route_planner:
+        solo_sum = 0.0
+        for request in (request_a, request_b):
+            summary = await route_planner.route_summary(
+                _location(request["pickup"]),
+                _location(request["dropoff"]),
+            )
+            solo_sum += float(summary["distanceKm"])
+    else:
+        solo_sum = sum(
+            road_km(_location(r["pickup"]), _location(r["dropoff"]))
+            for r in (request_a, request_b)
+        )
     if solo_sum <= 0:
         return False
-    return route_km([request_a, request_b]) <= solo_sum * MAX_COMBINED_RATIO
+    return (
+        await route_km([request_a, request_b], route_planner)
+        <= solo_sum * MAX_COMBINED_RATIO
+    )
 
 
 def _price_of(data: Any) -> int | None:
@@ -108,7 +135,9 @@ def _draft_stops(requests: list[dict[str, Any]]) -> tuple[DeliveryStop, list[Del
 
 
 async def pool_quote(
-    client: KakaoMobilityClient, requests: list[dict[str, Any]]
+    client: KakaoMobilityClient,
+    requests: list[dict[str, Any]],
+    route_planner: RoutePlanner | None = None,
 ) -> dict[str, Any]:
     """단독 견적 합계 vs 합승(경유지 묶음) 견적을 비교하고 분담금을 계산한다."""
     size = max(
@@ -142,6 +171,15 @@ async def pool_quote(
         raise ValueError("합승 견적 조회에 실패했어요.")
 
     shares = proportional_split(pooled_price, solo_prices)
+    route_info = (
+        await route_planner.route_summary(
+            pickup.location,
+            dropoff.location,
+            waypoints=[item.location for item in waypoints],
+        )
+        if route_planner
+        else None
+    )
     return {
         "soloPrices": solo_prices,
         "soloTotal": sum(solo_prices),
@@ -150,6 +188,7 @@ async def pool_quote(
         "savings": [solo - share for solo, share in zip(solo_prices, shares)],
         "groupSaving": sum(solo_prices) - pooled_price,
         "worthIt": pooled_price < sum(solo_prices),
+        "routeInfo": route_info,
     }
 
 

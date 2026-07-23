@@ -1,0 +1,106 @@
+[
+  {
+    "question": "MOVB는 어떤 서비스야?",
+    "expectedSource": "01-service-overview"
+  },
+  {
+    "question": "AI 채팅이 일반 입력 폼과 뭐가 달라?",
+    "expectedSource": "01-service-overview"
+  },
+  {
+    "question": "모브에서 지원하는 기능을 알려줘",
+    "expectedSource": "01-service-overview"
+  },
+  {
+    "question": "퀵이랑 도보 배송은 뭐가 달라?",
+    "expectedSource": "02-delivery-options"
+  },
+  {
+    "question": "배송 상품 종류가 몇 개야?",
+    "expectedSource": "02-delivery-options"
+  },
+  {
+    "question": "QUICK_EXPRESS는 어떤 옵션이야?",
+    "expectedSource": "02-delivery-options"
+  },
+  {
+    "question": "물품 크기는 어떻게 선택해?",
+    "expectedSource": "02-delivery-options"
+  },
+  {
+    "question": "도보 배송에 경유지를 넣을 수 있어?",
+    "expectedSource": "02-delivery-options"
+  },
+  {
+    "question": "채팅으로 주문하는 순서를 알려줘",
+    "expectedSource": "03-order-lifecycle"
+  },
+  {
+    "question": "내가 확인하기 전에 챗봇이 주문할 수도 있어?",
+    "expectedSource": "03-order-lifecycle"
+  },
+  {
+    "question": "배송 상태는 어디서 확인해?",
+    "expectedSource": "03-order-lifecycle"
+  },
+  {
+    "question": "접수한 주문을 취소하려면 어떻게 해?",
+    "expectedSource": "03-order-lifecycle"
+  },
+  {
+    "question": "같은 주문이 두 번 만들어지는 걸 막고 있어?",
+    "expectedSource": "03-order-lifecycle"
+  },
+  {
+    "question": "묶음배송은 어떤 기능이야?",
+    "expectedSource": "04-bundle-pool-carpool"
+  },
+  {
+    "question": "퀵 합승 매칭 조건을 설명해줘",
+    "expectedSource": "04-bundle-pool-carpool"
+  },
+  {
+    "question": "합승 요금은 어떻게 나눠?",
+    "expectedSource": "04-bundle-pool-carpool"
+  },
+  {
+    "question": "택시 동승 요금 계산은 실제 배차도 해줘?",
+    "expectedSource": "04-bundle-pool-carpool"
+  },
+  {
+    "question": "묶음배송과 퀵 합승의 차이는 뭐야?",
+    "expectedSource": "04-bundle-pool-carpool"
+  },
+  {
+    "question": "Sandbox 주문은 실제 결제가 되는 거야?",
+    "expectedSource": "05-sandbox-and-safety"
+  },
+  {
+    "question": "브라우저에 서버 API 키가 노출되지는 않아?",
+    "expectedSource": "05-sandbox-and-safety"
+  },
+  {
+    "question": "오토바이랑 다마스 중에서 차량을 직접 선택할 수 있어?",
+    "expectedSource": "02-delivery-options"
+  },
+  {
+    "question": "출발지와 경유지 상태를 각각 볼 수 있어?",
+    "expectedSource": "03-order-lifecycle"
+  },
+  {
+    "question": "관리자 화면에서 배송 완료까지 시연할 수 있어?",
+    "expectedSource": "03-order-lifecycle"
+  },
+  {
+    "question": "MOVB의 거리는 직선거리야 실제 도로 거리야?",
+    "expectedSource": "06-routes-and-eta"
+  },
+  {
+    "question": "예약 배송은 미래 교통량을 ETA에 반영해?",
+    "expectedSource": "06-routes-and-eta"
+  },
+  {
+    "question": "길찾기 REST 키와 퀵 배송 Vendor 키는 같은 거야?",
+    "expectedSource": "06-routes-and-eta"
+  }
+]
