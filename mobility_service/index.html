@@ -10,7 +10,7 @@
       --yellow: #fee500;
       --yellow-dark: #e5cf00;
       --ink: #191919;
-      --muted: #747474;
+      --muted: #686868;
       --line: #e7e7e7;
       --surface: #f7f7f5;
       --panel: #fff;
@@ -24,7 +24,9 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "SUIT Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
       color: var(--ink);
       background:
         radial-gradient(circle at 12% 6%, rgba(83, 71, 255, .11), transparent 24%),
@@ -57,7 +59,7 @@
     }
     .brand-copy small {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 650;
     }
     .brand-mark {
@@ -314,7 +316,7 @@
       padding: 7px 10px;
       background: #fff7bb;
       color: #625300;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 850;
     }
     .booking-steps {
@@ -327,8 +329,8 @@
       display: grid;
       gap: 5px;
       min-width: 0;
-      color: #8a8a86;
-      font-size: 10px;
+      color: #656560;
+      font-size: 12px;
       font-weight: 750;
     }
     .booking-step::before {
@@ -361,14 +363,14 @@
       border-radius: 8px;
       background: var(--ink);
       color: white;
-      font-size: 11px;
+      font-size: 12px;
     }
     .required-mark { color: var(--danger); }
     .field-hint {
       display: block;
       margin-top: 5px;
       color: var(--muted);
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 550;
       line-height: 1.4;
     }
@@ -378,12 +380,13 @@
     }
     .copy-contact {
       margin: -2px 0 12px;
-      padding: 0;
+      min-height: 44px;
+      padding: 10px 4px;
       border: 0;
       background: transparent;
       color: var(--blue);
       box-shadow: none;
-      font-size: 11px;
+      font-size: 13px;
     }
     .copy-contact:hover { transform: none; box-shadow: none; text-decoration: underline; }
     .quick-review {
@@ -406,7 +409,7 @@
       padding: 5px 8px;
       background: rgba(255, 255, 255, .12);
       color: rgba(255, 255, 255, .72);
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 800;
     }
     .quote-status.ready { background: rgba(254, 229, 0, .18); color: var(--yellow); }
@@ -419,8 +422,8 @@
       border-radius: 11px;
       background: rgba(255, 255, 255, .08);
     }
-    .review-item span { display: block; color: rgba(255, 255, 255, .55); font-size: 9px; }
-    .review-item strong { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; white-space: nowrap; }
+    .review-item span { display: block; color: rgba(255, 255, 255, .72); font-size: 12px; }
+    .review-item strong { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; font-size: 14px; white-space: nowrap; }
     .quick-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 9px; margin-top: 14px; }
     .quick-actions button { width: 100%; }
     #quickRequest, #history { scroll-margin-top: 18px; }
@@ -432,25 +435,28 @@
     }
     .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 13px; }
     .grid.three { grid-template-columns: 1.25fr .75fr .75fr; }
-    label { display: grid; gap: 6px; color: #4d4d4d; font-size: 12px; font-weight: 700; }
+    label { display: grid; gap: 6px; color: #4d4d4d; font-size: 14px; font-weight: 700; }
     .address-input { display: flex; gap: 7px; }
     .address-input input { min-width: 0; }
     .address-input button {
       flex: 0 0 auto;
+      min-height: 44px;
       padding: 10px 12px;
       border: 1px solid #d8d8d8;
       background: #f3f3f3;
       color: var(--ink);
-      font-size: 12px;
+      font-size: 14px;
     }
     input, select {
       width: 100%;
+      min-height: 44px;
       border: 1px solid #d8d8d8;
       border-radius: 10px;
       padding: 11px 12px;
       background: white;
       color: var(--ink);
       font: inherit;
+      font-size: 16px;
       outline: none;
     }
     input:focus, select:focus {
@@ -458,7 +464,7 @@
       box-shadow: 0 0 0 3px rgba(25, 25, 25, .08);
     }
     input::placeholder {
-      color: #a4a4a4;
+      color: #707070;
     }
     .actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
     .safety-note {
@@ -473,6 +479,7 @@
       font-weight: 650;
     }
     button {
+      min-height: 44px;
       border: 0;
       border-radius: 11px;
       padding: 12px 16px;
@@ -489,6 +496,13 @@
     button.secondary { background: linear-gradient(120deg, #f4f4ff, #eceff8); color: var(--ink); }
     button.danger { background: #fff0ef; color: var(--danger); }
     button:disabled { opacity: .48; cursor: not-allowed; transform: none; box-shadow: none; }
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid var(--blue);
+      outline-offset: 2px;
+    }
     .result {
       display: none;
       margin-top: 20px;
@@ -515,7 +529,7 @@
       background: white;
       border: 1px solid #d7dceb;
       color: #3f4b67;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
       white-space: nowrap;
     }
@@ -547,7 +561,7 @@
     .fare-sub {
       margin: 0 0 10px;
       color: #667089;
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 700;
     }
     .fare-row {
@@ -564,7 +578,7 @@
       margin-bottom: 8px;
       border-radius: 999px;
       padding: 4px 8px;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 800;
       color: #5f4e08;
       background: #fff4b5;
@@ -596,15 +610,15 @@
       border-radius: 999px;
       padding: 3px 8px;
       background: #ececec;
-      font-size: 10px;
+      font-size: 12px;
       font-weight: 800;
     }
-    .order time { display: block; margin-top: 6px; color: var(--muted); font-size: 11px; }
+    .order time { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
     .tracking { display: flex; gap: 8px; margin-top: 14px; }
     .tracking button { flex: 0 0 auto; }
     .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 26px 0; }
     .error { color: var(--danger); }
-    footer { color: var(--muted); text-align: center; font-size: 12px; padding: 0 20px 36px; }
+    footer { color: var(--muted); text-align: center; font-size: 13px; padding: 0 20px 36px; }
     .chat-fab {
       position: fixed;
       left: 24px;
@@ -804,7 +818,7 @@
       }
       .primary-nav::-webkit-scrollbar { display: none; }
       .nav-item { flex: 0 0 auto; }
-      .primary-nav .nav-item { padding: 9px 10px; font-size: 12px; }
+      .primary-nav .nav-item { min-height: 44px; padding: 10px; font-size: 13px; }
       main { grid-template-columns: 1fr; }
       .grid, .grid.three { grid-template-columns: 1fr; }
       .review-grid { grid-template-columns: 1fr; }

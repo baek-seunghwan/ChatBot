@@ -9,7 +9,7 @@
     :root {
       --yellow: #fee500;
       --ink: #191919;
-      --muted: #747474;
+      --muted: #686868;
       --line: #ececea;
       --surface: #f7f7f5;
       --panel: #fff;
@@ -23,7 +23,9 @@
     body {
       margin: 0;
       min-height: 100vh;
-      font-family: "SUIT Variable", "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
       color: var(--ink);
       background: #232227;
       display: flex;
@@ -61,8 +63,11 @@
       flex: 0 0 auto;
     }
     .app-bar h1 { margin: 0; font-size: 16px; font-weight: 850; }
-    .app-bar p { margin: 1px 0 0; font-size: 11px; color: #bdbdbd; }
+    .app-bar p { margin: 1px 0 0; font-size: 12px; color: #d0d0d5; }
     .app-bar a.quick-link {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
       margin-left: auto;
       color: #e8e8ee;
       font-size: 12px;
@@ -100,25 +105,28 @@
     .pin.p3 { background: #0f8a73; }
     input {
       width: 100%;
+      min-height: 44px;
       border: 1px solid #dcdcd8;
       border-radius: 12px;
       padding: 12px 13px;
       background: white;
       color: var(--ink);
       font: inherit;
-      font-size: 14px;
+      font-size: 16px;
       outline: none;
       min-width: 0;
     }
     input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(25, 25, 25, .08); }
-    input::placeholder { color: #ababab; }
+    input::placeholder { color: #707070; }
     .name-input { flex: 0 0 76px; }
 
     .remove-btn {
       flex: 0 0 auto;
+      min-width: 44px;
+      min-height: 44px;
       border: 0;
       background: transparent;
-      color: #b3b3ae;
+      color: #686868;
       font-size: 16px;
       padding: 4px 6px;
       cursor: pointer;
@@ -129,12 +137,13 @@
     .add-passenger {
       margin-top: 12px;
       width: 100%;
+      min-height: 44px;
       border: 1.5px dashed #d4d4cf;
       border-radius: 12px;
       background: transparent;
       color: var(--muted);
       font: inherit;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 750;
       padding: 11px;
       cursor: pointer;
@@ -201,7 +210,7 @@
       font-weight: 850;
       font-variant-numeric: tabular-nums;
     }
-    .total-card .meta { margin-top: 10px; font-size: 11.5px; color: #a9a9b2; }
+    .total-card .meta { margin-top: 10px; font-size: 12px; color: #bfc0c7; }
 
     .stop {
       display: grid;
@@ -232,15 +241,15 @@
       color: var(--green);
       border-radius: 999px;
       padding: 2px 8px;
-      font-size: 11.5px;
+      font-size: 12px;
       font-weight: 800;
       font-variant-numeric: tabular-nums;
     }
-    .fineprint { color: #8b8b85; font-size: 11.5px; text-align: center; margin: 0; }
+    .fineprint { color: var(--muted); font-size: 12px; text-align: center; margin: 0; }
 
     button:focus-visible, input:focus-visible, a:focus-visible {
-      outline: 3px solid rgba(49, 94, 251, .5);
-      outline-offset: 1px;
+      outline: 3px solid var(--blue);
+      outline-offset: 2px;
     }
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; }
