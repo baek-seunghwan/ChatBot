@@ -281,8 +281,7 @@ class MobilityKnowledgeBase:
         answer = "\n".join(paragraphs[:2])
         if len(answer) > 700:
             answer = answer[:697].rstrip() + "..."
-        sources = ", ".join(f"[{result.title}]" for result in results[:2])
-        return f"{answer}\n\n근거 문서: {sources}"
+        return answer
 
 
 @lru_cache(maxsize=1)

@@ -46,13 +46,13 @@ class MobilityKnowledgeTests(unittest.TestCase):
             [],
         )
 
-    def test_extractive_fallback_includes_evidence_title(self) -> None:
+    def test_extractive_fallback_hides_internal_evidence_title(self) -> None:
         knowledge = default_knowledge_base()
         results = knowledge.search("합승 요금은 어떻게 나눠?")
         answer = knowledge.fallback_answer(results)
 
-        self.assertIn("근거 문서", answer)
-        self.assertIn("퀵 합승", answer)
+        self.assertNotIn("근거 문서", answer)
+        self.assertNotIn("[퀵 합승", answer)
 
 
 class AgentKnowledgeRouteTests(unittest.TestCase):
@@ -126,7 +126,7 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
         data = response.json()["data"]
 
         self.assertTrue(data["sources"])
-        self.assertIn("근거 문서", data["reply"])
+        self.assertNotIn("근거 문서", data["reply"])
         self.assertNotIn("합승 등록에 아래 정보", data["reply"])
 
     def test_greeting_has_useful_offline_response(self) -> None:

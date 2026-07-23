@@ -68,7 +68,7 @@ KNOWLEDGE_SYSTEM = """당신은 MOVB AI 모빌리티 운영 서비스의 지식 
 - 먼저 사용자의 질문에 직접 답합니다.
 - 근거에 없는 실제 가격, 법적 제한, 운영 정책은 추측하지 않습니다.
 - 필요한 경우 AI 채팅에서 이어서 할 수 있는 행동을 한 문장으로 안내합니다.
-- 답변 끝에 사용한 근거 제목을 [제목] 형식으로 표시합니다.
+- 내부 문서 제목이나 출처 표시는 답변 본문에 노출하지 않습니다.
 """
 
 INTENT_PROMPT = """다음은 배송 주문 챗봇과 사용자의 대화입니다.
@@ -1329,11 +1329,6 @@ class DeliveryAgent:
                 max_tokens=450,
                 temperature=0.1,
             )
-            cited_titles = [result.title for result in results[:2]]
-            if not any(f"[{title}]" in reply for title in cited_titles):
-                reply += "\n\n근거 문서: " + ", ".join(
-                    f"[{title}]" for title in cited_titles
-                )
             generation = "llm"
         except RuntimeError:
             reply = self._knowledge.fallback_answer(results)
