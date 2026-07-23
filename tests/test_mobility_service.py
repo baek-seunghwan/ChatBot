@@ -7,6 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import httpx
 from fastapi.testclient import TestClient
@@ -175,6 +176,33 @@ class MobilityApiTests(unittest.TestCase):
         self.assertEqual(features.status_code, 200)
         self.assertIn("새로 추가한 기능은 두 가지입니다", features.text)
         self.assertIn("기능 소개", features.text)
+
+    def test_home_has_ollama_toggle_for_local_chat(self) -> None:
+        home = self.client.get("/")
+
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('id="ollamaSwitch"', home.text)
+        self.assertIn('role="switch"', home.text)
+        self.assertIn('localEngine: ollamaEnabled ? "ollama" : "own"', home.text)
+
+    def test_local_chat_uses_selected_own_engine(self) -> None:
+        with patch(
+            "mobility_service.app.local_model_reply",
+            return_value="자체 QA 응답",
+        ) as responder:
+            response = self.client.post(
+                "/api/agent/chat",
+                json={
+                    "message": "MOVB가 뭐야?",
+                    "mode": "local",
+                    "localEngine": "own",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["data"]["reply"], "자체 QA 응답")
+        self.assertEqual(response.json()["data"]["trace"], ["local_model:own"])
+        responder.assert_called_once_with("MOVB가 뭐야?", "own")
 
     def test_create_order_is_idempotent(self) -> None:
         payload = sample_order("same-order")

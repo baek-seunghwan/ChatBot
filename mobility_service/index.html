@@ -638,8 +638,9 @@
       font-size: 12px;
     }
     .chat-engine-row.hidden { display: none; }
+    .engine-copy { display: grid; gap: 1px; min-width: 0; }
     .engine-label { font-weight: 800; color: var(--ink); }
-    .chat-engine-row small { color: var(--muted); }
+    .chat-engine-row small { color: var(--muted); line-height: 1.3; }
     .switch {
       position: relative;
       width: 40px;
@@ -900,6 +901,21 @@
     <div class="chat-mode-toggle" id="chatModeToggle">
       <button type="button" class="chat-mode-btn active" data-mode="ai" onclick="setChatMode('ai')">AI 채팅</button>
       <button type="button" class="chat-mode-btn" data-mode="local" onclick="setChatMode('local')">내 로컬 채팅</button>
+    </div>
+    <div class="chat-engine-row hidden" id="ollamaControl">
+      <button
+        type="button"
+        class="switch on"
+        id="ollamaSwitch"
+        role="switch"
+        aria-checked="true"
+        aria-label="Ollama 사용 설정"
+        onclick="toggleOllama()"
+      ></button>
+      <span class="engine-copy">
+        <span class="engine-label">Ollama</span>
+        <small id="ollamaStatus" aria-live="polite">사용 중 · 로컬 AI로 답변</small>
+      </span>
     </div>
     <div class="chat-log" id="chatLog">
       <div class="chat-bubble bot">안녕하세요! 배송 요청을 대화로 도와드릴게요. 출발지, 도착지, 보내실 물건을 알려주세요 🙂</div>
@@ -1625,13 +1641,32 @@
       byId("chatWidget").classList.toggle("hidden");
     }
 
+    const OLLAMA_SETTING_KEY = "movb_ollama_enabled";
     let chatMode = "ai";
+    let ollamaEnabled = localStorage.getItem(OLLAMA_SETTING_KEY) !== "false";
+
+    function updateOllamaUi() {
+      const switchButton = byId("ollamaSwitch");
+      switchButton.classList.toggle("on", ollamaEnabled);
+      switchButton.setAttribute("aria-checked", String(ollamaEnabled));
+      byId("ollamaStatus").textContent = ollamaEnabled
+        ? "사용 중 · 로컬 AI로 답변"
+        : "사용 안 함 · 자체 QA로 답변";
+    }
+
+    function toggleOllama() {
+      ollamaEnabled = !ollamaEnabled;
+      localStorage.setItem(OLLAMA_SETTING_KEY, String(ollamaEnabled));
+      updateOllamaUi();
+    }
 
     function setChatMode(mode) {
       chatMode = mode;
       document.querySelectorAll(".chat-mode-btn").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.mode === mode);
       });
+      byId("ollamaControl").classList.toggle("hidden", mode !== "local");
+      updateOllamaUi();
     }
 
     function appendInlineMarkdown(parent, text) {
@@ -1709,7 +1744,9 @@
       const bubble = document.createElement("div");
       bubble.className = "chat-bubble bot typing";
       const label = document.createElement("span");
-      label.textContent = mode === "local" ? "로컬 모델 답변 준비 중" : "답변 준비 중";
+      label.textContent = mode === "local"
+        ? (ollamaEnabled ? "Ollama 답변 준비 중" : "자체 QA에서 답변 찾는 중")
+        : "답변 준비 중";
       const dots = document.createElement("span");
       dots.className = "typing-dots";
       for (let i = 0; i < 3; i += 1) dots.append(document.createElement("span"));
@@ -1733,7 +1770,11 @@
         const result = await api("/api/agent/chat", {
           method: "POST",
           headers: {"X-Session-Id": chatSessionId},
-          body: JSON.stringify({message, mode: chatMode})
+          body: JSON.stringify({
+            message,
+            mode: chatMode,
+            localEngine: ollamaEnabled ? "ollama" : "own"
+          })
         });
         loading.remove();
         appendChatBubble("bot", result.data?.reply || "응답을 받았지만 표시할 내용이 없어요.");
@@ -1751,6 +1792,7 @@
       event.preventDefault();
       sendChatMessage();
     });
+    updateOllamaUi();
 
     async function loadPoolBoard() {
       const list = byId("poolList");
