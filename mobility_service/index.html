@@ -888,6 +888,447 @@
       .chat-fab { left: 16px; bottom: 16px; }
     }
   </style>
+  <style id="workspace-redesign">
+    :root {
+      --ink: #17191f;
+      --muted: #6d727d;
+      --line: #e5e7eb;
+      --surface: #f5f6f8;
+      --panel: #ffffff;
+      --yellow: #fee500;
+      --blue: #315efb;
+      --danger: #c8443e;
+    }
+    body {
+      background: var(--surface);
+      color: var(--ink);
+      font-size: 15px;
+    }
+    .site-header {
+      position: sticky;
+      z-index: 50;
+      top: 0;
+      min-height: 64px;
+      gap: 22px;
+      padding: 9px clamp(18px, 4vw, 56px);
+      border-bottom: 1px solid rgba(229, 231, 235, .9);
+      background: rgba(255, 255, 255, .94);
+      backdrop-filter: blur(16px);
+    }
+    .brand { gap: 8px; }
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      background: #fff8b8;
+    }
+    .brand-mark svg { width: 25px; height: 25px; }
+    .brand-copy { gap: 0; letter-spacing: -.02em; }
+    .brand-copy span { font-size: 16px; }
+    .brand-copy small { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .primary-nav { gap: 3px; }
+    .nav-item,
+    .login-button {
+      min-height: 38px;
+      border-radius: 9px;
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+    .nav-item.active {
+      background: #17191f;
+      color: white;
+    }
+    .login-button { border-color: var(--line); }
+    .sandbox {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 6px 16px;
+      border-bottom: 1px solid #eee5a4;
+      background: #fffbed;
+      color: #746712;
+      font-size: 11px;
+    }
+    .sandbox b {
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: #17191f;
+      color: var(--yellow);
+      font-size: 10px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    main {
+      width: min(1400px, calc(100% - 32px));
+      margin: 16px auto 48px;
+      grid-template-columns: minmax(0, 1.65fr) minmax(350px, .8fr);
+      grid-auto-rows: min-content;
+      align-items: start;
+      gap: 16px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 5px 20px rgba(23, 25, 31, .045);
+    }
+    #quickRequest {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      scroll-margin-top: 80px;
+    }
+    .map-panel {
+      grid-column: 2;
+      grid-row: 1;
+      padding: 0;
+      border-radius: 18px;
+    }
+    #history {
+      grid-column: 2;
+      grid-row: 2;
+      align-self: start;
+      scroll-margin-top: 80px;
+    }
+    .eyebrow {
+      display: block;
+      margin-bottom: 4px;
+      color: #8a8f9b;
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: .14em;
+    }
+    h1, h2, h3 { letter-spacing: -.025em; }
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(25px, 2.3vw, 32px);
+      line-height: 1.15;
+    }
+    h2 { margin-bottom: 5px; font-size: 19px; }
+    .description { margin-bottom: 16px; font-size: 13px; line-height: 1.45; }
+    .quick-heading { align-items: center; margin-bottom: 18px; }
+    .quick-heading .description { max-width: 600px; margin: 0; }
+    .quick-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border: 1px solid #ece29a;
+      background: #fffbed;
+      color: #655b17;
+      font-size: 11px;
+    }
+    .quick-badge > span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #22a06b;
+      box-shadow: 0 0 0 3px rgba(34, 160, 107, .12);
+    }
+    .booking-steps {
+      gap: 8px;
+      margin-bottom: 14px;
+      padding: 0 2px;
+    }
+    .booking-step {
+      gap: 6px;
+      color: #9296a0;
+      font-size: 11px;
+    }
+    .booking-step::before { height: 3px; background: #eceef1; }
+    .booking-step.active::before { background: var(--yellow); }
+    .quick-options {
+      width: fit-content;
+      min-width: 260px;
+      margin: 0 0 14px;
+      padding: 3px;
+      border-radius: 10px;
+      background: #f0f1f3;
+    }
+    .quick-option {
+      min-height: 36px;
+      border-radius: 8px;
+      padding: 7px 15px;
+      font-size: 12px;
+    }
+    .form-sections {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .form-section {
+      min-width: 0;
+      margin: 0;
+      padding: 16px;
+      border-color: #e8e9ec;
+      border-radius: 14px;
+      background: #fafafa;
+    }
+    .form-section h3 {
+      margin-bottom: 13px;
+      font-size: 14px;
+    }
+    .section-number {
+      width: 21px;
+      height: 21px;
+      border-radius: 7px;
+      font-size: 11px;
+    }
+    .service-section,
+    .product-section { grid-column: 1 / -1; }
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 11px;
+    }
+    .contact-section .grid { grid-template-columns: 1fr; gap: 10px; }
+    .contact-section .grid[style] { margin-top: 10px !important; }
+    .copy-contact {
+      float: right;
+      min-height: 28px;
+      margin: -42px 0 8px;
+      padding: 4px;
+      font-size: 11px;
+    }
+    label { gap: 5px; color: #555a64; font-size: 12px; }
+    input, select {
+      min-height: 42px;
+      border-color: #dfe1e5;
+      border-radius: 9px;
+      padding: 9px 11px;
+      font-size: 14px;
+    }
+    .address-input { gap: 6px; }
+    .address-input button {
+      min-height: 42px;
+      border-color: #dfe1e5;
+      border-radius: 9px;
+      padding: 8px 10px;
+      background: white;
+      font-size: 12px;
+    }
+    .field-hint { margin-top: 3px; font-size: 10.5px; line-height: 1.35; }
+    .quick-review {
+      margin-top: 12px;
+      padding: 16px;
+      border-radius: 14px;
+      background: #1d2027;
+    }
+    .review-grid { gap: 6px; }
+    .review-item { padding: 9px 10px; border-radius: 9px; }
+    .review-item span { font-size: 10px; }
+    .review-item strong { font-size: 12px; }
+    .quick-actions { margin-top: 10px; }
+    .quick-actions button { min-height: 46px; }
+    .safety-note {
+      margin-top: 10px;
+      padding: 9px 11px;
+      border: 0;
+      background: #f7f7f7;
+      color: #777b84;
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+    .map-header {
+      display: grid;
+      gap: 12px;
+      padding: 17px;
+    }
+    .map-header .description { margin: 0; }
+    .map-tools {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    .map-mode {
+      min-height: 36px;
+      border-radius: 8px;
+      padding: 7px 6px;
+      font-size: 11px;
+    }
+    .map-stage,
+    #map {
+      min-height: 290px;
+      height: 290px;
+    }
+    .route-summary {
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 11px 16px;
+      font-size: 10.5px;
+    }
+    #routeDistance {
+      flex-basis: 100%;
+      padding-top: 3px;
+      border-top: 1px solid #f0f0f0;
+    }
+    #history .description { margin-bottom: 13px; }
+    .tracking { margin-top: 0; gap: 6px; }
+    .tracking button { min-width: 58px; padding: 9px 12px; }
+    #history > .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    #history > .actions button { min-height: 38px; padding: 8px; font-size: 11px; }
+    .history-group {
+      margin-top: 14px;
+      border-top: 1px solid var(--line);
+    }
+    .history-group summary {
+      padding: 14px 2px 9px;
+      color: #353942;
+      font-size: 13px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .history-group .description { margin: 0 0 8px; font-size: 11px; }
+    .history-group .actions { margin-top: 8px; }
+    .history-group .actions button { min-height: 36px; padding: 7px 9px; font-size: 10.5px; }
+    .order-list { gap: 7px; margin-top: 5px; }
+    .order { padding: 10px; border-radius: 10px; }
+    .empty { padding: 18px 0; }
+    footer { padding-bottom: 28px; font-size: 11px; }
+    .chat-fab {
+      right: 22px;
+      bottom: 22px;
+      left: auto;
+      width: auto;
+      height: 48px;
+      border-radius: 999px;
+      padding: 0 17px 0 13px;
+      gap: 8px;
+      background: #17191f;
+      color: white;
+      font-size: 12px;
+      letter-spacing: .02em;
+      box-shadow: 0 10px 28px rgba(23, 25, 31, .24);
+    }
+    .chat-fab svg {
+      width: 21px;
+      height: 21px;
+      fill: none;
+      stroke: var(--yellow);
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .chat-fab circle { fill: var(--yellow); stroke: none; }
+    .chat-widget {
+      right: 22px;
+      bottom: 82px;
+      left: auto;
+      width: min(390px, calc(100vw - 32px));
+      max-height: min(620px, calc(100vh - 110px));
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(23, 25, 31, .2);
+    }
+    .chat-widget-header {
+      padding: 14px 16px;
+      background: #17191f;
+    }
+    .chat-widget-header h3::before {
+      content: "";
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      margin-right: 7px;
+      border-radius: 50%;
+      background: var(--yellow);
+    }
+    @media (max-width: 1180px) {
+      main { grid-template-columns: minmax(0, 1.35fr) minmax(330px, .8fr); }
+      .service-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 860px) {
+      .site-header { flex-wrap: wrap; gap: 8px; padding: 8px 14px; }
+      .login-button { margin-left: auto; }
+      .primary-nav {
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        padding-bottom: 1px;
+      }
+      main {
+        width: min(100% - 20px, 720px);
+        margin-top: 10px;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      #quickRequest {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .map-panel {
+        grid-column: 1;
+        grid-row: 2;
+      }
+      #history {
+        grid-column: 1;
+        grid-row: 3;
+      }
+      .quick-heading { display: flex; }
+      .quick-badge { margin: 0; }
+      .form-sections { grid-template-columns: 1fr; }
+      .service-section,
+      .product-section { grid-column: 1; }
+      .contact-section .grid,
+      .product-section .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .map-header {
+        grid-template-columns: 1fr auto;
+        align-items: end;
+      }
+      .map-tools { min-width: 260px; }
+      .map-stage,
+      #map {
+        min-height: 260px;
+        height: 260px;
+      }
+      .chat-widget {
+        right: 12px;
+        bottom: 72px;
+      }
+      .chat-fab { right: 12px; bottom: 12px; }
+    }
+    @media (max-width: 560px) {
+      .brand-copy small { display: none; }
+      .primary-nav .nav-item { min-height: 36px; padding: 7px 10px; }
+      .sandbox span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .panel { border-radius: 14px; padding: 16px; }
+      .map-panel { border-radius: 14px; }
+      .quick-heading { display: block; }
+      .quick-badge { margin-top: 10px; }
+      .booking-step { font-size: 9.5px; }
+      .quick-options { width: 100%; min-width: 0; }
+      .service-grid,
+      .contact-section .grid,
+      .product-section .grid { grid-template-columns: 1fr; }
+      .map-header { grid-template-columns: 1fr; }
+      .map-tools { min-width: 0; }
+      .map-stage,
+      #map {
+        min-height: 220px;
+        height: 220px;
+      }
+      .review-grid { grid-template-columns: 1fr; }
+      .quick-actions { grid-template-columns: 1fr; }
+      .chat-widget {
+        right: 8px;
+        bottom: 68px;
+        width: calc(100vw - 16px);
+        max-height: calc(100vh - 88px);
+      }
+      .chat-fab {
+        right: 8px;
+        bottom: 8px;
+        width: 48px;
+        padding: 0;
+      }
+      .chat-fab span { display: none; }
+    }
+  </style>
 </head>
 <body id="top">
   <header class="site-header">
@@ -899,15 +1340,15 @@
         </svg>
       </div>
       <div class="brand-copy">
-        <span>MOVB 택시_퀵</span>
-        <small>모브 (MOVB)</small>
+        <span>MOVB</span>
+        <small>Mobility AI</small>
       </div>
     </a>
     <nav class="primary-nav" aria-label="주요 메뉴">
       <a class="nav-item" href="/features">기능 소개</a>
       <button type="button" class="nav-item" data-nav="taxi" onclick="startTaxiRequest()">택시 접수하기</button>
-      <button type="button" class="nav-item active" data-nav="quick" onclick="goToSection('quickRequest', 'quick')">퀵 접수하기</button>
-      <button type="button" class="nav-item" data-nav="history" onclick="goToSection('history', 'history')">이용 내역</button>
+      <button type="button" class="nav-item active" data-nav="quick" onclick="goToSection('quickRequest', 'quick')">퀵 배송</button>
+      <button type="button" class="nav-item" data-nav="history" onclick="goToSection('history', 'history')">주문 조회</button>
     </nav>
     <button type="button" class="login-button" id="loginButton" onclick="openAuthModal()">로그인</button>
     <span class="visually-hidden" id="status" aria-live="polite">연동 상태 확인 중</span>
@@ -956,40 +1397,17 @@
       </div>
     </section>
   </div>
-  <div class="sandbox">Sandbox 환경입니다. 실제 개인정보 대신 테스트용 이름·전화번호를 사용하세요.</div>
+  <div class="sandbox"><b>Sandbox</b><span>테스트용 이름과 전화번호만 사용해주세요.</span></div>
 
   <main>
-    <section class="panel map-panel">
-      <div class="map-header">
-        <div>
-          <h2>배송 경로 지도</h2>
-          <p class="description">주소를 검색하거나 지도를 클릭해 출발지와 도착지를 지정하세요.</p>
-        </div>
-        <div class="map-tools" aria-label="지도 좌표 선택">
-          <button class="map-mode active" data-mode="pickup" onclick="setMapMode('pickup')">출발지 설정</button>
-          <button class="map-mode" data-mode="dropoff" onclick="setMapMode('dropoff')">도착지 설정</button>
-          <button class="map-mode" onclick="fitRoute()">경로 전체보기</button>
-        </div>
-      </div>
-      <div class="map-stage">
-        <div id="map" aria-label="카카오 배송 경로 지도"></div>
-        <div class="map-message" id="mapMessage">카카오 지도를 불러오는 중입니다.</div>
-      </div>
-      <div class="route-summary">
-        <span class="route-dot pickup"></span><b>출발지</b>
-        <span>→</span>
-        <span class="route-dot dropoff"></span><b>도착지</b>
-        <span id="routeDistance">실제 도로 거리를 계산하는 중입니다.</span>
-      </div>
-    </section>
-
     <section class="panel" id="quickRequest">
       <div class="quick-heading">
         <div>
-          <h2>퀵 접수하기</h2>
-          <p class="description">주소부터 요금 확인까지 순서대로 입력하면 약 1분이면 충분해요.</p>
+          <span class="eyebrow">QUICK DELIVERY</span>
+          <h1>퀵 배송 접수</h1>
+          <p class="description">필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
         </div>
-        <span class="quick-badge">SANDBOX 안전 접수</span>
+        <span class="quick-badge"><span></span>안전한 테스트 접수</span>
       </div>
 
       <div class="booking-steps" aria-label="퀵 접수 단계">
@@ -1004,9 +1422,10 @@
         <button type="button" class="quick-option" data-quick-mode="bundle" onclick="startBundleRequest()">묶음 퀵</button>
       </div>
 
-      <div class="form-section">
+      <div class="form-sections">
+      <div class="form-section service-section">
         <h3><span class="section-number">1</span>어떤 배송이 필요한가요?</h3>
-        <div class="grid">
+        <div class="service-grid">
           <label>배송 상품 <span class="required-mark">필수</span>
             <select id="orderType">
               <option value="QUICK">퀵 · 일반 배송</option>
@@ -1025,8 +1444,6 @@
             </select>
             <small class="field-hint">포장 완료 상태의 크기를 기준으로 선택하세요.</small>
           </label>
-        </div>
-        <div class="grid" style="margin-top:13px">
           <label>배송 차량
             <select id="fleet">
               <option value="">카카오 추천 차량</option>
@@ -1044,7 +1461,7 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section contact-section pickup-section">
         <h3><span class="section-number">2</span>어디에서 픽업할까요?</h3>
         <div class="grid">
           <label>출발지 주소 <span class="required-mark">필수</span>
@@ -1061,7 +1478,7 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section contact-section dropoff-section">
         <h3><span class="section-number">3</span>어디로 배송할까요?</h3>
         <button type="button" class="copy-contact" onclick="copyPickupContact()">받는 분이 보내는 분과 같아요</button>
         <div class="grid">
@@ -1079,12 +1496,13 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <div class="form-section product-section">
         <h3><span class="section-number">4</span>무엇을 보내시나요?</h3>
         <div class="grid">
           <label>물품명 <span class="required-mark">필수</span><input id="productName" required maxlength="100" placeholder="예: 계약서, 의류, 소형 부품"></label>
           <label>물품 신고가<input id="declaredValue" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 10000"><small class="field-hint">분실·파손 보상 확인에 사용되는 금액입니다.</small></label>
         </div>
+      </div>
       </div>
 
       <div class="quick-review" id="quickReview">
@@ -1115,9 +1533,35 @@
       </div>
     </section>
 
+    <section class="panel map-panel">
+      <div class="map-header">
+        <div>
+          <span class="eyebrow">ROUTE</span>
+          <h2>배송 경로</h2>
+          <p class="description">지도에서 출발지와 도착지를 바로 지정할 수 있어요.</p>
+        </div>
+        <div class="map-tools" aria-label="지도 좌표 선택">
+          <button class="map-mode active" data-mode="pickup" onclick="setMapMode('pickup')">출발지</button>
+          <button class="map-mode" data-mode="dropoff" onclick="setMapMode('dropoff')">도착지</button>
+          <button class="map-mode" onclick="fitRoute()">전체 보기</button>
+        </div>
+      </div>
+      <div class="map-stage">
+        <div id="map" aria-label="카카오 배송 경로 지도"></div>
+        <div class="map-message" id="mapMessage">카카오 지도를 불러오는 중입니다.</div>
+      </div>
+      <div class="route-summary">
+        <span class="route-dot pickup"></span><b>출발지</b>
+        <span>→</span>
+        <span class="route-dot dropoff"></span><b>도착지</b>
+        <span id="routeDistance">실제 도로 거리를 계산하는 중입니다.</span>
+      </div>
+    </section>
+
     <aside class="panel" id="history">
-      <h2>이용 내역</h2>
-      <p class="description">저장된 주문과 수신한 콜백 상태를 확인합니다.</p>
+      <span class="eyebrow">TRACKING</span>
+      <h2>주문 조회</h2>
+      <p class="description">주문 번호로 현재 배송 상태를 확인하세요.</p>
       <div class="tracking">
         <input id="trackingId" placeholder="partnerOrderId">
         <button onclick="trackOrder()">조회</button>
@@ -1132,21 +1576,33 @@
         <div class="step-timeline" id="stepTimeline"></div>
       </div>
 
-      <h3 class="section-title">최근 주문</h3>
-      <div class="order-list" id="orderList"><div class="empty">주문을 불러오는 중입니다.</div></div>
+      <details class="history-group" open>
+        <summary>최근 주문</summary>
+        <div class="order-list" id="orderList"><div class="empty">주문을 불러오는 중입니다.</div></div>
+      </details>
 
-      <h3 class="section-title">🚚 퀵 합승 — 같은 방향이면 나눠 내요</h3>
-      <p class="description" style="margin-bottom:10px">다른 사람 물건과 같은 차에 묶어 먼 거리도 싸게. 채팅으로 신청하세요.</p>
-      <div class="order-list" id="poolList"><div class="empty">합승 대기 건을 불러오는 중입니다.</div></div>
-      <div class="actions">
-        <button class="secondary" onclick="startPoolChat()">채팅으로 합승 신청</button>
-        <button class="secondary" onclick="loadPoolBoard()">새로고침</button>
-      </div>
+      <details class="history-group">
+        <summary>퀵 합승 대기</summary>
+        <p class="description">같은 방향의 배송을 묶어 비용을 나눠요.</p>
+        <div class="order-list" id="poolList"><div class="empty">합승 대기 건을 불러오는 중입니다.</div></div>
+        <div class="actions">
+          <button class="secondary" onclick="startPoolChat()">채팅으로 신청</button>
+          <button class="secondary" onclick="loadPoolBoard()">새로고침</button>
+        </div>
+      </details>
     </aside>
   </main>
   <footer>모브 (MOVB) · Kakao Mobility Sandbox 연동</footer>
 
-  <button class="chat-fab" id="chatFab" onclick="toggleChat()" aria-label="채팅 열기">💬</button>
+  <button class="chat-fab" id="chatFab" onclick="toggleChat()" aria-label="채팅 열기">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7.5 18.5 4 21v-5.2A8 8 0 1 1 20 12a8 8 0 0 1-8 8c-1.6 0-3.1-.5-4.5-1.5Z"/>
+      <circle cx="8.5" cy="12" r="1"/>
+      <circle cx="12" cy="12" r="1"/>
+      <circle cx="15.5" cy="12" r="1"/>
+    </svg>
+    <span>MOVB AI</span>
+  </button>
   <div class="chat-widget hidden" id="chatWidget">
     <div class="chat-widget-header">
       <h3>모브 (MOVB) 도우미</h3>
@@ -1172,7 +1628,10 @@
       </span>
     </div>
     <div class="chat-log" id="chatLog">
-      <div class="chat-bubble bot">안녕하세요! 카카오모빌리티 API를 사용하는 MOVB AI예요. 배송 주문·차량 선택·실도로 ETA·정차지별 상태를 대화로 도와드릴게요 🙂</div>
+      <div class="chat-bubble bot">
+        <p>안녕하세요! 카카오모빌리티 API를 사용하는 MOVB AI예요.</p>
+        <p>배송 주문·차량 선택·실도로 ETA·정차지별 상태를 대화로 도와드릴게요 🙂</p>
+      </div>
     </div>
     <div class="chat-suggestions" aria-label="추천 질문">
       <button type="button" onclick="openChatWithPrompt('퀵 배송 주문하고 싶어')">배송 주문</button>

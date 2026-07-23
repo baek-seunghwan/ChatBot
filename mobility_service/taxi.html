@@ -80,11 +80,57 @@
     }
     .app-bar a.quick-link:hover { background: rgba(255, 255, 255, .1); }
 
-    .screen { flex: 1; padding: 18px 16px 120px; display: flex; flex-direction: column; gap: 14px; }
+    .screen { flex: 1; padding: 18px 16px 128px; display: flex; flex-direction: column; gap: 14px; }
+    .screen.completed > .hello,
+    .screen.completed > .card,
+    .screen.completed > .disclaimer,
+    .screen.completed > .notice,
+    .screen.completed > #planResult { display: none !important; }
 
     .hello { margin: 4px 2px 2px; }
     .hello h2 { margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.015em; }
     .hello p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      color: #5d4c00;
+      background: #fff7c2;
+      border-radius: 999px;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 14px;
+    }
+    .step {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #8c8c87;
+      font-size: 11px;
+      font-weight: 750;
+      min-width: 0;
+    }
+    .step::before {
+      content: attr(data-step);
+      display: grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #e6e6e1;
+      color: #6d6d68;
+      flex: 0 0 auto;
+    }
+    .step.active { color: var(--ink); }
+    .step.active::before { background: var(--yellow); color: var(--ink); }
+    .step.done::before { content: "✓"; background: var(--green-soft); color: var(--green); }
 
     .card {
       background: var(--panel);
@@ -93,7 +139,20 @@
       padding: 16px;
       box-shadow: 0 8px 24px rgba(20, 18, 36, .06);
     }
-    .card h3 { margin: 0 0 10px; font-size: 13px; font-weight: 800; color: #4d4d4d; }
+    .card h3 { margin: 0 0 10px; font-size: 14px; font-weight: 850; color: #353535; }
+    .section-title { display: flex; align-items: center; gap: 8px; }
+    .section-number {
+      display: inline-grid;
+      place-items: center;
+      width: 23px;
+      height: 23px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: white;
+      font-size: 11px;
+      flex: 0 0 auto;
+    }
+    .section-copy { margin: -2px 0 12px 31px; color: var(--muted); font-size: 12px; }
 
     .field { display: flex; align-items: center; gap: 10px; }
     .field + .field { margin-top: 10px; }
@@ -103,7 +162,7 @@
     .pin.p1 { background: var(--danger); }
     .pin.p2 { background: #8a36c9; }
     .pin.p3 { background: #0f8a73; }
-    input {
+    input, textarea {
       width: 100%;
       min-height: 44px;
       border: 1px solid #dcdcd8;
@@ -116,9 +175,59 @@
       outline: none;
       min-width: 0;
     }
-    input:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(25, 25, 25, .08); }
-    input::placeholder { color: #707070; }
+    textarea { min-height: 78px; resize: vertical; }
+    input:focus, textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(25, 25, 25, .08); }
+    input::placeholder, textarea::placeholder { color: #707070; }
     .name-input { flex: 0 0 76px; }
+    .field-label { display: block; margin: 12px 0 6px; font-size: 12px; font-weight: 800; color: #555; }
+    .field-label:first-of-type { margin-top: 0; }
+    .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+    .choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .choice {
+      position: relative;
+      display: block;
+      min-width: 0;
+    }
+    .choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .choice-body {
+      min-height: 76px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 1.5px solid #deded9;
+      border-radius: 13px;
+      padding: 11px 12px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .choice-body b { font-size: 13px; }
+    .choice-body span { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .choice input:checked + .choice-body {
+      border-color: var(--ink);
+      background: #fffceb;
+      box-shadow: inset 0 0 0 1px var(--ink);
+    }
+    .choice input:focus-visible + .choice-body { outline: 3px solid var(--blue); outline-offset: 2px; }
+    .inline-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      margin-top: 12px;
+      color: #4c4c49;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .inline-check input {
+      width: 20px;
+      min-height: 20px;
+      height: 20px;
+      margin: 0;
+      flex: 0 0 auto;
+      accent-color: var(--ink);
+    }
+    .schedule-field { margin-top: 10px; }
+    .hidden { display: none !important; }
 
     .remove-btn {
       flex: 0 0 auto;
@@ -187,6 +296,11 @@
       font-weight: 650;
     }
     .notice.visible { display: block; }
+    .notice.success {
+      background: var(--green-soft);
+      border-color: #b9dec9;
+      color: var(--green);
+    }
 
     /* 결과 */
     #planResult { display: none; }
@@ -246,13 +360,80 @@
       font-variant-numeric: tabular-nums;
     }
     .fineprint { color: var(--muted); font-size: 12px; text-align: center; margin: 0; }
+    .review-card { border: 1.5px solid #ddd7a8; background: #fffef7; }
+    .review-list { display: grid; gap: 9px; margin: 0; }
+    .review-row { display: grid; grid-template-columns: 78px 1fr; gap: 10px; font-size: 12px; }
+    .review-row dt { color: var(--muted); }
+    .review-row dd { margin: 0; font-weight: 750; text-align: right; overflow-wrap: anywhere; }
+    .secondary {
+      width: 100%;
+      min-height: 44px;
+      margin-top: 12px;
+      border: 1px solid #d7d7d2;
+      border-radius: 12px;
+      background: white;
+      color: #555;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    #receiptResult { display: none; }
+    #receiptResult.visible { display: block; }
+    .receipt-card {
+      text-align: center;
+      background: linear-gradient(160deg, #15223b, #191919);
+      color: white;
+      border-radius: 20px;
+      padding: 26px 18px;
+      box-shadow: 0 14px 32px rgba(20, 26, 42, .24);
+    }
+    .receipt-check {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: var(--yellow);
+      color: var(--ink);
+      font-size: 24px;
+      font-weight: 900;
+    }
+    .receipt-card h3 { margin: 0; color: white; font-size: 20px; }
+    .receipt-card p { margin: 7px 0 0; color: #c8cad2; font-size: 12px; }
+    .receipt-id {
+      margin-top: 16px;
+      padding: 11px;
+      border: 1px solid rgba(255, 255, 255, .16);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, .07);
+      font-size: 12px;
+    }
+    .receipt-id b { display: block; margin-top: 2px; color: var(--yellow); font-size: 15px; letter-spacing: .03em; }
+    .disclaimer {
+      display: flex;
+      gap: 9px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      background: #f1f1ee;
+      color: #5c5c58;
+      font-size: 11px;
+      line-height: 1.45;
+    }
 
-    button:focus-visible, input:focus-visible, a:focus-visible {
+    button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible {
       outline: 3px solid var(--blue);
       outline-offset: 2px;
     }
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; }
+    }
+    @media (max-width: 360px) {
+      .name-input { flex-basis: 64px; }
+      .step { font-size: 10px; }
+      .stop { grid-template-columns: 28px 1fr; }
+      .stop-pay { grid-column: 2; text-align: left; }
     }
   </style>
 </head>
@@ -266,31 +447,98 @@
         </svg>
       </div>
       <div>
-        <h1>택시 합승</h1>
-        <p>MOVB · 같이 타면 나눠 내요</p>
+        <h1>택시 접수하기</h1>
+        <p>MOVB · 경로 확인부터 접수까지</p>
       </div>
       <a class="quick-link" href="/">퀵 접수 →</a>
     </header>
 
-    <main class="screen">
+    <main class="screen" id="taxiScreen">
       <div class="hello">
-        <h2>어디서 출발하세요?</h2>
-        <p>같은 곳에서 출발해 각자 다른 곳에 내리는 일행의 하차 순서와 요금 분담을 계산해드려요.</p>
+        <span class="eyebrow">● 합승 접수 · 2~4명</span>
+        <h2>같이 갈 일행을 접수해요</h2>
+        <p>출발지와 각자 목적지를 입력하면 최적 하차 순서와 분담 요금을 확인한 뒤 접수할 수 있어요.</p>
+        <div class="steps" aria-label="택시 접수 단계">
+          <span class="step active" id="step1" data-step="1">경로 입력</span>
+          <span class="step" id="step2" data-step="2">요금 확인</span>
+          <span class="step" id="step3" data-step="3">접수 완료</span>
+        </div>
       </div>
 
       <section class="card">
-        <h3>출발지</h3>
+        <h3 class="section-title"><span class="section-number">1</span> 출발지</h3>
+        <p class="section-copy">모든 탑승자가 함께 출발하는 장소예요.</p>
         <div class="field">
           <span class="pin origin"></span>
-          <input id="originAddress" placeholder="공통 출발지 (예: 강남역)" autocomplete="off">
+          <input id="originAddress" placeholder="공통 출발지 (예: 강남역 2호선)" autocomplete="street-address">
         </div>
       </section>
 
       <section class="card">
-        <h3>탑승자와 목적지 <small style="font-weight:600;color:#9a9a94">(2~4명)</small></h3>
+        <h3 class="section-title"><span class="section-number">2</span> 탑승자와 목적지</h3>
+        <p class="section-copy">이름과 각자 내릴 장소를 입력해주세요. 최대 4명까지 가능해요.</p>
         <div id="passengerRows"></div>
         <button type="button" class="add-passenger" id="addPassengerBtn" onclick="addPassenger()">+ 탑승자 추가</button>
       </section>
+
+      <section class="card">
+        <h3 class="section-title"><span class="section-number">3</span> 탑승 조건</h3>
+        <p class="section-copy">출발 시간과 원하는 차량을 선택해주세요.</p>
+        <span class="field-label">언제 출발할까요?</span>
+        <div class="choice-grid">
+          <label class="choice">
+            <input type="radio" name="departureMode" value="now" checked>
+            <span class="choice-body"><b>지금 출발</b><span>가능한 경로로 바로 접수</span></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="departureMode" value="scheduled">
+            <span class="choice-body"><b>시간 예약</b><span>원하는 출발 시간 지정</span></span>
+          </label>
+        </div>
+        <div class="schedule-field hidden" id="scheduleField">
+          <label class="field-label" for="departureAt">예약 출발 시간</label>
+          <input type="datetime-local" id="departureAt">
+        </div>
+
+        <span class="field-label">차량 선호</span>
+        <div class="choice-grid">
+          <label class="choice">
+            <input type="radio" name="taxiType" value="standard" checked>
+            <span class="choice-body"><b>일반 중형</b><span>2~3명에게 추천</span></span>
+          </label>
+          <label class="choice">
+            <input type="radio" name="taxiType" value="large">
+            <span class="choice-body"><b>넓은 차량</b><span>4명 또는 짐이 있을 때</span></span>
+          </label>
+        </div>
+        <label class="inline-check">
+          <input type="checkbox" id="hasLuggage">
+          <span>캐리어처럼 큰 짐이 있어요</span>
+        </label>
+      </section>
+
+      <section class="card">
+        <h3 class="section-title"><span class="section-number">4</span> 접수자 정보</h3>
+        <p class="section-copy">접수 내용을 확인할 대표자 정보를 입력해주세요.</p>
+        <div class="two-columns">
+          <div>
+            <label class="field-label" for="requesterName">이름</label>
+            <input id="requesterName" placeholder="홍길동" autocomplete="name">
+          </div>
+          <div>
+            <label class="field-label" for="requesterPhone">연락처</label>
+            <input id="requesterPhone" type="tel" inputmode="tel" placeholder="010-0000-0000" autocomplete="tel">
+          </div>
+        </div>
+        <label class="field-label" for="requestNote">기사님께 전달할 요청사항 <small style="font-weight:600;color:#8a8a84">(선택)</small></label>
+        <textarea id="requestNote" maxlength="300" placeholder="예: 출발지 3번 출구 앞에서 만나요."></textarea>
+        <label class="inline-check">
+          <input type="checkbox" id="bookingConsent">
+          <span>예상 경로·요금 접수이며 실제 택시 배차와 결제는 진행되지 않는다는 안내를 확인했어요.</span>
+        </label>
+      </section>
+
+      <div class="disclaimer"><span aria-hidden="true">ℹ️</span><span>현재 택시 기능은 공개 호출 API가 없어 접수 내역과 예상 요금만 저장합니다. 실제 차량 호출이나 결제는 발생하지 않아요.</span></div>
 
       <div class="notice" id="taxiNotice"></div>
 
@@ -302,12 +550,27 @@
           <div class="meta" id="planMeta"></div>
         </div>
         <div class="card" id="stopList"></div>
-        <p class="fineprint">직선거리 기반 추정 요금으로 실제 미터기 요금과 다를 수 있어요.</p>
+        <div class="card review-card">
+          <h3>접수 전 확인</h3>
+          <dl class="review-list" id="bookingReview"></dl>
+          <button type="button" class="secondary" onclick="editBooking()">입력 내용 수정하기</button>
+        </div>
+        <p class="fineprint">카카오 실도로 또는 보정 거리 기반 예상 요금으로 실제 미터기 요금과 다를 수 있어요.</p>
+      </section>
+
+      <section id="receiptResult" aria-live="polite">
+        <div class="receipt-card">
+          <div class="receipt-check">✓</div>
+          <h3>합승 접수가 완료됐어요</h3>
+          <p>입력한 경로와 예상 요금이 MOVB에 안전하게 저장됐어요.</p>
+          <div class="receipt-id">접수번호<b id="receiptId">-</b></div>
+        </div>
+        <div class="disclaimer" style="margin-top:12px"><span aria-hidden="true">🚕</span><span id="receiptMessage">실제 택시 배차는 진행되지 않았어요.</span></div>
       </section>
     </main>
 
     <div class="cta-dock">
-      <button type="button" class="cta" id="planBtn" onclick="computePlan(this)">합승 요금 계산하기</button>
+      <button type="button" class="cta" id="planBtn" onclick="handlePrimaryAction(this)">예상 요금 확인하기</button>
     </div>
   </div>
 
@@ -315,10 +578,42 @@
     const byId = (id) => document.getElementById(id);
     const PIN_CLASSES = ["p0", "p1", "p2", "p3"];
     const DEFAULT_NAMES = ["A", "B", "C", "D"];
+    const STOP_COLORS = ["#315efb", "#c43c35", "#8a36c9", "#0f8a73"];
     let passengers = [
       {name: "A", address: ""},
       {name: "B", address: ""}
     ];
+    let currentPlan = null;
+    let actionMode = "plan";
+
+    function selectedValue(name) {
+      return document.querySelector(`input[name="${name}"]:checked`)?.value || "";
+    }
+
+    function setActionMode(mode) {
+      actionMode = mode;
+      const button = byId("planBtn");
+      if (mode === "submit") button.textContent = "이 내용으로 택시 합승 접수하기";
+      else if (mode === "reset") button.textContent = "새 택시 접수 시작하기";
+      else button.textContent = "예상 요금 확인하기";
+    }
+
+    function setStep(stage) {
+      [1, 2, 3].forEach(index => {
+        const step = byId(`step${index}`);
+        step.classList.toggle("active", index === stage);
+        step.classList.toggle("done", index < stage || stage === 4);
+      });
+    }
+
+    function invalidatePlan() {
+      if (!currentPlan) return;
+      currentPlan = null;
+      byId("planResult").classList.remove("visible");
+      byId("receiptResult").classList.remove("visible");
+      setActionMode("plan");
+      setStep(1);
+    }
 
     function renderPassengers() {
       const wrap = byId("passengerRows");
@@ -333,12 +628,18 @@
         nameInput.placeholder = "이름";
         nameInput.value = passenger.name;
         nameInput.setAttribute("aria-label", `탑승자 ${index + 1} 이름`);
-        nameInput.addEventListener("input", () => { passenger.name = nameInput.value; });
+        nameInput.addEventListener("input", () => {
+          passenger.name = nameInput.value;
+          invalidatePlan();
+        });
         const addressInput = document.createElement("input");
         addressInput.placeholder = `목적지 (예: ${index === 0 ? "잠실역" : "건대입구역"})`;
         addressInput.value = passenger.address;
         addressInput.setAttribute("aria-label", `탑승자 ${index + 1} 목적지`);
-        addressInput.addEventListener("input", () => { passenger.address = addressInput.value; });
+        addressInput.addEventListener("input", () => {
+          passenger.address = addressInput.value;
+          invalidatePlan();
+        });
         row.append(pin, nameInput, addressInput);
         if (passengers.length > 2) {
           const remove = document.createElement("button");
@@ -349,6 +650,7 @@
           remove.addEventListener("click", () => {
             passengers.splice(index, 1);
             renderPassengers();
+            invalidatePlan();
           });
           row.append(remove);
         }
@@ -361,55 +663,186 @@
       if (passengers.length >= 4) return;
       passengers.push({name: DEFAULT_NAMES[passengers.length] || "", address: ""});
       renderPassengers();
+      invalidatePlan();
     }
 
-    function showNotice(text) {
+    function showNotice(text, type = "error") {
       const notice = byId("taxiNotice");
       notice.textContent = text;
+      notice.classList.toggle("success", type === "success");
       notice.classList.add("visible");
+      notice.scrollIntoView({behavior: "smooth", block: "center"});
     }
 
     function clearNotice() {
-      byId("taxiNotice").classList.remove("visible");
+      byId("taxiNotice").classList.remove("visible", "success");
     }
 
     function won(value) {
       return `${Number(value || 0).toLocaleString("ko-KR")}원`;
     }
 
-    async function computePlan(button) {
-      clearNotice();
+    function routePayload() {
       const origin = byId("originAddress").value.trim();
       const filled = passengers
         .map(p => ({name: p.name.trim() || null, address: p.address.trim()}))
         .filter(p => p.address);
-      if (!origin) { showNotice("공통 출발지를 입력해주세요."); return; }
-      if (filled.length < 2) { showNotice("목적지를 2곳 이상 입력해주세요."); return; }
+      if (!origin) throw new Error("공통 출발지를 입력해주세요.");
+      if (filled.length < 2) throw new Error("탑승자 목적지를 2곳 이상 입력해주세요.");
+      const scheduled = selectedValue("departureMode") === "scheduled";
+      const departureAt = scheduled ? byId("departureAt").value : null;
+      if (scheduled && !departureAt) throw new Error("예약 출발 시간을 입력해주세요.");
+      return {originAddress: origin, passengers: filled, departureAt};
+    }
+
+    function bookingPayload() {
+      const payload = routePayload();
+      const departureMode = selectedValue("departureMode");
+      const departureAt = byId("departureAt").value;
+      const requesterName = byId("requesterName").value.trim();
+      const requesterPhone = byId("requesterPhone").value.trim();
+      if (departureMode === "scheduled" && !departureAt) {
+        throw new Error("예약 출발 시간을 입력해주세요.");
+      }
+      if (!requesterName) throw new Error("접수자 이름을 입력해주세요.");
+      if (!/^[0-9+\-\s]{8,20}$/.test(requesterPhone)) {
+        throw new Error("접수자 연락처를 확인해주세요.");
+      }
+      if (!byId("bookingConsent").checked) {
+        throw new Error("접수 안내를 확인하고 체크해주세요.");
+      }
+      return {
+        ...payload,
+        requesterName,
+        requesterPhone,
+        departureMode,
+        departureAt: departureMode === "scheduled" ? departureAt : null,
+        taxiType: selectedValue("taxiType") || "standard",
+        hasLuggage: byId("hasLuggage").checked,
+        note: byId("requestNote").value.trim() || null,
+        consent: true
+      };
+    }
+
+    function departureLabel() {
+      if (selectedValue("departureMode") === "now") return "지금 출발";
+      const value = byId("departureAt").value;
+      if (!value) return "예약 시간 입력 필요";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime())
+        ? value
+        : new Intl.DateTimeFormat("ko-KR", {
+            month: "long", day: "numeric", weekday: "short",
+            hour: "numeric", minute: "2-digit"
+          }).format(date);
+    }
+
+    function appendReviewRow(list, label, value) {
+      const row = document.createElement("div");
+      row.className = "review-row";
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const description = document.createElement("dd");
+      description.textContent = value;
+      row.append(term, description);
+      list.append(row);
+    }
+
+    function renderReview() {
+      const list = byId("bookingReview");
+      list.innerHTML = "";
+      appendReviewRow(list, "출발", departureLabel());
+      appendReviewRow(
+        list,
+        "차량",
+        `${selectedValue("taxiType") === "large" ? "넓은 차량 요청" : "일반 중형"}${byId("hasLuggage").checked ? " · 큰 짐 있음" : ""}`
+      );
+      appendReviewRow(
+        list,
+        "접수자",
+        `${byId("requesterName").value.trim() || "이름 입력 필요"} · ${byId("requesterPhone").value.trim() || "연락처 입력 필요"}`
+      );
+      appendReviewRow(
+        list,
+        "안내 확인",
+        byId("bookingConsent").checked ? "확인 완료" : "체크 필요"
+      );
+    }
+
+    async function computePlan(button) {
+      clearNotice();
+      let payload;
+      try {
+        payload = routePayload();
+      } catch (error) {
+        showNotice(error.message);
+        return;
+      }
 
       button.disabled = true;
-      button.textContent = "계산 중...";
+      button.textContent = "최적 경로 계산 중...";
       try {
         const response = await fetch("/api/carpool/plan", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
-          body: JSON.stringify({originAddress: origin, passengers: filled})
+          body: JSON.stringify(payload)
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) {
           const detail = body.message || body.detail || `HTTP ${response.status}`;
           throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
         }
-        renderPlan(body.data);
+        currentPlan = body.data;
+        renderPlan(currentPlan);
+        renderReview();
+        setStep(2);
+        setActionMode("submit");
       } catch (error) {
         showNotice(error.message);
         byId("planResult").classList.remove("visible");
       } finally {
         button.disabled = false;
-        button.textContent = "합승 요금 계산하기";
+        if (!currentPlan) setActionMode("plan");
       }
     }
 
-    const STOP_COLORS = ["#315efb", "#c43c35", "#8a36c9", "#0f8a73"];
+    async function submitBooking(button) {
+      clearNotice();
+      let payload;
+      try {
+        payload = bookingPayload();
+      } catch (error) {
+        showNotice(error.message);
+        renderReview();
+        return;
+      }
+      button.disabled = true;
+      button.textContent = "접수 저장 중...";
+      try {
+        const response = await fetch("/api/carpool/requests", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const detail = body.message || body.detail || `HTTP ${response.status}`;
+          throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+        }
+        renderReceipt(body.data, body.message);
+      } catch (error) {
+        showNotice(error.message);
+        setActionMode("submit");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function handlePrimaryAction(button) {
+      if (actionMode === "submit") submitBooking(button);
+      else if (actionMode === "reset") resetBooking();
+      else computePlan(button);
+    }
 
     function renderPlan(plan) {
       byId("totalFare").textContent = won(plan.sharedFare);
@@ -446,7 +879,71 @@
       result.scrollIntoView({behavior: "smooth", block: "start"});
     }
 
+    function renderReceipt(saved, message) {
+      byId("planResult").classList.remove("visible");
+      byId("receiptId").textContent = saved.requestId;
+      byId("receiptMessage").textContent = message || "실제 택시 배차는 진행되지 않았어요.";
+      const receipt = byId("receiptResult");
+      receipt.classList.add("visible");
+      byId("taxiScreen").classList.add("completed");
+      clearNotice();
+      setStep(4);
+      setActionMode("reset");
+      receipt.scrollIntoView({behavior: "smooth", block: "center"});
+    }
+
+    function editBooking() {
+      byId("planResult").classList.remove("visible");
+      currentPlan = null;
+      setActionMode("plan");
+      setStep(1);
+      byId("originAddress").scrollIntoView({behavior: "smooth", block: "center"});
+      byId("originAddress").focus({preventScroll: true});
+    }
+
+    function resetBooking() {
+      passengers = [{name: "A", address: ""}, {name: "B", address: ""}];
+      renderPassengers();
+      ["originAddress", "requesterName", "requesterPhone", "requestNote", "departureAt"].forEach(id => {
+        byId(id).value = "";
+      });
+      document.querySelector('input[name="departureMode"][value="now"]').checked = true;
+      document.querySelector('input[name="taxiType"][value="standard"]').checked = true;
+      byId("hasLuggage").checked = false;
+      byId("bookingConsent").checked = false;
+      byId("scheduleField").classList.add("hidden");
+      byId("planResult").classList.remove("visible");
+      byId("receiptResult").classList.remove("visible");
+      byId("taxiScreen").classList.remove("completed");
+      currentPlan = null;
+      clearNotice();
+      setStep(1);
+      setActionMode("plan");
+      window.scrollTo({top: 0, behavior: "smooth"});
+    }
+
+    function toggleSchedule() {
+      const scheduled = selectedValue("departureMode") === "scheduled";
+      byId("scheduleField").classList.toggle("hidden", !scheduled);
+      if (scheduled && !byId("departureAt").value) {
+        const future = new Date(Date.now() + 30 * 60 * 1000);
+        future.setMinutes(Math.ceil(future.getMinutes() / 10) * 10, 0, 0);
+        const local = new Date(future.getTime() - future.getTimezoneOffset() * 60000);
+        byId("departureAt").value = local.toISOString().slice(0, 16);
+      }
+      invalidatePlan();
+    }
+
     renderPassengers();
+    byId("originAddress").addEventListener("input", invalidatePlan);
+    byId("departureAt").addEventListener("input", invalidatePlan);
+    document.querySelectorAll('input[name="departureMode"]').forEach(input => {
+      input.addEventListener("change", toggleSchedule);
+    });
+    document.querySelectorAll('input[name="taxiType"], #hasLuggage, #requesterName, #requesterPhone, #bookingConsent').forEach(input => {
+      input.addEventListener("change", renderReview);
+      input.addEventListener("input", renderReview);
+    });
   </script>
 </body>
 </html>

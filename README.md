@@ -79,6 +79,14 @@ Workflow가 수행하는 하이브리드 구조입니다.
 
 현재 지식베이스는 6개 문서, 23개 근거 섹션으로 구성되어 있습니다.
 
+### Ollama 없는 내 로컬 채팅
+
+- `mobility_service/local_chat_qa.jsonl`의 일상 대화 QA를 저장소에 함께 배포
+- MOVB 핵심 질문과 실제 주문 요청을 일반 QA보다 먼저 구분
+- 문자 2·3-gram 유사도와 변형 질문으로 가장 가까운 학습 답변 검색
+- 모르는 질문은 답을 지어내지 않고 로컬 QA의 지원 범위를 안내
+- 배송 견적·접수·조회·취소 요청은 실제 업무를 수행하는 AI 채팅으로 안내
+
 ### 배송 운영
 
 - QUICK, QUICK_ECONOMY, QUICK_EXPRESS, DOBO 견적
@@ -118,7 +126,7 @@ Workflow가 수행하는 하이브리드 구조입니다.
 | 평가 | 데이터 | 현재 결과 |
 |---|---:|---:|
 | 지식 검색 Source Hit@3 | 26문항 | **26/26 (100%)** |
-| 자동 테스트 | API·인증·주문·경로·Step·RAG·Agent | **33개 통과** |
+| 자동 테스트 | API·인증·주문·경로·Step·RAG·Agent·로컬 QA | **36개 통과** |
 
 평가 실행:
 
@@ -203,7 +211,8 @@ OLLAMA_MODEL=gemma4:e2b
 
 Render 같은 원격 서버의 `localhost`는 개발자 컴퓨터가 아닙니다. 원격 배포에서
 Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결할 수 없으면 MOVB가
-내장 Knowledge RAG와 자체 QA 모드로 답변합니다.
+내장 Knowledge RAG와 저장소에 포함된 자체 QA 모드로 답변합니다. Ollama가 연결된
+로컬 환경에서도 채팅창의 스위치를 끄면 같은 자체 QA 경로를 사용합니다.
 
 ## 주요 API
 
@@ -221,6 +230,8 @@ Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결
 | `PATCH` | `/api/admin/orders/{partnerOrderId}/sandbox-status` | 관리자 Sandbox 상태 시연 |
 | `POST` | `/api/bundle/quote` | 묶음배송 비교 견적 |
 | `POST` | `/api/carpool/plan` | 택시 동승 경로·요금 분배 |
+| `POST` | `/api/carpool/requests` | 택시 합승 접수 저장·접수번호 발급 |
+| `GET` | `/api/carpool/requests/{requestId}` | 택시 합승 접수 조회 |
 | `GET` | `/api/pool/requests` | 퀵 합승 대기 요청 |
 
 ## 프로젝트 구조

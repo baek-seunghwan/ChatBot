@@ -53,6 +53,7 @@ async def carpool_plan(
     origin: Location,
     passengers: list[dict[str, Any]],
     route_planner: RoutePlanner | None = None,
+    departure_time: str | None = None,
 ) -> dict[str, Any]:
     """동승(카풀) 경유 순서와 요금 분배안을 계산한다.
 
@@ -76,6 +77,7 @@ async def carpool_plan(
                 origin,
                 ordered_locations[-1],
                 waypoints=ordered_locations[:-1],
+                departure_time=departure_time,
             )
             total = float(route["distanceKm"])
         else:
@@ -102,7 +104,7 @@ async def carpool_plan(
     for passenger in passengers:
         if route_planner:
             solo_route = await route_planner.route_summary(
-                origin, passenger["location"]
+                origin, passenger["location"], departure_time=departure_time
             )
             solo_fare = int(solo_route.get("taxiFare") or 0) or estimate_taxi_fare(
                 float(solo_route["distanceKm"])
