@@ -212,6 +212,22 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn('id="orderButton"', home.text)
         self.assertIn("주소 확인이 필요해요", home.text)
 
+    def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
+        home = self.client.get("/")
+        taxi = self.client.get("/taxi")
+        features = self.client.get("/features")
+
+        for response in (home, taxi, features):
+            self.assertEqual(response.status_code, 200)
+            self.assertIn("system-ui, -apple-system", response.text)
+            self.assertIn("focus-visible", response.text)
+
+        self.assertIn("min-height: 44px", home.text)
+        self.assertIn("font-size: 16px", home.text)
+        self.assertIn("color: #707070", home.text)
+        self.assertIn("min-height: 44px", taxi.text)
+        self.assertIn("color: #707070", taxi.text)
+
     def test_local_chat_uses_selected_own_engine(self) -> None:
         with patch(
             "mobility_service.app.local_model_reply",
