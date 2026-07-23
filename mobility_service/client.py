@@ -131,6 +131,10 @@ class KakaoMobilityClient:
             ]
         if draft.wish_time:
             payload["pickup"]["wishTime"] = draft.wish_time
+        if draft.fleet_option:
+            payload["fleetOption"] = draft.fleet_option.model_dump(
+                mode="json", by_alias=True
+            )
         return await self._request(
             "POST", "/goa-sandbox-service/api/v2/orders/price", json=payload
         )
@@ -164,6 +168,10 @@ class KakaoMobilityClient:
             payload["waypoints"] = [self._stop(item) for item in request.waypoints]
         if request.wish_time:
             payload["pickup"]["wishTime"] = request.wish_time
+        if request.fleet_option:
+            payload["fleetOption"] = request.fleet_option.model_dump(
+                mode="json", by_alias=True
+            )
 
         return await self._request(
             "POST", "/goa-sandbox-service/api/v2/orders", json=payload
@@ -181,9 +189,33 @@ class KakaoMobilityClient:
             "GET", f"/goa-sandbox-service/api/v2/orders/{safe_id}/picker"
         )
 
+    async def get_step(self, partner_order_id: str, step_id: str) -> Any:
+        safe_order_id = quote(partner_order_id, safe="")
+        safe_step_id = quote(step_id, safe="")
+        return await self._request(
+            "GET",
+            f"/goa-sandbox-service/api/v2/orders/{safe_order_id}/steps/{safe_step_id}",
+        )
+
+    async def change_sandbox_status(
+        self,
+        partner_order_id: str,
+        order_status: str,
+        *,
+        cancel_by: str | None = None,
+    ) -> Any:
+        safe_id = quote(partner_order_id, safe="")
+        payload: dict[str, Any] = {"orderStatus": order_status}
+        if cancel_by:
+            payload["cancelBy"] = cancel_by
+        return await self._request(
+            "PATCH",
+            f"/goa-sandbox-service/api/v1/developers/orders/{safe_id}/status",
+            json=payload,
+        )
+
     async def cancel_order(self, partner_order_id: str) -> Any:
         safe_id = quote(partner_order_id, safe="")
         return await self._request(
             "PATCH", f"/goa-sandbox-service/api/v1/orders/{safe_id}/cancel"
         )
-

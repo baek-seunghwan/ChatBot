@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .client import KakaoApiError, KakaoMobilityClient
+from .directions import RoutePlanner
 from .geocode import KakaoGeocodeClient
 from .models import DeliveryDraft, DeliveryStop, Location, OrderType, ProductSize
 from .rideshare import road_km
@@ -19,13 +20,24 @@ def _total_price(data: Any) -> int | None:
     return None
 
 
-def _nearest_neighbor_order(pickup: Location, stops: list[Location]) -> list[int]:
-    """출발지에서 가까운 곳부터 차례로 도는 휴리스틱 경유 순서."""
+async def _nearest_neighbor_order(
+    pickup: Location,
+    stops: list[Location],
+    route_planner: RoutePlanner | None,
+) -> list[int]:
+    """카카오 실도로 거리를 기준으로 가까운 정차지를 차례로 고른다."""
     remaining = list(range(len(stops)))
     order: list[int] = []
     cursor = pickup
     while remaining:
-        nearest = min(remaining, key=lambda i: road_km(cursor, stops[i]))
+        if route_planner is None:
+            nearest = min(remaining, key=lambda i: road_km(cursor, stops[i]))
+        else:
+            distances = []
+            for index in remaining:
+                route = await route_planner.route_summary(cursor, stops[index])
+                distances.append((route["distanceMeters"], index))
+            nearest = min(distances)[1]
         order.append(nearest)
         cursor = stops[nearest]
         remaining.remove(nearest)
@@ -38,6 +50,7 @@ async def bundle_quote(
     pickup_address: str,
     dropoff_addresses: list[str],
     product_size: str = "XS",
+    route_planner: RoutePlanner | None = None,
 ) -> dict[str, Any]:
     """여러 도착지를 '각각 따로 보낼 때'와 '한 번에 묶어 보낼 때' 요금을 비교한다.
 
@@ -81,7 +94,7 @@ async def bundle_quote(
         individual_total += price
 
     # 2) 묶어서 보낼 때: 가까운 곳부터 도는 순서로 경유지 구성
-    order = _nearest_neighbor_order(pickup, dropoffs)
+    order = await _nearest_neighbor_order(pickup, dropoffs, route_planner)
     ordered = [dropoffs[i] for i in order]
     bundled_draft = DeliveryDraft(
         orderType=OrderType.QUICK,
@@ -93,6 +106,15 @@ async def bundle_quote(
     bundled_price = _total_price(await client.price(bundled_draft))
     if bundled_price is None:
         raise ValueError("묶음 견적 조회에 실패했어요.")
+    route_info = (
+        await route_planner.route_summary(
+            pickup,
+            ordered[-1],
+            waypoints=ordered[:-1],
+        )
+        if route_planner
+        else None
+    )
 
     return {
         "pickup": pickup.basic_address,
@@ -102,4 +124,5 @@ async def bundle_quote(
         "bundledPrice": bundled_price,
         "saving": individual_total - bundled_price,
         "recommendBundle": bundled_price < individual_total,
+        "routeInfo": route_info,
     }

@@ -24,7 +24,9 @@ from .bundle import bundle_quote
 from .client import KakaoApiError, KakaoMobilityClient
 from .config import Settings
 from .conversation_store import ConversationStore
+from .directions import KakaoDirectionsClient, RoutePlanner
 from .geocode import KakaoGeocodeClient
+from .knowledge import default_knowledge_base
 from .local_responder import local_model_reply, ollama_status
 from .models import (
     AgentChatRequest,
@@ -36,9 +38,16 @@ from .models import (
     DeliveryDraft,
     LoginRequest,
     RegisterRequest,
+    RouteSummaryRequest,
+    SandboxStatusChange,
 )
 from .rideshare import carpool_plan
-from .orders import cancel_order_by_id, get_order_status, place_order
+from .orders import (
+    cancel_order_by_id,
+    get_order_status,
+    get_order_steps,
+    place_order,
+)
 from .pool_store import PoolStore
 from .store import MobilityStore
 from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
@@ -54,6 +63,7 @@ def create_app(
     client: KakaoMobilityClient | None = None,
     store: MobilityStore | None = None,
     geocoder: KakaoGeocodeClient | None = None,
+    directions: KakaoDirectionsClient | None = None,
     conversations: ConversationStore | None = None,
     agent: DeliveryAgent | None = None,
     pool_store: PoolStore | None = None,
@@ -63,9 +73,12 @@ def create_app(
     resolved_store = store or MobilityStore(resolved_settings.database_path)
     resolved_client = client or KakaoMobilityClient(resolved_settings)
     resolved_geocoder = geocoder or KakaoGeocodeClient(resolved_settings)
+    resolved_directions = directions or KakaoDirectionsClient(resolved_settings)
+    resolved_routes = RoutePlanner(resolved_directions)
     resolved_conversations = conversations or ConversationStore(resolved_settings.database_path)
     resolved_pools = pool_store or PoolStore(resolved_settings.database_path)
     resolved_users = user_store or UserStore(resolved_settings.database_path)
+    resolved_knowledge = default_knowledge_base()
     if resolved_settings.admin_configured:
         resolved_users.ensure_admin(
             username=resolved_settings.admin_username,
@@ -73,10 +86,12 @@ def create_app(
         )
     resolved_agent = agent or DeliveryAgent(
         resolved_client, resolved_geocoder, resolved_store, resolved_conversations,
-        pools=resolved_pools,
+        pools=resolved_pools, knowledge_base=resolved_knowledge,
+        route_planner=resolved_routes,
     )
     owns_client = client is None
     owns_geocoder = geocoder is None
+    owns_directions = directions is None
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -85,19 +100,27 @@ def create_app(
             await resolved_client.close()
         if owns_geocoder:
             await resolved_geocoder.close()
+        if owns_directions:
+            await resolved_directions.close()
 
     application = FastAPI(
         title="모브 (MOVB)",
-        description="Kakao Mobility Sandbox API를 연동한 FastAPI 백엔드 서비스",
-        version="1.0.0",
+        description=(
+            "LangGraph Agent와 근거 기반 Knowledge RAG가 Kakao Mobility Sandbox "
+            "업무를 연결하는 AI 모빌리티 운영 서비스"
+        ),
+        version="1.2.0",
         lifespan=lifespan,
     )
     application.state.settings = resolved_settings
     application.state.kakao_client = resolved_client
     application.state.store = resolved_store
     application.state.geocoder = resolved_geocoder
+    application.state.directions = resolved_directions
+    application.state.routes = resolved_routes
     application.state.conversations = resolved_conversations
     application.state.agent = resolved_agent
+    application.state.knowledge = resolved_knowledge
     application.state.users = resolved_users
 
     def set_session_cookie(response: Response, request: Request, token: str) -> None:
@@ -180,7 +203,9 @@ def create_app(
             "service": "moveops",
             "kakaoConfigured": resolved_settings.configured,
             "mapConfigured": resolved_settings.map_configured,
+            "directionsConfigured": resolved_settings.directions_configured,
             "adminConfigured": resolved_settings.admin_configured,
+            "knowledgeChunks": len(resolved_knowledge.chunks),
             "sandbox": True,
         }
 
@@ -191,6 +216,7 @@ def create_app(
                 "configured": resolved_settings.configured,
                 "mapConfigured": resolved_settings.map_configured,
                 "geocodingConfigured": resolved_settings.geocoding_configured,
+                "directionsConfigured": resolved_settings.directions_configured,
                 # JavaScript 키는 등록된 웹 도메인에서 사용하는 공개 식별자다.
                 # REST API 키와 Native App 키는 절대 클라이언트에 전달하지 않는다.
                 "kakaoJavascriptKey": (
@@ -207,6 +233,25 @@ def create_app(
     @application.get("/api/local-chat/status", response_model=ApiEnvelope)
     async def local_chat_status() -> ApiEnvelope:
         return ApiEnvelope(data=await asyncio.to_thread(ollama_status))
+
+    @application.get("/api/knowledge/search", response_model=ApiEnvelope)
+    async def knowledge_search(
+        q: str = Query(min_length=2, max_length=500),
+        limit: int = Query(default=3, ge=1, le=5),
+    ) -> ApiEnvelope:
+        results = resolved_knowledge.search(q, limit=limit)
+        return ApiEnvelope(
+            data={
+                "query": q,
+                "results": [
+                    {
+                        **result.to_source(),
+                        "excerpt": result.content[:500],
+                    }
+                    for result in results
+                ],
+            }
+        )
 
     @application.get("/api/kakao/auth-check", response_model=ApiEnvelope)
     async def auth_check() -> ApiEnvelope:
@@ -297,7 +342,27 @@ def create_app(
 
     @application.post("/api/deliveries/estimate", response_model=ApiEnvelope)
     async def estimate(request: DeliveryDraft) -> ApiEnvelope:
-        return ApiEnvelope(data=await resolved_client.estimate(request))
+        provider = await resolved_client.estimate(request)
+        route = await resolved_routes.route_summary(
+            request.pickup.location,
+            request.dropoff.location,
+            waypoints=[item.location for item in request.waypoints],
+            departure_time=request.wish_time,
+        )
+        data = dict(provider) if isinstance(provider, dict) else {"provider": provider}
+        data["routeInfo"] = route
+        return ApiEnvelope(data=data)
+
+    @application.post("/api/routes/summary", response_model=ApiEnvelope)
+    async def route_summary(request: RouteSummaryRequest) -> ApiEnvelope:
+        return ApiEnvelope(
+            data=await resolved_routes.route_summary(
+                request.origin,
+                request.destination,
+                waypoints=request.waypoints,
+                departure_time=request.departure_time,
+            )
+        )
 
     @application.post("/api/deliveries/price", response_model=ApiEnvelope)
     async def price(request: DeliveryDraft) -> ApiEnvelope:
@@ -343,6 +408,24 @@ def create_app(
     async def get_picker(partner_order_id: str) -> ApiEnvelope:
         return ApiEnvelope(data=await resolved_client.get_picker(partner_order_id))
 
+    @application.get(
+        "/api/orders/{partner_order_id}/steps", response_model=ApiEnvelope
+    )
+    async def order_steps(
+        partner_order_id: str,
+        refresh: bool = Query(default=True),
+    ) -> ApiEnvelope:
+        if resolved_store.get_order(partner_order_id) is None:
+            raise HTTPException(status_code=404, detail="저장된 주문이 없습니다.")
+        return ApiEnvelope(
+            data=await get_order_steps(
+                resolved_client,
+                resolved_store,
+                partner_order_id,
+                refresh_order=refresh,
+            )
+        )
+
     @application.patch(
         "/api/orders/{partner_order_id}/cancel", response_model=ApiEnvelope
     )
@@ -351,6 +434,38 @@ def create_app(
             raise HTTPException(status_code=404, detail="저장된 주문이 없습니다.")
         result = await cancel_order_by_id(resolved_client, resolved_store, partner_order_id)
         return ApiEnvelope(data=result)
+
+    @application.patch(
+        "/api/admin/orders/{partner_order_id}/sandbox-status",
+        response_model=ApiEnvelope,
+    )
+    async def change_sandbox_status(
+        partner_order_id: str,
+        payload: SandboxStatusChange,
+        _: dict[str, Any] = Depends(require_admin),
+    ) -> ApiEnvelope:
+        if resolved_store.get_order(partner_order_id) is None:
+            raise HTTPException(status_code=404, detail="저장된 주문이 없습니다.")
+        provider = await resolved_client.change_sandbox_status(
+            partner_order_id,
+            payload.order_status.value,
+            cancel_by=payload.cancel_by,
+        )
+        local_status = {
+            "ABORT": "ABORTED",
+            "MATCH_PICKER": "MATCHED",
+            "CANCEL": "CANCELED",
+            "PICKUP_COMPLETED": "PICKUP_COMPLETED",
+            "DROPOFF_COMPLETED": "DROPOFF_COMPLETED",
+        }[payload.order_status.value]
+        resolved_store.set_status(partner_order_id, local_status)
+        return ApiEnvelope(
+            data={
+                "provider": provider,
+                "order": resolved_store.get_order(partner_order_id),
+            },
+            message=f"Sandbox 주문 상태를 {local_status}(으)로 변경했습니다.",
+        )
 
     @application.put(
         "/api/v1/callback/orders/{partner_order_id}/{event}",
@@ -419,6 +534,7 @@ def create_app(
                 request.pickup_address,
                 request.dropoff_addresses,
                 product_size=request.product_size.value,
+                route_planner=resolved_routes,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
@@ -440,7 +556,9 @@ def create_app(
                 )
             passengers.append({"name": passenger.name, "location": location})
         try:
-            plan = carpool_plan(origin, passengers)
+            plan = await carpool_plan(
+                origin, passengers, route_planner=resolved_routes
+            )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
         return ApiEnvelope(data=plan)

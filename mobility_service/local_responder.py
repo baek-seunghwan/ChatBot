@@ -6,7 +6,7 @@ from datetime import datetime
 
 import httpx
 
-from .knowledge import SERVICE_FACTS
+from .knowledge import SERVICE_FACTS, default_knowledge_base
 from .my_model import own_model_reply
 
 # 로컬 챗봇: Ollama(http://localhost:11434)로 답한다.
@@ -94,12 +94,22 @@ def local_model_reply(prompt: str, engine: str = "ollama") -> str:
         return own_model_reply(text)
 
     try:
+        knowledge_results = default_knowledge_base().search(text, limit=3)
+        knowledge_context = (
+            "\n\n[검색된 MOVB 근거]\n"
+            + default_knowledge_base().context(knowledge_results)
+            if knowledge_results
+            else ""
+        )
         response = httpx.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json={
                 "model": OLLAMA_MODEL,
                 "messages": [
-                    {"role": "system", "content": _SYSTEM_PROMPT},
+                    {
+                        "role": "system",
+                        "content": _SYSTEM_PROMPT + knowledge_context,
+                    },
                     {"role": "user", "content": text},
                 ],
                 "stream": False,

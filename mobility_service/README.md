@@ -1,6 +1,7 @@
-# MoveOps — 카카오 T 퀵·도보 배송 관제
+# MOVB — AI 모빌리티 운영 서비스
 
-카카오 T 퀵·도보 배송 Sandbox를 연동한 독립 FastAPI 웹 서비스입니다.
+LangGraph Agent와 근거 기반 Knowledge RAG가 Kakao Mobility 퀵·도보 배송
+Sandbox 업무를 연결하는 FastAPI 웹 서비스입니다.
 
 ## 제공 기능
 
@@ -10,6 +11,9 @@
 - 환경변수 기반 최초 관리자 계정과 역할 기반 접근 제어
 - 관리자 전용 회원·주문·합승 현황 대시보드
 - 배송 예상 시간 조회 & 배송 가격 조회
+- 자동차·다중 경유지 길찾기의 실도로 거리 및 예상 시간
+- 미래 운행 정보로 예약 배송 ETA 보강
+- 챗봇·접수 화면의 오토바이·다마스·라보·1톤 선택
 - 카카오 지도 출발지·도착지 표시
 - 주소 검색 및 지도 클릭 좌표 입력
 - Sandbox 주문 생성
@@ -17,9 +21,17 @@
 - 배송원 정보 조회 API
 - 주문 취소
 - 주문·스텝 상태 콜백 수신
+- 출발지·경유지·목적지 Step 상태 단건 조회
+- 관리자 Sandbox 배송 생명주기 시연
 - SQLite 주문 및 콜백 이력 보존
 - 같은 `partnerOrderId`의 중복 주문 방지
 - 중복 콜백 제거 및 역순 상태 변경 방지
+- 17개 노드의 LangGraph 배송 Agent
+- 서비스 질문과 업무 요청을 분리하는 하이브리드 의도 분류
+- 6개 MOVB 문서를 검색하는 BM25 + 문자 n-gram Knowledge RAG
+- LLM 미설정 시 근거 문서를 이용한 추출형 답변
+- Anthropic 호출 실패 시 Gemini 자동 폴백
+- 묶음배송 비교 견적, 택시 동승 요금 분배, 사용자 간 퀵 합승
 
 ## 환경변수
 
@@ -41,6 +53,10 @@ KAKAO_MOBILITY_CALLBACK_BASE_URL=https://api.example.com
 # 카카오 지도에는 JavaScript 키를 사용합니다.
 KAKAO_JAVASCRIPT_KEY=발급받은_JAVASCRIPT_KEY
 
+# 주소 변환 + 카카오모빌리티 길찾기(자동차·다중 경유지·미래 운행)
+KAKAO_REST_API_KEY=카카오디벨로퍼스_REST_API_KEY
+KAKAO_DIRECTIONS_BASE_URL=https://apis-navi.kakaomobility.com
+
 # 관리자 계정 — 비밀번호는 .env에만 저장합니다.
 MOVB_ADMIN_USERNAME=관리자_아이디
 MOVB_ADMIN_PASSWORD=8자_이상_비밀번호
@@ -53,6 +69,11 @@ Native App 키는 전달되지 않습니다.
 카카오 디벨로퍼스의 JavaScript 키 설정에서 로컬 테스트 주소
 `http://127.0.0.1:8002`를 JavaScript SDK 도메인으로 등록해야 지도가
 표시됩니다. 운영할 때는 실제 HTTPS 서비스 주소도 함께 등록하세요.
+
+길찾기는 [카카오모빌리티 길찾기 API 공식 문서](https://developers.kakaomobility.com/guide/navi-api/start),
+배송 주문·차량·Step은 [퀵·도보 배송 API 공식 문서](https://logistics-developers.kakaomobility.com/document/post-orders)
+형식을 따릅니다. 현재 주문 연동은 Sandbox 기준이며, 실제 운영 사용 전에는
+카카오모빌리티의 운영 환경 연동 절차와 승인이 별도로 필요합니다.
 
 ## 실행
 
@@ -68,6 +89,7 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 - 상태 확인: <http://127.0.0.1:8002/health>
 - 카카오 인증 확인: <http://127.0.0.1:8002/api/kakao/auth-check>
 - 관리자 화면: <http://127.0.0.1:8002/admin>
+- 지식 검색: <http://127.0.0.1:8002/api/knowledge/search?q=합승%20요금>
 
 직접 화면이나 API 코드를 수정하려면
 [MOVB 직접 수정 가이드](../EDITING_GUIDE.md)를 먼저 확인하세요. 화면별 파일
@@ -99,7 +121,8 @@ PUT /api/v1/callback/orders/{orderId}/steps/{stepId}
 테스트는 실제 배송 주문을 생성하지 않고 Mock API를 사용합니다.
 
 ```bash
-uv run python -m unittest tests.test_mobility_service -v
+uv run python -m unittest discover -s tests -v
+uv run python scripts/evaluate_mobility_knowledge.py
 ```
 
 검증 항목:
@@ -113,3 +136,10 @@ uv run python -m unittest tests.test_mobility_service -v
 - 회원가입·로그인·로그아웃 세션 수명주기
 - 중복 이메일 및 잘못된 비밀번호 거부
 - 일반 사용자와 관리자의 접근 권한 분리
+- 서비스 질문의 Knowledge RAG 경로와 출처 반환
+- LLM이 없는 환경의 추출형 답변
+- 질문과 합승 등록 요청의 의도 구분
+- 차량 선택 버튼과 슬롯 저장
+- 자동차·다중 경유지·미래 운행 요청 형식
+- Step 상태 단건 조회와 관리자 Sandbox 상태 변경
+- 26개 질문의 기대 근거 Source Hit@3

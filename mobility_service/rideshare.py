@@ -4,6 +4,7 @@ import math
 from itertools import permutations
 from typing import Any
 
+from .directions import RoutePlanner
 from .models import Location
 
 # 서울 중형택시 기준 추정 요금 (기본요금 1.6km까지 4,800원 + 이후 km당 약 800원).
@@ -48,7 +49,11 @@ def proportional_split(total: int, solo_prices: list[int]) -> list[int]:
     return shares
 
 
-def carpool_plan(origin: Location, passengers: list[dict[str, Any]]) -> dict[str, Any]:
+async def carpool_plan(
+    origin: Location,
+    passengers: list[dict[str, Any]],
+    route_planner: RoutePlanner | None = None,
+) -> dict[str, Any]:
     """동승(카풀) 경유 순서와 요금 분배안을 계산한다.
 
     passengers: [{"name": str, "location": Location}, ...] (2~4명)
@@ -63,33 +68,71 @@ def carpool_plan(origin: Location, passengers: list[dict[str, Any]]) -> dict[str
     # 1) 최적 방문 순서: 인원이 적으므로 전체 순열 비교로 충분하다
     best_order: tuple[int, ...] | None = None
     best_total_km = float("inf")
+    best_route: dict[str, Any] | None = None
     for order in permutations(range(len(passengers))):
-        total = 0.0
-        cursor = origin
-        for idx in order:
-            stop = passengers[idx]["location"]
-            total += road_km(cursor, stop)
-            cursor = stop
+        ordered_locations = [passengers[idx]["location"] for idx in order]
+        if route_planner:
+            route = await route_planner.route_summary(
+                origin,
+                ordered_locations[-1],
+                waypoints=ordered_locations[:-1],
+            )
+            total = float(route["distanceKm"])
+        else:
+            route = None
+            total = 0.0
+            cursor = origin
+            for stop in ordered_locations:
+                total += road_km(cursor, stop)
+                cursor = stop
         if total < best_total_km:
             best_total_km = total
             best_order = order
+            best_route = route
     assert best_order is not None
 
-    shared_fare = estimate_taxi_fare(best_total_km)
+    shared_fare = (
+        int(best_route.get("taxiFare") or 0)
+        if best_route
+        else 0
+    ) or estimate_taxi_fare(best_total_km)
 
     # 2) 요금 분배: 혼자 탔을 때 요금에 비례
-    solo_fares = [
-        estimate_taxi_fare(road_km(origin, p["location"])) for p in passengers
-    ]
+    solo_fares = []
+    for passenger in passengers:
+        if route_planner:
+            solo_route = await route_planner.route_summary(
+                origin, passenger["location"]
+            )
+            solo_fare = int(solo_route.get("taxiFare") or 0) or estimate_taxi_fare(
+                float(solo_route["distanceKm"])
+            )
+        else:
+            solo_fare = estimate_taxi_fare(
+                road_km(origin, passenger["location"])
+            )
+        solo_fares.append(solo_fare)
     solo_total = sum(solo_fares)
     shares = proportional_split(shared_fare, solo_fares)
 
     stops = []
     cursor = origin
     cumulative_km = 0.0
+    section_distances = (
+        [
+            float(section.get("distanceMeters") or 0) / 1000
+            for section in best_route.get("sections", [])
+        ]
+        if best_route
+        else []
+    )
     for rank, idx in enumerate(best_order, start=1):
         passenger = passengers[idx]
-        leg = road_km(cursor, passenger["location"])
+        leg = (
+            section_distances[rank - 1]
+            if rank - 1 < len(section_distances)
+            else road_km(cursor, passenger["location"])
+        )
         cumulative_km += leg
         cursor = passenger["location"]
         stops.append(
@@ -111,5 +154,10 @@ def carpool_plan(origin: Location, passengers: list[dict[str, Any]]) -> dict[str
         "soloFareTotal": solo_total,
         "groupSaving": solo_total - shared_fare,
         "stops": stops,
-        "note": "직선거리 기반 추정 요금으로 실제 미터기 요금과 다를 수 있어요.",
+        "routeInfo": best_route,
+        "note": (
+            "카카오 실도로·예상 택시요금 기준이며 실제 미터기 요금과 다를 수 있어요."
+            if best_route and best_route.get("actualRoadData")
+            else "카카오 길찾기 미연결로 보정 거리 추정치를 사용했어요."
+        ),
     }

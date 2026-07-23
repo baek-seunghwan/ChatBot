@@ -745,6 +745,61 @@
     }
     .chat-widget-form input { flex: 1; }
     .chat-widget-form button { flex: 0 0 auto; padding: 11px 14px; }
+    .chat-suggestions {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 8px 12px;
+      border-top: 1px solid var(--line);
+      background: var(--surface);
+      scrollbar-width: thin;
+    }
+    .chat-suggestions button {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      color: var(--ink);
+      font-size: 11.5px;
+      font-weight: 700;
+      box-shadow: none;
+    }
+    .chat-suggestions button:hover {
+      transform: none;
+      border-color: var(--purple);
+      color: var(--purple);
+      box-shadow: none;
+    }
+    .chat-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 9px;
+    }
+    .chat-actions button {
+      min-height: 34px;
+      padding: 6px 10px;
+      border: 1px solid #d7d2ff;
+      border-radius: 999px;
+      background: #f5f2ff;
+      color: #4c3cb0;
+      font-size: 11.5px;
+      font-weight: 800;
+      box-shadow: none;
+    }
+    .chat-actions button:hover { transform: none; background: #ebe6ff; box-shadow: none; }
+    .step-timeline { display: grid; gap: 8px; margin-top: 12px; }
+    .step-card {
+      display: grid;
+      gap: 3px;
+      padding: 11px 12px;
+      border-left: 4px solid var(--yellow);
+      border-radius: 10px;
+      background: #f7f7f4;
+      font-size: 13px;
+    }
+    .step-card span { color: var(--muted); font-size: 12px; }
     .chat-mode-toggle {
       display: flex;
       gap: 6px;
@@ -924,7 +979,7 @@
         <span class="route-dot pickup"></span><b>출발지</b>
         <span>→</span>
         <span class="route-dot dropoff"></span><b>도착지</b>
-        <span id="routeDistance">직선거리를 계산하는 중입니다.</span>
+        <span id="routeDistance">실제 도로 거리를 계산하는 중입니다.</span>
       </div>
     </section>
 
@@ -969,6 +1024,22 @@
               <option value="L">L · 대형 물품</option>
             </select>
             <small class="field-hint">포장 완료 상태의 크기를 기준으로 선택하세요.</small>
+          </label>
+        </div>
+        <div class="grid" style="margin-top:13px">
+          <label>배송 차량
+            <select id="fleet">
+              <option value="">카카오 추천 차량</option>
+              <option value="MOTORCYCLE">오토바이</option>
+              <option value="DAMAS">다마스</option>
+              <option value="LABO">라보</option>
+              <option value="TON">1톤</option>
+            </select>
+            <small class="field-hint">대형(L) 물품은 차량을 반드시 선택해야 해요.</small>
+          </label>
+          <label>픽업 예약 시간
+            <input id="wishTime" type="datetime-local">
+            <small class="field-hint">예약 시 카카오 미래 교통량을 반영해 ETA를 계산해요.</small>
           </label>
         </div>
       </div>
@@ -1055,7 +1126,11 @@
         <button class="secondary" onclick="refreshProvider()">카카오 상태 동기화</button>
         <button class="danger" onclick="cancelTrackedOrder()">주문 취소</button>
       </div>
-      <div class="result" id="trackResult"><h3>주문 상세</h3><pre id="trackBody"></pre></div>
+      <div class="result" id="trackResult">
+        <h3>주문 상세</h3>
+        <pre id="trackBody"></pre>
+        <div class="step-timeline" id="stepTimeline"></div>
+      </div>
 
       <h3 class="section-title">최근 주문</h3>
       <div class="order-list" id="orderList"><div class="empty">주문을 불러오는 중입니다.</div></div>
@@ -1097,7 +1172,14 @@
       </span>
     </div>
     <div class="chat-log" id="chatLog">
-      <div class="chat-bubble bot">안녕하세요! 배송 요청을 대화로 도와드릴게요. 출발지, 도착지, 보내실 물건을 알려주세요 🙂</div>
+      <div class="chat-bubble bot">안녕하세요! 카카오모빌리티 API를 사용하는 MOVB AI예요. 배송 주문·차량 선택·실도로 ETA·정차지별 상태를 대화로 도와드릴게요 🙂</div>
+    </div>
+    <div class="chat-suggestions" aria-label="추천 질문">
+      <button type="button" onclick="openChatWithPrompt('퀵 배송 주문하고 싶어')">배송 주문</button>
+      <button type="button" onclick="openChatWithPrompt('차량 선택지를 보여줘')">차량 선택</button>
+      <button type="button" onclick="openChatWithPrompt('예약 배송을 시작하고 싶어')">예약 ETA</button>
+      <button type="button" onclick="openChatWithPrompt('배송 상태를 확인하고 싶어')">배송 상태</button>
+      <button type="button" onclick="openChatWithPrompt('MOVB는 어떤 서비스야?')">서비스 안내</button>
     </div>
     <form class="chat-widget-form" id="chatForm">
       <input id="chatInput" placeholder="메시지를 입력하세요" autocomplete="off">
@@ -1165,7 +1247,11 @@
       byId("reviewRoute").textContent = pickup && dropoff
         ? `${pickup} → ${dropoff}`
         : "출발지와 도착지를 입력해주세요.";
-      byId("reviewService").textContent = orderTypeLabel(byId("orderType").value);
+      const fleet = byId("fleet").value;
+      byId("reviewService").textContent = [
+        orderTypeLabel(byId("orderType").value),
+        fleet ? fleetLabel(fleet) : "차량 자동 추천"
+      ].join(" · ");
       byId("reviewProduct").textContent = byId("productName").value.trim() || "입력 전";
 
       const routeDone = Boolean(pickup && dropoff && pickupResolved && dropoffResolved);
@@ -1217,6 +1303,16 @@
         byId(`${kind}Address`).classList.add("field-error");
         byId(`${kind}Address`).focus();
         showResult("주소 확인이 필요해요", "주소를 직접 입력하지 말고 주소 검색 버튼이나 지도를 이용해 위치를 선택해주세요.", true);
+        return false;
+      }
+      if (
+        byId("productSize").value === "L"
+        && byId("orderType").value !== "DOBO"
+        && !byId("fleet").value
+      ) {
+        byId("fleet").classList.add("field-error");
+        byId("fleet").focus();
+        showResult("차량 선택이 필요해요", "대형(L) 퀵 배송은 오토바이·다마스·라보·1톤 중 차량을 선택해주세요.", true);
         return false;
       }
       const sandboxPhone = /^010-1000-\d{4}$/;
@@ -1401,15 +1497,40 @@
       return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
-    function updateDistance() {
+    let routeLookupToken = 0;
+
+    async function updateDistance() {
       const pickup = locationValue("pickup");
       const dropoff = locationValue("dropoff");
       if (![pickup.latitude, pickup.longitude, dropoff.latitude, dropoff.longitude].every(Number.isFinite)) {
-        byId("routeDistance").textContent = "좌표를 입력하면 직선거리를 계산합니다.";
+        byId("routeDistance").textContent = "좌표를 입력하면 실제 도로 거리를 계산합니다.";
         return;
       }
-      const distance = distanceKilometers(pickup, dropoff);
-      byId("routeDistance").textContent = `· 직선거리 약 ${distance.toFixed(distance < 10 ? 1 : 0)}km`;
+      const token = ++routeLookupToken;
+      byId("routeDistance").textContent = "· 카카오 실도로 경로를 계산하는 중입니다.";
+      const payload = {
+        origin: {basicAddress: "출발지", ...pickup},
+        destination: {basicAddress: "목적지", ...dropoff},
+        waypoints: []
+      };
+      const wishTimeValue = byId("wishTime")?.value;
+      if (wishTimeValue) payload.departureTime = new Date(wishTimeValue).toISOString();
+      try {
+        const result = await api("/api/routes/summary", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        if (token !== routeLookupToken) return;
+        const route = result.data;
+        const source = route.actualRoadData ? "카카오 실도로" : "보정 거리";
+        const future = route.futureTrafficApplied ? " · 예약 교통량 반영" : "";
+        byId("routeDistance").textContent =
+          `· ${source} ${route.distanceKm}km · 약 ${route.durationMinutes}분${future}`;
+      } catch {
+        if (token !== routeLookupToken) return;
+        const distance = distanceKilometers(pickup, dropoff) * 1.3;
+        byId("routeDistance").textContent = `· 보정 거리 약 ${distance.toFixed(1)}km`;
+      }
     }
 
     function renderRoute(shouldFit = false) {
@@ -1615,6 +1736,12 @@
         paymentType: "CARD",
         waypoints: []
       };
+      const fleet = byId("fleet").value;
+      if (fleet && payload.orderType !== "DOBO") {
+        payload.fleetOption = {fleet, type: "REQUIRED"};
+      }
+      const wishTime = byId("wishTime").value;
+      if (wishTime) payload.wishTime = new Date(wishTime).toISOString();
       const pickupContact = contactValue("pickup");
       if (pickupContact) payload.pickup.contact = pickupContact;
       const dropoffContact = contactValue("dropoff");
@@ -1720,9 +1847,9 @@
           .sort((a, b) => (Number(a.totalFareAmount) || 0) - (Number(b.totalFareAmount) || 0))
           .map(item => ({
             orderType: item.orderType,
-            fleet: item.fleet,
+            fleet: item.fleetOption?.fleet || item.fleet,
             orderTypeLabel: orderTypeLabel(item.orderType),
-            fleetLabel: fleetLabel(item.fleet),
+            fleetLabel: fleetLabel(item.fleetOption?.fleet || item.fleet),
             timeText: secondsToKorean(item.estimatedTime),
             fareText: won(item.totalFareAmount),
             discountText: won(item.discountAmount),
@@ -1770,9 +1897,9 @@
           .sort((a, b) => (Number(a.totalFareAmount) || 0) - (Number(b.totalFareAmount) || 0))
           .map((item, index) => ({
             orderType: item.orderType,
-            fleet: item.fleet,
+            fleet: item.fleetOption?.fleet || item.fleet,
             orderTypeLabel: orderTypeLabel(item.orderType),
-            fleetLabel: fleetLabel(item.fleet),
+            fleetLabel: fleetLabel(item.fleetOption?.fleet || item.fleet),
             timeText: item.estimatedTime ? secondsToKorean(item.estimatedTime) : "-",
             fareText: won(item.totalFareAmount),
             discountText: won(item.discountAmount),
@@ -1813,8 +1940,11 @@
         const price = Number(priceResult.data?.totalPrice ?? NaN);
         const estimateRows = Array.isArray(estimateResult?.data?.lists) ? estimateResult.data.lists : [];
         const selectedEstimate = estimateRows.find(item => item.orderType === requestDraft.orderType) || estimateRows[0];
+        const roadRoute = estimateResult?.data?.routeInfo;
         byId("reviewPrice").textContent = Number.isFinite(price) ? won(price) : "요금 확인 완료";
-        byId("quoteStatus").textContent = selectedEstimate?.estimatedTime
+        byId("quoteStatus").textContent = roadRoute?.durationMinutes
+          ? `실도로 약 ${roadRoute.durationMinutes}분${roadRoute.futureTrafficApplied ? " · 예약 반영" : ""}`
+          : selectedEstimate?.estimatedTime
           ? `약 ${secondsToKorean(selectedEstimate.estimatedTime)}`
           : "요금 확인 완료";
         byId("quoteStatus").classList.add("ready");
@@ -1860,11 +1990,49 @@
         byId("trackBody").textContent = JSON.stringify(result.data, null, 2);
         byId("trackBody").className = "";
         byId("trackResult").classList.add("visible");
+        await loadOrderSteps(id, refresh);
         await loadOrders();
       } catch (error) {
         byId("trackBody").textContent = error.message;
         byId("trackBody").className = "error";
         byId("trackResult").classList.add("visible");
+      }
+    }
+
+    async function loadOrderSteps(id, refresh = true) {
+      const timeline = byId("stepTimeline");
+      timeline.replaceChildren();
+      try {
+        const result = await api(`/api/orders/${encodeURIComponent(id)}/steps?refresh=${refresh}`);
+        const steps = result.data?.steps || [];
+        if (!steps.length) {
+          const empty = document.createElement("div");
+          empty.className = "empty";
+          empty.textContent = "카카오 주문 응답에 Step ID가 아직 없습니다.";
+          timeline.append(empty);
+          return;
+        }
+        const kindLabels = {PICKUP: "출발지", DROPOFF: "목적지"};
+        steps.forEach(step => {
+          const card = document.createElement("div");
+          card.className = "step-card";
+          const title = document.createElement("strong");
+          title.textContent = `${kindLabels[step.kind] || step.kind.replace("WAYPOINT_", "경유지 ")} · ${step.status || "상태 미확인"}`;
+          const address = document.createElement("span");
+          address.textContent = step.location?.basicAddress || step.stepId;
+          const time = document.createElement("span");
+          time.textContent = step.estimatedEndedAt
+            ? `예상 완료 ${new Date(step.estimatedEndedAt).toLocaleString("ko-KR")}`
+            : (step.statusUpdatedAt ? `갱신 ${new Date(step.statusUpdatedAt).toLocaleString("ko-KR")}` : "");
+          card.append(title, address);
+          if (time.textContent) card.append(time);
+          timeline.append(card);
+        });
+      } catch (error) {
+        const failed = document.createElement("div");
+        failed.className = "empty error";
+        failed.textContent = `Step 상태를 불러오지 못했어요: ${error.message}`;
+        timeline.append(failed);
       }
     }
 
@@ -2039,6 +2207,26 @@
       const log = byId("chatLog");
       log.appendChild(bubble);
       log.scrollTop = log.scrollHeight;
+      return bubble;
+    }
+
+    function appendChatActions(bubble, actions) {
+      if (!Array.isArray(actions) || !actions.length) return;
+      const container = document.createElement("div");
+      container.className = "chat-actions";
+      actions.slice(0, 6).forEach(action => {
+        if (!action?.label || !action?.message) return;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = action.label;
+        button.addEventListener("click", () => {
+          container.querySelectorAll("button").forEach(item => item.disabled = true);
+          byId("chatInput").value = action.message;
+          sendChatMessage();
+        }, {once: true});
+        container.append(button);
+      });
+      bubble.append(container);
     }
 
     function appendLoadingBubble(mode) {
@@ -2078,7 +2266,11 @@
           })
         });
         loading.remove();
-        appendChatBubble("bot", result.data?.reply || "응답을 받았지만 표시할 내용이 없어요.");
+        const responseBubble = appendChatBubble(
+          "bot",
+          result.data?.reply || "응답을 받았지만 표시할 내용이 없어요."
+        );
+        appendChatActions(responseBubble, result.data?.actions);
         loadPoolBoard();
         if (result.data?.order) loadOrders();
       } catch (error) {
@@ -2144,7 +2336,7 @@
       await loadPoolBoard();
     }
     const quickFormFields = [
-      "orderType", "productSize", "pickupAddress", "pickupDetailAddress",
+      "orderType", "productSize", "fleet", "wishTime", "pickupAddress", "pickupDetailAddress",
       "pickupName", "pickupPhone", "dropoffAddress", "dropoffDetailAddress",
       "dropoffName", "dropoffPhone", "productName", "declaredValue"
     ];
@@ -2154,11 +2346,13 @@
       field.addEventListener(eventName, () => {
         if (id === "pickupAddress") pickupResolved = false;
         if (id === "dropoffAddress") dropoffResolved = false;
+        if (id === "orderType" && field.value === "DOBO") byId("fleet").value = "";
         if (id === "pickupPhone" || id === "dropoffPhone") {
           field.value = formatPhone(field.value);
         }
         field.classList.remove("field-error");
         handleQuickFormChange();
+        if (id === "wishTime") updateDistance();
       });
     });
     syncQuickReview();

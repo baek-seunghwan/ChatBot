@@ -99,6 +99,28 @@
     }
     .order strong { overflow: hidden; text-overflow: ellipsis; font-size: 14px; }
     .order span { color: var(--muted); font-size: 12px; }
+    .order-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .order-actions button {
+      min-height: 34px;
+      padding: 6px 9px;
+      border: 1px solid var(--line);
+      background: #f7f7f4;
+      color: var(--ink);
+      font-size: 11px;
+    }
+    .order-actions button:hover { background: #fff4ac; }
+    .order-actions .danger-action { color: var(--danger); }
+    .step-list { display: grid; gap: 6px; margin-top: 6px; }
+    .step {
+      display: grid;
+      gap: 2px;
+      padding: 8px 10px;
+      border-left: 3px solid var(--yellow);
+      border-radius: 8px;
+      background: #f7f7f4;
+    }
+    .step strong { font-size: 12px; }
+    .step span { font-size: 11px; }
     .empty { padding: 24px 0; color: var(--muted); text-align: center; font-size: 13px; }
     .error { color: var(--danger); }
     button:focus-visible,
@@ -226,9 +248,114 @@
         id.textContent = order.partnerOrderId;
         const meta = document.createElement("span");
         meta.textContent = `${order.status} · ${new Date(order.updatedAt).toLocaleString("ko-KR")}`;
-        card.append(id, meta);
+        const actions = document.createElement("div");
+        actions.className = "order-actions";
+        const demoButton = document.createElement("button");
+        demoButton.type = "button";
+        demoButton.textContent = "전체 생명주기 시연";
+        demoButton.addEventListener("click", () => demoLifecycle(order.partnerOrderId));
+        actions.append(demoButton);
+        [
+          ["배송원 배정", "MATCH_PICKER"],
+          ["픽업 완료", "PICKUP_COMPLETED"],
+          ["배송 완료", "DROPOFF_COMPLETED"],
+          ["취소", "CANCEL"],
+          ["강제 종료", "ABORT"]
+        ].forEach(([label, status]) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.textContent = label;
+          if (status === "CANCEL" || status === "ABORT") button.className = "danger-action";
+          button.addEventListener("click", () => changeSandboxStatus(order.partnerOrderId, status));
+          actions.append(button);
+        });
+        const stepsButton = document.createElement("button");
+        stepsButton.type = "button";
+        stepsButton.textContent = "Step 상세";
+        stepsButton.addEventListener("click", () => loadSteps(order.partnerOrderId, card));
+        actions.prepend(stepsButton);
+        card.append(id, meta, actions);
         list.append(card);
       });
+    }
+
+    async function changeSandboxStatus(orderId, status) {
+      if (
+        ["CANCEL", "ABORT"].includes(status)
+        && !confirm(`${orderId} 주문을 ${status}(으)로 변경할까요?`)
+      ) return;
+      try {
+        await request(`/api/admin/orders/${encodeURIComponent(orderId)}/sandbox-status`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            orderStatus: status,
+            ...(status === "CANCEL" ? {cancelBy: "ADMIN"} : {})
+          })
+        });
+        await loadDashboard();
+      } catch (error) {
+        alert(`상태 변경 실패: ${error.message}`);
+      }
+    }
+
+    async function demoLifecycle(orderId) {
+      if (!confirm(`${orderId} 주문을 배송원 배정 → 픽업 완료 → 배송 완료 순서로 시연할까요?`)) return;
+      try {
+        for (const status of ["MATCH_PICKER", "PICKUP_COMPLETED", "DROPOFF_COMPLETED"]) {
+          await request(`/api/admin/orders/${encodeURIComponent(orderId)}/sandbox-status`, {
+            method: "PATCH",
+            body: JSON.stringify({orderStatus: status})
+          });
+        }
+        await loadDashboard();
+      } catch (error) {
+        alert(`생명주기 시연 중 중단됐습니다: ${error.message}`);
+        await loadDashboard();
+      }
+    }
+
+    async function loadSteps(orderId, card) {
+      card.querySelector(".step-list")?.remove();
+      const list = document.createElement("div");
+      list.className = "step-list";
+      const loading = document.createElement("span");
+      loading.textContent = "출발지·경유지·목적지 상태를 불러오는 중입니다.";
+      list.append(loading);
+      card.append(list);
+      try {
+        const result = await request(`/api/orders/${encodeURIComponent(orderId)}/steps?refresh=true`);
+        list.replaceChildren();
+        const steps = result.data?.steps || [];
+        if (!steps.length) {
+          const empty = document.createElement("span");
+          empty.textContent = "주문 응답에 Step ID가 아직 없습니다.";
+          list.append(empty);
+          return;
+        }
+        const labels = {PICKUP: "출발지", DROPOFF: "목적지"};
+        steps.forEach(step => {
+          const row = document.createElement("div");
+          row.className = "step";
+          const title = document.createElement("strong");
+          const kind = String(step.kind || "STEP");
+          title.textContent = `${labels[kind] || kind.replace("WAYPOINT_", "경유지 ")} · ${step.status || "상태 미확인"}`;
+          const detail = document.createElement("span");
+          detail.textContent = step.location?.basicAddress || step.stepId;
+          row.append(title, detail);
+          if (step.estimatedEndedAt) {
+            const eta = document.createElement("span");
+            eta.textContent = `예상 완료 ${new Date(step.estimatedEndedAt).toLocaleString("ko-KR")}`;
+            row.append(eta);
+          }
+          list.append(row);
+        });
+      } catch (error) {
+        list.replaceChildren();
+        const failed = document.createElement("span");
+        failed.className = "error";
+        failed.textContent = error.message;
+        list.append(failed);
+      }
     }
 
     async function loadDashboard() {

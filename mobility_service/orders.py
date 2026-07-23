@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import HTTPException
@@ -69,3 +70,58 @@ async def cancel_order_by_id(
     response = await client.cancel_order(partner_order_id)
     store.set_status(partner_order_id, "CANCELED")
     return {"provider": response, "order": store.get_order(partner_order_id)}
+
+
+def _provider_step_refs(provider: Any) -> list[dict[str, str]]:
+    if not isinstance(provider, dict):
+        return []
+    refs: list[dict[str, str]] = []
+    pickup = provider.get("pickup")
+    if isinstance(pickup, dict) and pickup.get("stepId"):
+        refs.append({"kind": "PICKUP", "stepId": str(pickup["stepId"])})
+    for index, waypoint in enumerate(provider.get("waypoints") or [], start=1):
+        if isinstance(waypoint, dict) and waypoint.get("stepId"):
+            refs.append(
+                {"kind": f"WAYPOINT_{index}", "stepId": str(waypoint["stepId"])}
+            )
+    dropoff = provider.get("dropoff")
+    if isinstance(dropoff, dict) and dropoff.get("stepId"):
+        refs.append({"kind": "DROPOFF", "stepId": str(dropoff["stepId"])})
+    return refs
+
+
+async def get_order_steps(
+    client: KakaoMobilityClient,
+    store: MobilityStore,
+    partner_order_id: str,
+    *,
+    refresh_order: bool = True,
+) -> dict[str, Any]:
+    """주문 응답의 실제 stepId를 찾아 출발지·경유지·목적지를 각각 조회한다."""
+    local_order = await get_order_status(
+        client, store, partner_order_id, refresh=refresh_order
+    )
+    if local_order is None:
+        return {"order": None, "steps": []}
+    refs = _provider_step_refs(local_order.get("response"))
+    if not refs:
+        return {"order": local_order, "steps": []}
+
+    results = await asyncio.gather(
+        *(client.get_step(partner_order_id, item["stepId"]) for item in refs),
+        return_exceptions=True,
+    )
+    steps: list[dict[str, Any]] = []
+    for ref, result in zip(refs, results):
+        if isinstance(result, Exception):
+            steps.append(
+                {
+                    **ref,
+                    "status": "UNKNOWN",
+                    "error": str(result),
+                }
+            )
+            continue
+        detail = result if isinstance(result, dict) else {"raw": result}
+        steps.append({**ref, **detail})
+    return {"order": local_order, "steps": steps}
