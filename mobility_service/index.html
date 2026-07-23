@@ -37,9 +37,9 @@
       gap: 26px;
       min-height: 76px;
       padding: 14px clamp(20px, 5vw, 72px);
-      background: linear-gradient(110deg, #111111, #24203f 68%, #131313);
-      color: white;
-      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      background: #ffffff;
+      color: var(--ink);
+      border-bottom: 1px solid #e5e8ef;
     }
     .brand {
       display: flex;
@@ -56,7 +56,7 @@
       line-height: 1.1;
     }
     .brand-copy small {
-      color: rgba(255, 255, 255, .72);
+      color: var(--muted);
       font-size: 12px;
       font-weight: 650;
     }
@@ -75,7 +75,7 @@
       border-radius: 10px;
       padding: 11px 14px;
       background: transparent;
-      color: #dfdfe5;
+      color: var(--ink);
       box-shadow: none;
       text-decoration: none;
       white-space: nowrap;
@@ -83,23 +83,23 @@
     .nav-item:hover,
     .login-button:hover {
       transform: none;
-      background: rgba(255, 255, 255, .09);
-      color: white;
+      background: #f3f4f7;
+      color: var(--ink);
       box-shadow: none;
     }
     .nav-item.active {
-      background: rgba(254, 229, 0, .14);
-      color: var(--yellow);
+      background: rgba(254, 229, 0, .24);
+      color: #6a5400;
     }
     .login-button {
       margin-left: auto;
-      border: 1px solid rgba(255, 255, 255, .28);
-      color: white;
+      border: 1px solid #d4d9e4;
+      color: var(--ink);
     }
     .login-button.logged-in {
-      border-color: rgba(254, 229, 0, .55);
-      background: rgba(254, 229, 0, .12);
-      color: var(--yellow);
+      border-color: rgba(254, 229, 0, .8);
+      background: rgba(254, 229, 0, .22);
+      color: #6a5400;
     }
     .visually-hidden {
       position: absolute;
@@ -1911,19 +1911,39 @@
     const OLLAMA_SETTING_KEY = "movb_ollama_enabled";
     let chatMode = "ai";
     let ollamaEnabled = localStorage.getItem(OLLAMA_SETTING_KEY) !== "false";
+    let ollamaAvailable = null;
 
     function updateOllamaUi() {
       const switchButton = byId("ollamaSwitch");
-      switchButton.classList.toggle("on", ollamaEnabled);
-      switchButton.setAttribute("aria-checked", String(ollamaEnabled));
-      byId("ollamaStatus").textContent = ollamaEnabled
-        ? "사용 중 · 로컬 AI로 답변"
-        : "사용 안 함 · 자체 QA로 답변";
+      const connectedAndEnabled = ollamaAvailable === true && ollamaEnabled;
+      switchButton.disabled = ollamaAvailable !== true;
+      switchButton.classList.toggle("on", connectedAndEnabled);
+      switchButton.setAttribute("aria-checked", String(connectedAndEnabled));
+      if (ollamaAvailable === null) {
+        byId("ollamaStatus").textContent = "연결 확인 중";
+      } else if (!ollamaAvailable) {
+        byId("ollamaStatus").textContent = "연결 안 됨 · 자체 QA 사용";
+      } else {
+        byId("ollamaStatus").textContent = ollamaEnabled
+          ? "연결됨 · 로컬 AI로 답변"
+          : "사용 안 함 · 자체 QA로 답변";
+      }
     }
 
     function toggleOllama() {
+      if (!ollamaAvailable) return;
       ollamaEnabled = !ollamaEnabled;
       localStorage.setItem(OLLAMA_SETTING_KEY, String(ollamaEnabled));
+      updateOllamaUi();
+    }
+
+    async function refreshOllamaStatus() {
+      try {
+        const result = await api("/api/local-chat/status");
+        ollamaAvailable = result.data?.available === true;
+      } catch {
+        ollamaAvailable = false;
+      }
       updateOllamaUi();
     }
 
@@ -2012,7 +2032,7 @@
       bubble.className = "chat-bubble bot typing";
       const label = document.createElement("span");
       label.textContent = mode === "local"
-        ? (ollamaEnabled ? "Ollama 답변 준비 중" : "자체 QA에서 답변 찾는 중")
+        ? (ollamaAvailable && ollamaEnabled ? "Ollama 답변 준비 중" : "자체 QA에서 답변 찾는 중")
         : "답변 준비 중";
       const dots = document.createElement("span");
       dots.className = "typing-dots";
@@ -2040,7 +2060,7 @@
           body: JSON.stringify({
             message,
             mode: chatMode,
-            localEngine: ollamaEnabled ? "ollama" : "own"
+            localEngine: ollamaAvailable && ollamaEnabled ? "ollama" : "own"
           })
         });
         loading.remove();
@@ -2088,6 +2108,7 @@
 
     async function initialize() {
       await loadCurrentUser();
+      await refreshOllamaStatus();
       if (new URLSearchParams(location.search).get("admin") === "1") {
         if (currentUser?.role === "ADMIN") {
           location.replace("/admin");

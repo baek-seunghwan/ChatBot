@@ -31,6 +31,40 @@ _DATE_PATTERN = re.compile(r"며칠|몇\s*일이|무슨\s*요일|오늘\s*날짜
 _WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 
 
+def ollama_status() -> dict[str, object]:
+    """Return the Ollama availability seen by the FastAPI server.
+
+    On Render, localhost means the Render container rather than the user's PC,
+    so this check prevents the browser from showing a misleading ON state.
+    """
+    try:
+        response = httpx.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=2.0)
+        response.raise_for_status()
+        body = response.json()
+        models = body.get("models", []) if isinstance(body, dict) else []
+        names = {
+            str(model.get("name", ""))
+            for model in models
+            if isinstance(model, dict)
+        }
+        model_available = OLLAMA_MODEL in names
+        return {
+            "available": model_available,
+            "model": OLLAMA_MODEL,
+            "message": (
+                "Ollama와 모델이 준비되어 있습니다."
+                if model_available
+                else f"Ollama에 {OLLAMA_MODEL} 모델이 없습니다."
+            ),
+        }
+    except (httpx.HTTPError, ValueError):
+        return {
+            "available": False,
+            "model": OLLAMA_MODEL,
+            "message": "이 서버에서 Ollama에 연결할 수 없습니다.",
+        }
+
+
 def _dynamic_answer(prompt: str) -> str | None:
     now = datetime.now()
     if _TIME_PATTERN.search(prompt):
