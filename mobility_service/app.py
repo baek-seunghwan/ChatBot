@@ -33,6 +33,7 @@ from .models import (
     ApiEnvelope,
     BundleQuoteRequest,
     CallbackBody,
+    CarpoolBookingRequest,
     CarpoolPlanRequest,
     CreateDeliveryRequest,
     DeliveryDraft,
@@ -540,8 +541,9 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc))
         return ApiEnvelope(data=result)
 
-    @application.post("/api/carpool/plan", response_model=ApiEnvelope)
-    async def carpool_plan_route(request: CarpoolPlanRequest) -> ApiEnvelope:
+    async def build_carpool_plan(
+        request: CarpoolPlanRequest, *, departure_time: str | None = None
+    ) -> dict[str, Any]:
         origin = await resolved_geocoder.search_address(request.origin_address)
         if origin is None:
             raise HTTPException(
@@ -557,11 +559,50 @@ def create_app(
             passengers.append({"name": passenger.name, "location": location})
         try:
             plan = await carpool_plan(
-                origin, passengers, route_planner=resolved_routes
+                origin,
+                passengers,
+                route_planner=resolved_routes,
+                departure_time=departure_time,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
-        return ApiEnvelope(data=plan)
+        return plan
+
+    @application.post("/api/carpool/plan", response_model=ApiEnvelope)
+    async def carpool_plan_route(request: CarpoolPlanRequest) -> ApiEnvelope:
+        return ApiEnvelope(
+            data=await build_carpool_plan(
+                request, departure_time=request.departure_at
+            )
+        )
+
+    @application.post("/api/carpool/requests", response_model=ApiEnvelope)
+    async def create_carpool_request(
+        request: CarpoolBookingRequest,
+    ) -> ApiEnvelope:
+        plan = await build_carpool_plan(
+            request,
+            departure_time=(
+                request.departure_at if request.departure_mode == "scheduled" else None
+            ),
+        )
+        saved = resolved_store.create_taxi_request(
+            request.model_dump(mode="json", by_alias=True), plan
+        )
+        return ApiEnvelope(
+            data=saved,
+            message=(
+                "택시 합승 접수가 저장되었습니다. "
+                "현재는 실제 택시 배차가 아닌 경로·요금 접수 기능입니다."
+            ),
+        )
+
+    @application.get("/api/carpool/requests/{request_id}", response_model=ApiEnvelope)
+    async def get_carpool_request(request_id: str) -> ApiEnvelope:
+        saved = resolved_store.get_taxi_request(request_id)
+        if saved is None:
+            raise HTTPException(status_code=404, detail="택시 합승 접수를 찾지 못했습니다.")
+        return ApiEnvelope(data=saved)
 
     @application.get("/api/pool/requests", response_model=ApiEnvelope)
     async def list_pool_requests() -> ApiEnvelope:

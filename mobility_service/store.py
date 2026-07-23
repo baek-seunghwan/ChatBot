@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 
 EVENT_TO_STATUS = {
@@ -86,8 +87,71 @@ class MobilityStore:
 
                 CREATE INDEX IF NOT EXISTS idx_callbacks_order
                 ON callback_events(partner_order_id, received_at);
+
+                CREATE TABLE IF NOT EXISTS taxi_requests (
+                    request_id TEXT PRIMARY KEY,
+                    status TEXT NOT NULL,
+                    request_json TEXT NOT NULL,
+                    plan_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_taxi_requests_created
+                ON taxi_requests(created_at DESC);
                 """
             )
+
+    def create_taxi_request(
+        self, request_payload: dict[str, Any], plan: dict[str, Any]
+    ) -> dict[str, Any]:
+        """택시 합승 접수와 서버가 다시 계산한 요금안을 함께 저장한다."""
+        request_id = f"taxi-{uuid4().hex[:12]}"
+        now = utc_now()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO taxi_requests (
+                    request_id, status, request_json, plan_json, created_at, updated_at
+                ) VALUES (?, 'RECEIVED', ?, ?, ?, ?)
+                """,
+                (
+                    request_id,
+                    json.dumps(request_payload, ensure_ascii=False),
+                    json.dumps(plan, ensure_ascii=False),
+                    now,
+                    now,
+                ),
+            )
+        return {
+            "requestId": request_id,
+            "status": "RECEIVED",
+            "request": request_payload,
+            "plan": plan,
+            "createdAt": now,
+            "updatedAt": now,
+        }
+
+    def get_taxi_request(self, request_id: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT request_id, status, request_json, plan_json, created_at, updated_at
+                FROM taxi_requests
+                WHERE request_id = ?
+                """,
+                (request_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "requestId": row["request_id"],
+            "status": row["status"],
+            "request": json.loads(row["request_json"]),
+            "plan": json.loads(row["plan_json"]),
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+        }
 
     def reserve_order(
         self, partner_order_id: str, request_payload: dict[str, Any]

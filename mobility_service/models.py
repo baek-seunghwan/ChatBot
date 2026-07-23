@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
@@ -173,6 +173,31 @@ class CarpoolPassenger(CamelModel):
 class CarpoolPlanRequest(CamelModel):
     origin_address: str = Field(alias="originAddress", min_length=2, max_length=200)
     passengers: list[CarpoolPassenger] = Field(min_length=2, max_length=4)
+    departure_at: str | None = Field(default=None, alias="departureAt", max_length=40)
+
+
+class CarpoolBookingRequest(CarpoolPlanRequest):
+    requester_name: str = Field(alias="requesterName", min_length=1, max_length=50)
+    requester_phone: str = Field(
+        alias="requesterPhone", pattern=r"^[0-9+\-\s]{8,20}$"
+    )
+    departure_mode: Literal["now", "scheduled"] = Field(alias="departureMode")
+    taxi_type: Literal["standard", "large"] = Field(
+        default="standard", alias="taxiType"
+    )
+    has_luggage: bool = Field(default=False, alias="hasLuggage")
+    note: str | None = Field(default=None, max_length=300)
+    consent: bool
+
+    @model_validator(mode="after")
+    def validate_booking(self) -> "CarpoolBookingRequest":
+        if self.departure_mode == "scheduled" and not self.departure_at:
+            raise ValueError("예약 출발 시간을 입력해주세요.")
+        if self.departure_mode == "now":
+            self.departure_at = None
+        if not self.consent:
+            raise ValueError("접수 안내 확인이 필요합니다.")
+        return self
 
 
 class RouteSummaryRequest(CamelModel):

@@ -17,7 +17,7 @@ from mobility_service.auth import build_authorization
 from mobility_service.client import KakaoMobilityClient
 from mobility_service.config import Settings
 from mobility_service.models import DeliveryDraft
-from mobility_service.my_model import own_model_reply
+from mobility_service.my_model import load_qa_index, own_model_reply
 from mobility_service.store import MobilityStore
 
 
@@ -276,11 +276,35 @@ class MobilityApiTests(unittest.TestCase):
         responder.assert_called_once_with("MOVB가 뭐야?", "own")
 
     def test_own_model_handles_basic_deployed_chat(self) -> None:
-        self.assertIn("안녕하세요", own_model_reply("헬로"))
-        self.assertIn("안녕하세요", own_model_reply("ㅇㅇ"))
+        greeting = "안녕하세요! MOVB 서비스에 대해 물어보세요 🙂"
+        self.assertEqual(own_model_reply("헬로"), greeting)
+        self.assertEqual(own_model_reply("ㅇㅇ"), greeting)
         self.assertIn("MOVB", own_model_reply("MOVB가 뭐야"))
         self.assertIn("연결 상태", own_model_reply("지금은 켰어"))
         self.assertIn("연결 상태", own_model_reply("라마"))
+        self.assertGreaterEqual(len(load_qa_index()), 80)
+
+    def test_own_model_routes_service_actions_without_hallucinating(self) -> None:
+        order_reply = own_model_reply("배송 주문해줘")
+        difference_reply = own_model_reply("퀵과 도보 배송 차이가 뭐야?")
+
+        self.assertIn("AI 채팅", order_reply)
+        self.assertNotIn("인증 키", order_reply)
+        self.assertIn("차량", difference_reply)
+        self.assertIn("도보", difference_reply)
+        self.assertNotIn("택시 동승", difference_reply)
+
+    def test_own_model_answers_general_chat_without_ollama(self) -> None:
+        self.assertIn("힘드셨겠어요", own_model_reply("오늘 기분이 안 좋아"))
+        self.assertIn("실시간 날씨", own_model_reply("오늘 날씨 어때?"))
+        self.assertIn("답을 찾지 못했어요", own_model_reply("서울에서 부산까지 얼마나 걸려?"))
+        self.assertIn("답을 찾지 못했어요", own_model_reply("파이썬이 뭐야?"))
+        self.assertNotIn("프로그래밍 언어", own_model_reply("파이썬이 뭐야?"))
+
+    def test_own_model_uses_bundled_daily_and_movb_qa(self) -> None:
+        self.assertGreaterEqual(len(load_qa_index()), 80)
+        self.assertIn("AI 채팅", own_model_reply("배송 주문해줘"))
+        self.assertIn("김치찌개", own_model_reply("뭐 먹을까?"))
 
     def test_create_order_is_idempotent(self) -> None:
         payload = sample_order("same-order")
