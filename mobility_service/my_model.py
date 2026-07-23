@@ -15,6 +15,10 @@ MATCH_THRESHOLD = 0.55
 # MOVB 서비스 전용 QA (코퍼스에 없는 서비스 지식 보강)
 MOVB_QA: list[tuple[str, str]] = [
     (
+        "MOVB가 뭐야",
+        "MOVB는 택시 합승과 묶음 퀵을 더 편리하게 접수하고, 경로와 예상 요금을 확인하는 포트폴리오용 모빌리티 서비스예요.",
+    ),
+    (
         "퀵 합승이 뭐야",
         "퀵 합승은 서로 다른 사람들의 물건이 같은 방향이면 한 차량에 묶어 요금을 나누는 MOVB의 핵심 기능이에요. "
         "진행 방향 차이가 30도 이내이고, 묶었을 때 총 주행거리가 각자 따로 갈 때의 85% 이하면 매칭됩니다.",
@@ -43,8 +47,13 @@ MOVB_QA: list[tuple[str, str]] = [
 ]
 
 _FALLBACK = (
-    "아직 배우지 못한 질문이에요. 저는 학습한 질문-답변 범위 안에서만 답할 수 있는 작은 모델이라, "
-    "이 질문은 Ollama를 켜거나 'AI 채팅' 모드로 물어봐 주세요!"
+    "자체 QA에 아직 등록되지 않은 질문이에요. 퀵 종류, 물품 크기, 합승 요금처럼 MOVB 서비스에 관해 물어보거나 "
+    "더 자유로운 대화는 'AI 채팅' 모드를 이용해주세요."
+)
+
+_GREETING_PATTERN = re.compile(r"^(안녕|안녕하세요|하이|헬로|헬|ㅎㅇ|반가워|ㅇㅇ)+$")
+_OLLAMA_PATTERN = re.compile(
+    r"^(올라마|ollama|라마)$|(올라마|ollama|라마).*(켜|상태|연결)|(?:켜|연결).*(올라마|ollama|라마)|지금.*켰"
 )
 
 
@@ -84,6 +93,11 @@ def load_qa_index() -> list[tuple[str, str]]:
 
 def own_model_reply(prompt: str) -> str:
     """학습 QA 중 가장 비슷한 질문의 답을 돌려준다. 기준 미달이면 솔직히 모른다고 답한다."""
+    conversation_key = re.sub(r"[^가-힣ㄱ-ㅎㅏ-ㅣa-z0-9]", "", prompt.lower())
+    if _GREETING_PATTERN.fullmatch(conversation_key):
+        return "안녕하세요! 지금은 서버 없이 동작하는 MOVB 자체 QA 모드예요. 퀵·택시·합승 서비스에 대해 물어보세요 🙂"
+    if _OLLAMA_PATTERN.search(conversation_key):
+        return "현재 연결 상태는 채팅창 위의 Ollama 표시가 가장 정확해요. '연결 안 됨'이면 이 자체 QA 모드로 답변합니다."
     best_answer, best_score = None, 0.0
     for question, answer in load_qa_index():
         score = similarity(prompt, question)

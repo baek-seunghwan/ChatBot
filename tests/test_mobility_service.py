@@ -17,6 +17,7 @@ from mobility_service.auth import build_authorization
 from mobility_service.client import KakaoMobilityClient
 from mobility_service.config import Settings
 from mobility_service.models import DeliveryDraft
+from mobility_service.my_model import own_model_reply
 from mobility_service.store import MobilityStore
 
 
@@ -183,7 +184,22 @@ class MobilityApiTests(unittest.TestCase):
         self.assertEqual(home.status_code, 200)
         self.assertIn('id="ollamaSwitch"', home.text)
         self.assertIn('role="switch"', home.text)
-        self.assertIn('localEngine: ollamaEnabled ? "ollama" : "own"', home.text)
+        self.assertIn('ollamaAvailable && ollamaEnabled ? "ollama" : "own"', home.text)
+
+    def test_local_chat_status_reports_server_side_ollama_state(self) -> None:
+        with patch(
+            "mobility_service.app.ollama_status",
+            return_value={
+                "available": False,
+                "model": "gemma4:e2b",
+                "message": "이 서버에서 Ollama에 연결할 수 없습니다.",
+            },
+        ):
+            response = self.client.get("/api/local-chat/status")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.json()["data"]["available"])
+        self.assertEqual(response.json()["data"]["model"], "gemma4:e2b")
 
     def test_quick_request_has_guided_booking_flow(self) -> None:
         home = self.client.get("/")
@@ -214,6 +230,13 @@ class MobilityApiTests(unittest.TestCase):
         self.assertEqual(response.json()["data"]["reply"], "자체 QA 응답")
         self.assertEqual(response.json()["data"]["trace"], ["local_model:own"])
         responder.assert_called_once_with("MOVB가 뭐야?", "own")
+
+    def test_own_model_handles_basic_deployed_chat(self) -> None:
+        self.assertIn("안녕하세요", own_model_reply("헬로"))
+        self.assertIn("안녕하세요", own_model_reply("ㅇㅇ"))
+        self.assertIn("MOVB", own_model_reply("MOVB가 뭐야"))
+        self.assertIn("연결 상태", own_model_reply("지금은 켰어"))
+        self.assertIn("연결 상태", own_model_reply("라마"))
 
     def test_create_order_is_idempotent(self) -> None:
         payload = sample_order("same-order")

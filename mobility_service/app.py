@@ -25,7 +25,7 @@ from .client import KakaoApiError, KakaoMobilityClient
 from .config import Settings
 from .conversation_store import ConversationStore
 from .geocode import KakaoGeocodeClient
-from .local_responder import local_model_reply
+from .local_responder import local_model_reply, ollama_status
 from .models import (
     AgentChatRequest,
     ApiEnvelope,
@@ -203,6 +203,10 @@ def create_app(
                 "database": Path(resolved_settings.database_path).name,
             }
         )
+
+    @application.get("/api/local-chat/status", response_model=ApiEnvelope)
+    async def local_chat_status() -> ApiEnvelope:
+        return ApiEnvelope(data=await asyncio.to_thread(ollama_status))
 
     @application.get("/api/kakao/auth-check", response_model=ApiEnvelope)
     async def auth_check() -> ApiEnvelope:

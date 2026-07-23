@@ -45,6 +45,18 @@ Optional for LLM assistant mode:
 - `ANTHROPIC_API_KEY`
 - `GEMINI_API_KEY`
 
+## Local chat and deployment
+
+`내 로컬 채팅`의 Ollama mode connects from the FastAPI server to
+`OLLAMA_BASE_URL`. With the default `http://localhost:11434`, it works only
+when FastAPI and Ollama run on the same computer. A Render service cannot reach
+Ollama running on a developer laptop. The web UI checks
+`/api/local-chat/status` and automatically uses the built-in QA mode when
+Ollama is unavailable.
+
+To use Ollama from Render, host Ollama on a separately secured HTTPS model
+server and set that reachable address as `OLLAMA_BASE_URL` in Render.
+
 ## Branch strategy
 
 - `main`: 택시·퀵 관제 백엔드 전용

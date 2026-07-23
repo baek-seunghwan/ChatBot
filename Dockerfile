@@ -13,4 +13,4 @@ COPY .env.example ./.env.example
 
 EXPOSE 8002
 
-CMD ["uv", "run", "uvicorn", "mobility_service.app:app", "--host", "0.0.0.0", "--port", "8002"]
+CMD ["sh", "-c", "exec uv run uvicorn mobility_service.app:app --host 0.0.0.0 --port ${PORT:-8002}"]
