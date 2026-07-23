@@ -185,6 +185,17 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn('role="switch"', home.text)
         self.assertIn('localEngine: ollamaEnabled ? "ollama" : "own"', home.text)
 
+    def test_quick_request_has_guided_booking_flow(self) -> None:
+        home = self.client.get("/")
+
+        self.assertEqual(home.status_code, 200)
+        self.assertIn("1. 배송 경로", home.text)
+        self.assertIn("받는 분이 보내는 분과 같아요", home.text)
+        self.assertIn('id="quickReview"', home.text)
+        self.assertIn('id="quoteButton"', home.text)
+        self.assertIn('id="orderButton"', home.text)
+        self.assertIn("주소 확인이 필요해요", home.text)
+
     def test_local_chat_uses_selected_own_engine(self) -> None:
         with patch(
             "mobility_service.app.local_model_reply",

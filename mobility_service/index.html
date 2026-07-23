@@ -302,6 +302,127 @@
     }
     .quick-option:hover { transform: none; box-shadow: none; background: white; }
     .quick-option.active { background: white; color: var(--ink); box-shadow: 0 3px 10px rgba(25, 25, 25, .08); }
+    .quick-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .quick-badge {
+      flex: 0 0 auto;
+      border-radius: 999px;
+      padding: 7px 10px;
+      background: #fff7bb;
+      color: #625300;
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .booking-steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin: 0 0 22px;
+    }
+    .booking-step {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+      color: #8a8a86;
+      font-size: 10px;
+      font-weight: 750;
+    }
+    .booking-step::before {
+      content: "";
+      height: 4px;
+      border-radius: 999px;
+      background: #e5e5e1;
+    }
+    .booking-step.active { color: var(--ink); }
+    .booking-step.active::before { background: var(--yellow); }
+    .form-section {
+      margin-top: 14px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+    }
+    .form-section h3 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 14px;
+      font-size: 15px;
+    }
+    .section-number {
+      display: inline-grid;
+      place-items: center;
+      width: 23px;
+      height: 23px;
+      border-radius: 8px;
+      background: var(--ink);
+      color: white;
+      font-size: 11px;
+    }
+    .required-mark { color: var(--danger); }
+    .field-hint {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 550;
+      line-height: 1.4;
+    }
+    .field-error {
+      border-color: var(--danger) !important;
+      box-shadow: 0 0 0 3px rgba(196, 60, 53, .1) !important;
+    }
+    .copy-contact {
+      margin: -2px 0 12px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: var(--blue);
+      box-shadow: none;
+      font-size: 11px;
+    }
+    .copy-contact:hover { transform: none; box-shadow: none; text-decoration: underline; }
+    .quick-review {
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 16px;
+      background: var(--ink);
+      color: white;
+    }
+    .quick-review-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 13px;
+    }
+    .quick-review-head h3 { margin: 0; font-size: 15px; }
+    .quote-status {
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: rgba(255, 255, 255, .12);
+      color: rgba(255, 255, 255, .72);
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .quote-status.ready { background: rgba(254, 229, 0, .18); color: var(--yellow); }
+    .review-route { margin: 0 0 14px; color: rgba(255, 255, 255, .82); font-size: 12px; line-height: 1.5; }
+    .review-route strong { color: white; }
+    .review-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .review-item {
+      min-width: 0;
+      padding: 10px;
+      border-radius: 11px;
+      background: rgba(255, 255, 255, .08);
+    }
+    .review-item span { display: block; color: rgba(255, 255, 255, .55); font-size: 9px; }
+    .review-item strong { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; white-space: nowrap; }
+    .quick-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 9px; margin-top: 14px; }
+    .quick-actions button { width: 100%; }
     #quickRequest, #history { scroll-margin-top: 18px; }
     .section-title {
       margin: 24px 0 12px;
@@ -367,7 +488,7 @@
     button.primary { background: linear-gradient(120deg, #ffe665, #fee500 66%); color: var(--ink); }
     button.secondary { background: linear-gradient(120deg, #f4f4ff, #eceff8); color: var(--ink); }
     button.danger { background: #fff0ef; color: var(--danger); }
-    button:disabled { opacity: .48; cursor: wait; }
+    button:disabled { opacity: .48; cursor: not-allowed; transform: none; box-shadow: none; }
     .result {
       display: none;
       margin-top: 20px;
@@ -678,10 +799,18 @@
         width: 100%;
         overflow-x: auto;
         padding-bottom: 2px;
+        gap: 2px;
+        scrollbar-width: none;
       }
+      .primary-nav::-webkit-scrollbar { display: none; }
       .nav-item { flex: 0 0 auto; }
+      .primary-nav .nav-item { padding: 9px 10px; font-size: 12px; }
       main { grid-template-columns: 1fr; }
       .grid, .grid.three { grid-template-columns: 1fr; }
+      .review-grid { grid-template-columns: 1fr; }
+      .quick-actions { grid-template-columns: 1fr; }
+      .quick-heading { display: block; }
+      .quick-badge { display: inline-block; margin-bottom: 16px; }
       .map-header { display: grid; }
       .map-tools { justify-content: flex-start; }
       #map, .map-stage { height: 340px; min-height: 340px; }
@@ -786,76 +915,112 @@
     </section>
 
     <section class="panel" id="quickRequest">
-      <h2>퀵 접수하기</h2>
-      <p class="description">출발지와 도착지를 입력해 예상 시간과 가격을 확인하세요.</p>
+      <div class="quick-heading">
+        <div>
+          <h2>퀵 접수하기</h2>
+          <p class="description">주소부터 요금 확인까지 순서대로 입력하면 약 1분이면 충분해요.</p>
+        </div>
+        <span class="quick-badge">SANDBOX 안전 접수</span>
+      </div>
+
+      <div class="booking-steps" aria-label="퀵 접수 단계">
+        <span class="booking-step active" data-step="route">1. 배송 경로</span>
+        <span class="booking-step" data-step="contact">2. 연락처</span>
+        <span class="booking-step" data-step="product">3. 물품 정보</span>
+        <span class="booking-step" data-step="quote">4. 요금 확인</span>
+      </div>
 
       <div class="quick-options" aria-label="퀵 접수 방식">
         <button type="button" class="quick-option active" data-quick-mode="single" onclick="selectQuickMode('single')">일반 퀵</button>
         <button type="button" class="quick-option" data-quick-mode="bundle" onclick="startBundleRequest()">묶음 퀵</button>
       </div>
 
-      <div class="grid">
-        <label>배송 상품
-          <select id="orderType">
-            <option value="QUICK">퀵</option>
-            <option value="QUICK_ECONOMY">퀵 이코노미</option>
-            <option value="QUICK_EXPRESS">퀵 급송</option>
-            <option value="DOBO">도보 배송</option>
-          </select>
-        </label>
-        <label>물품 크기
-          <select id="productSize">
-            <option value="XS">XS · 서류/초소형</option>
-            <option value="S">S · 소형</option>
-            <option value="M">M · 중형</option>
-            <option value="L">L · 대형</option>
-          </select>
-        </label>
+      <div class="form-section">
+        <h3><span class="section-number">1</span>어떤 배송이 필요한가요?</h3>
+        <div class="grid">
+          <label>배송 상품 <span class="required-mark">필수</span>
+            <select id="orderType">
+              <option value="QUICK">퀵 · 일반 배송</option>
+              <option value="QUICK_ECONOMY">퀵 이코노미 · 비용 절약</option>
+              <option value="QUICK_EXPRESS">퀵 급송 · 가장 빠르게</option>
+              <option value="DOBO">도보 배송 · 가까운 거리</option>
+            </select>
+            <small class="field-hint">긴급도와 비용에 맞는 상품을 선택하세요.</small>
+          </label>
+          <label>물품 크기 <span class="required-mark">필수</span>
+            <select id="productSize">
+              <option value="XS">XS · 서류/초소형</option>
+              <option value="S">S · 소형 박스</option>
+              <option value="M">M · 중형 박스</option>
+              <option value="L">L · 대형 물품</option>
+            </select>
+            <small class="field-hint">포장 완료 상태의 크기를 기준으로 선택하세요.</small>
+          </label>
+        </div>
       </div>
 
-      <h3 class="section-title">출발지</h3>
-      <div class="grid">
-        <label>주소검색
-          <span class="address-input">
-            <input id="pickupAddress" placeholder="주소검색 (예: 판교역로 152, 백현동 532)">
-            <button type="button" onclick="searchAddress('pickup')">검색</button>
-          </span>
-        </label>
-        <label>상세주소<input id="pickupDetailAddress" placeholder="상세주소 (예: 3층, 101동 1203호)"></label>
-      </div>
-      <div class="grid" style="margin-top:13px">
-        <label>이름<input id="pickupName" placeholder="이름 (예: 홍길동)"></label>
-        <label>연락처<input id="pickupPhone" placeholder="연락처 (예: 010-1234-5678)"></label>
-      </div>
-
-      <h3 class="section-title">도착지</h3>
-      <div class="grid">
-        <label>주소검색
-          <span class="address-input">
-            <input id="dropoffAddress" placeholder="주소검색 (예: 정자동 49-4, 판교로 235)">
-            <button type="button" onclick="searchAddress('dropoff')">검색</button>
-          </span>
-        </label>
-        <label>상세주소<input id="dropoffDetailAddress" placeholder="상세주소 (예: 3층, 101동 1203호)"></label>
-      </div>
-      <div class="grid" style="margin-top:13px">
-        <label>이름<input id="dropoffName" placeholder="이름 (예: 김철수)"></label>
-        <label>연락처<input id="dropoffPhone" placeholder="연락처 (예: 010-1234-5678)"></label>
+      <div class="form-section">
+        <h3><span class="section-number">2</span>어디에서 픽업할까요?</h3>
+        <div class="grid">
+          <label>출발지 주소 <span class="required-mark">필수</span>
+            <span class="address-input">
+              <input id="pickupAddress" required autocomplete="street-address" placeholder="도로명 또는 지번 주소">
+              <button type="button" onclick="searchAddress('pickup')">주소 검색</button>
+            </span>
+          </label>
+          <label>상세주소<input id="pickupDetailAddress" autocomplete="address-line2" placeholder="건물명, 층, 호수"></label>
+        </div>
+        <div class="grid" style="margin-top:13px">
+          <label>보내는 분 <span class="required-mark">필수</span><input id="pickupName" required autocomplete="name" maxlength="50" placeholder="이름"></label>
+          <label>연락처 <span class="required-mark">필수</span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">Sandbox에서는 010-1000-XXXX 형식만 사용할 수 있어요.</small></label>
+        </div>
       </div>
 
-      <h3 class="section-title">물품 정보</h3>
-      <div class="grid">
-        <label>물품명<input id="productName" placeholder="물품명 (예: 서류, 소형 박스)"></label>
-        <label>신고 가격<input id="declaredValue" type="number" min="0" placeholder="신고 가격 (예: 10000)"></label>
+      <div class="form-section">
+        <h3><span class="section-number">3</span>어디로 배송할까요?</h3>
+        <button type="button" class="copy-contact" onclick="copyPickupContact()">받는 분이 보내는 분과 같아요</button>
+        <div class="grid">
+          <label>도착지 주소 <span class="required-mark">필수</span>
+            <span class="address-input">
+              <input id="dropoffAddress" required autocomplete="street-address" placeholder="도로명 또는 지번 주소">
+              <button type="button" onclick="searchAddress('dropoff')">주소 검색</button>
+            </span>
+          </label>
+          <label>상세주소<input id="dropoffDetailAddress" autocomplete="address-line2" placeholder="건물명, 층, 호수"></label>
+        </div>
+        <div class="grid" style="margin-top:13px">
+          <label>받는 분 <span class="required-mark">필수</span><input id="dropoffName" required maxlength="50" placeholder="이름"></label>
+          <label>연락처 <span class="required-mark">필수</span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
+        </div>
       </div>
 
-      <div class="actions">
-        <button class="secondary" onclick="callEstimate(this)">예상시간 조회</button>
-        <button class="secondary" onclick="callPrice(this)">가격 조회</button>
-        <button class="primary" onclick="createOrder(this)">Sandbox 주문 접수</button>
+      <div class="form-section">
+        <h3><span class="section-number">4</span>무엇을 보내시나요?</h3>
+        <div class="grid">
+          <label>물품명 <span class="required-mark">필수</span><input id="productName" required maxlength="100" placeholder="예: 계약서, 의류, 소형 부품"></label>
+          <label>물품 신고가<input id="declaredValue" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 10000"><small class="field-hint">분실·파손 보상 확인에 사용되는 금액입니다.</small></label>
+        </div>
+      </div>
+
+      <div class="quick-review" id="quickReview">
+        <div class="quick-review-head">
+          <h3>접수 내용 확인</h3>
+          <span class="quote-status" id="quoteStatus">요금 확인 전</span>
+        </div>
+        <p class="review-route" id="reviewRoute"><strong>출발지와 도착지를 입력해주세요.</strong></p>
+        <div class="review-grid">
+          <div class="review-item"><span>배송 상품</span><strong id="reviewService">퀵</strong></div>
+          <div class="review-item"><span>물품</span><strong id="reviewProduct">입력 전</strong></div>
+          <div class="review-item"><span>예상 요금</span><strong id="reviewPrice">조회 전</strong></div>
+        </div>
+      </div>
+
+      <div class="quick-actions">
+        <button type="button" class="secondary" id="quoteButton" onclick="callPrice(this)">예상 시간·요금 확인</button>
+        <button type="button" class="primary" id="orderButton" onclick="createOrder(this)" disabled>확인하고 Sandbox 접수</button>
       </div>
       <div class="safety-note">
-        안전장치: 주문 접수 전 테스트 전화번호(010-1000-XXXX) 확인 + <b>SANDBOX</b> 입력 확인을 통과해야 요청이 전송됩니다.
+        실제 주문이 생성되지 않는 포트폴리오용 Sandbox입니다. 접수 전 테스트 전화번호 확인과 <b>SANDBOX</b> 확인 절차를 거칩니다.
       </div>
       <div class="result" id="result">
         <h3 id="resultTitle">결과</h3>
@@ -962,6 +1127,94 @@
     function startBundleRequest() {
       selectQuickMode("bundle");
       openChatWithPrompt("묶음 퀵 견적을 보고 싶어요. 판교역에서 정자역과 서현역으로 서류를 보내요.");
+    }
+
+    let quoteReady = false;
+
+    function copyPickupContact() {
+      byId("dropoffName").value = byId("pickupName").value;
+      byId("dropoffPhone").value = byId("pickupPhone").value;
+      handleQuickFormChange();
+      byId("dropoffName").focus();
+    }
+
+    function formatPhone(value) {
+      const digits = value.replace(/\D/g, "").slice(0, 11);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+      return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    }
+
+    function syncQuickReview() {
+      const pickup = byId("pickupAddress").value.trim();
+      const dropoff = byId("dropoffAddress").value.trim();
+      byId("reviewRoute").textContent = pickup && dropoff
+        ? `${pickup} → ${dropoff}`
+        : "출발지와 도착지를 입력해주세요.";
+      byId("reviewService").textContent = orderTypeLabel(byId("orderType").value);
+      byId("reviewProduct").textContent = byId("productName").value.trim() || "입력 전";
+
+      const routeDone = Boolean(pickup && dropoff && pickupResolved && dropoffResolved);
+      const contactDone = ["pickupName", "pickupPhone", "dropoffName", "dropoffPhone"]
+        .every(id => byId(id).value.trim());
+      const productDone = Boolean(byId("productName").value.trim());
+      document.querySelector('[data-step="route"]').classList.toggle("active", routeDone || !pickup);
+      document.querySelector('[data-step="contact"]').classList.toggle("active", routeDone && contactDone);
+      document.querySelector('[data-step="product"]').classList.toggle("active", routeDone && contactDone && productDone);
+      document.querySelector('[data-step="quote"]').classList.toggle("active", quoteReady);
+    }
+
+    function resetQuoteState() {
+      if (quoteReady) byId("result").classList.remove("visible");
+      quoteReady = false;
+      byId("quoteStatus").textContent = "요금 확인 전";
+      byId("quoteStatus").classList.remove("ready");
+      byId("reviewPrice").textContent = "조회 전";
+      byId("orderButton").disabled = true;
+    }
+
+    function handleQuickFormChange() {
+      resetQuoteState();
+      syncQuickReview();
+    }
+
+    function validateQuickForm() {
+      document.querySelectorAll("#quickRequest .field-error").forEach(input => input.classList.remove("field-error"));
+      const required = [
+        ["pickupAddress", "출발지 주소를 검색해주세요."],
+        ["pickupName", "보내는 분 이름을 입력해주세요."],
+        ["pickupPhone", "보내는 분 연락처를 입력해주세요."],
+        ["dropoffAddress", "도착지 주소를 검색해주세요."],
+        ["dropoffName", "받는 분 이름을 입력해주세요."],
+        ["dropoffPhone", "받는 분 연락처를 입력해주세요."],
+        ["productName", "보내는 물품을 입력해주세요."]
+      ];
+      for (const [id, message] of required) {
+        const input = byId(id);
+        if (!input.value.trim()) {
+          input.classList.add("field-error");
+          input.focus();
+          showResult("입력 내용을 확인해주세요", message, true);
+          return false;
+        }
+      }
+      if (!pickupResolved || !dropoffResolved) {
+        const kind = !pickupResolved ? "pickup" : "dropoff";
+        byId(`${kind}Address`).classList.add("field-error");
+        byId(`${kind}Address`).focus();
+        showResult("주소 확인이 필요해요", "주소를 직접 입력하지 말고 주소 검색 버튼이나 지도를 이용해 위치를 선택해주세요.", true);
+        return false;
+      }
+      const sandboxPhone = /^010-1000-\d{4}$/;
+      for (const id of ["pickupPhone", "dropoffPhone"]) {
+        if (!sandboxPhone.test(byId(id).value.trim())) {
+          byId(id).classList.add("field-error");
+          byId(id).focus();
+          showResult("연락처를 확인해주세요", "Sandbox에서는 010-1000-XXXX 형식의 테스트 전화번호만 사용할 수 있어요.", true);
+          return false;
+        }
+      }
+      return true;
     }
 
     let currentUser = null;
@@ -1098,6 +1351,8 @@
     let mapMode = "pickup";
     let pickupLocation = {latitude: 37.3946095, longitude: 127.1118735};
     let dropoffLocation = {latitude: 37.3595316, longitude: 127.1052133};
+    let pickupResolved = false;
+    let dropoffResolved = false;
 
     function locationValue(kind) {
       const location = kind === "pickup" ? pickupLocation : dropoffLocation;
@@ -1175,10 +1430,13 @@
       const location = {latitude: Number(latitude), longitude: Number(longitude)};
       if (kind === "pickup") {
         pickupLocation = location;
+        pickupResolved = true;
       } else {
         dropoffLocation = location;
+        dropoffResolved = true;
       }
       if (address) byId(`${kind}Address`).value = address;
+      handleQuickFormChange();
       renderRoute(false);
     }
 
@@ -1188,7 +1446,10 @@
         if (status !== kakao.maps.services.Status.OK || !results.length) return;
         const result = results[0];
         const address = result.road_address?.address_name || result.address?.address_name || "";
-        if (address) byId(`${kind}Address`).value = address;
+        if (address) {
+          byId(`${kind}Address`).value = address;
+          handleQuickFormChange();
+        }
       });
     }
 
@@ -1204,6 +1465,7 @@
         oncomplete: function(data) {
           const address = data.roadAddress || data.address || "";
           byId(`${kind}Address`).value = address;
+          handleQuickFormChange();
           setMapMode(kind);
 
           if (!geocoder || !address) {
@@ -1520,6 +1782,7 @@
     }
 
     async function callPrice(button) {
+      if (!validateQuickForm()) return;
       await withButton(button, async () => {
         const requestDraft = draft();
         const priceResult = await api("/api/deliveries/price", {method: "POST", body: JSON.stringify(requestDraft)});
@@ -1533,28 +1796,32 @@
           "가격 조회 결과",
           formatPriceResult(priceResult.data, estimateResult?.data, requestDraft.orderType)
         );
+        const price = Number(priceResult.data?.totalPrice ?? NaN);
+        const estimateRows = Array.isArray(estimateResult?.data?.lists) ? estimateResult.data.lists : [];
+        const selectedEstimate = estimateRows.find(item => item.orderType === requestDraft.orderType) || estimateRows[0];
+        byId("reviewPrice").textContent = Number.isFinite(price) ? won(price) : "요금 확인 완료";
+        byId("quoteStatus").textContent = selectedEstimate?.estimatedTime
+          ? `약 ${secondsToKorean(selectedEstimate.estimatedTime)}`
+          : "요금 확인 완료";
+        byId("quoteStatus").classList.add("ready");
+        quoteReady = true;
+        byId("orderButton").disabled = false;
+        syncQuickReview();
       });
     }
 
     async function createOrder(button) {
+      if (!validateQuickForm()) return;
+      if (!quoteReady) {
+        showResult("요금 확인이 필요해요", "주문 접수 전에 예상 시간과 요금을 먼저 확인해주세요.", true);
+        return;
+      }
       if (!currentUser) {
         showResult("로그인 필요", "주문을 접수하려면 먼저 로그인해주세요.", true);
         openAuthModal();
         return;
       }
       if (!confirm("Sandbox 테스트 주문만 허용됩니다. 계속할까요?")) return;
-
-      const pickupPhone = byId("pickupPhone").value.trim();
-      const dropoffPhone = byId("dropoffPhone").value.trim();
-      const sandboxPhone = /^010-1000-\d{4}$/;
-      if (!sandboxPhone.test(pickupPhone) || !sandboxPhone.test(dropoffPhone)) {
-        showResult(
-          "주문 차단",
-          "테스트 전화번호 형식(010-1000-XXXX)만 허용됩니다. 실제 번호 입력 시 접수되지 않습니다.",
-          true
-        );
-        return;
-      }
 
       const phrase = prompt("실제 주문이 아님을 확인했습니다. 계속하려면 SANDBOX 를 입력하세요.", "");
       if ((phrase || "").trim().toUpperCase() !== "SANDBOX") {
@@ -1841,6 +2108,25 @@
       await loadOrders();
       await loadPoolBoard();
     }
+    const quickFormFields = [
+      "orderType", "productSize", "pickupAddress", "pickupDetailAddress",
+      "pickupName", "pickupPhone", "dropoffAddress", "dropoffDetailAddress",
+      "dropoffName", "dropoffPhone", "productName", "declaredValue"
+    ];
+    quickFormFields.forEach(id => {
+      const field = byId(id);
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, () => {
+        if (id === "pickupAddress") pickupResolved = false;
+        if (id === "dropoffAddress") dropoffResolved = false;
+        if (id === "pickupPhone" || id === "dropoffPhone") {
+          field.value = formatPhone(field.value);
+        }
+        field.classList.remove("field-error");
+        handleQuickFormChange();
+      });
+    });
+    syncQuickReview();
     updateDistance();
     initialize();
   </script>
