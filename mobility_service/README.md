@@ -69,6 +69,10 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 - 카카오 인증 확인: <http://127.0.0.1:8002/api/kakao/auth-check>
 - 관리자 화면: <http://127.0.0.1:8002/admin>
 
+직접 화면이나 API 코드를 수정하려면
+[MOVB 직접 수정 가이드](../EDITING_GUIDE.md)를 먼저 확인하세요. 화면별 파일
+위치부터 로컬 확인, 테스트, GitHub 푸시와 Render 반영까지 정리되어 있습니다.
+
 화면에 기본으로 입력된 주소와 연락처는 Sandbox 테스트용 예시입니다.
 실제 개인정보를 입력하지 마세요.
 

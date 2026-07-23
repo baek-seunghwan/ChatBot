@@ -23,6 +23,12 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 - Docs: http://127.0.0.1:8002/docs
 - Health: http://127.0.0.1:8002/health
 
+## Edit the project
+
+화면별 수정 파일, HTML·CSS·JavaScript 수정 방법, 로컬 확인, 테스트,
+커밋·푸시와 Render 반영 과정은 [MOVB 직접 수정 가이드](EDITING_GUIDE.md)를
+참고하세요.
+
 ## Environment
 
 Use `.env.example` as a template.
