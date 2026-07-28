@@ -18,3 +18,4 @@ def _page(name: str, *, active: str = "bundle") -> str:
 INDEX_HTML = _page("index.html", active="bundle")
 ADMIN_HTML = Path(__file__).with_name("admin.html").read_text(encoding="utf-8")
 FEATURES_HTML = _page("features.html", active="bundle")
+HISTORY_HTML = _page("history.html", active="history")

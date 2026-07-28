@@ -161,10 +161,7 @@ def site_header(active: str = "bundle") -> str:
         event.preventDefault(); openSmartDelivery();
       }}">스마트 딜리버리</a>
     <a class="movb-nav-item{active_class("history")}" data-nav="history"
-      href="/#history"
-      onclick="if (typeof goToSection === 'function') {{
-        event.preventDefault(); goToSection('history', 'history');
-      }}">이용 내역</a>
+      href="/history">이용 내역</a>
   </nav>
   <a class="movb-login-button" id="loginButton" href="/?login=1"
     onclick="if (typeof openAuthModal === 'function') {{
