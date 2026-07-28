@@ -19,33 +19,30 @@
     .hero {
       position: relative;
       overflow: hidden;
-      padding: clamp(64px, 11vw, 128px) 24px clamp(96px, 12vw, 148px);
-      background: linear-gradient(160deg, #0d1c38 0%, #0a1730 45%, #060d1e 100%);
+      min-height: clamp(540px, 66vw, 680px);
+      padding: clamp(88px, 12vw, 138px) 24px;
+      display: flex;
+      align-items: center;
+      background-color: #071226;
+      background-image: url("/assets/movb-brand-hero.webp");
+      background-position: center;
+      background-size: cover;
       color: #fff;
     }
     .hero::before {
       content: "";
       position: absolute;
       inset: 0;
-      background-image:
-        linear-gradient(100deg, transparent 40%, rgba(255, 204, 0, .12) 50%, transparent 60%),
-        repeating-linear-gradient(100deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 90px);
-      opacity: .8;
-      pointer-events: none;
-    }
-    .hero-mark {
-      position: absolute;
-      top: 50%;
-      right: clamp(-140px, -4vw, -20px);
-      width: clamp(320px, 42vw, 620px);
-      transform: translateY(-50%);
-      opacity: .1;
+      background:
+        linear-gradient(90deg, rgba(3, 10, 25, .96) 0%, rgba(3, 10, 25, .83) 36%, rgba(3, 10, 25, .24) 67%, rgba(3, 10, 25, .08) 100%),
+        linear-gradient(0deg, rgba(3, 10, 25, .44), transparent 38%);
       pointer-events: none;
     }
     .hero-inner {
       position: relative;
       width: min(1120px, 100%);
       margin: 0 auto;
+      z-index: 1;
     }
     .hero .eyebrow {
       display: inline-block;
@@ -226,6 +223,19 @@
       .service-grid, .tech-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 560px) {
+      .hero {
+        min-height: 600px;
+        align-items: flex-end;
+        padding: 72px 24px 58px;
+        background-position: 64% center;
+      }
+      .hero::before {
+        background:
+          linear-gradient(0deg, rgba(3, 10, 25, .98) 0%, rgba(3, 10, 25, .84) 49%, rgba(3, 10, 25, .24) 100%),
+          linear-gradient(90deg, rgba(3, 10, 25, .6), transparent);
+      }
+      .hero h1 { font-size: clamp(36px, 11vw, 50px); }
+      .hero p { color: #d1d8e6; }
       .pillars { grid-template-columns: 1fr; }
       .closing { flex-direction: column; align-items: flex-start; }
     }
@@ -235,11 +245,9 @@
 <body>
 {{SITE_HEADER}}
 
-<section class="hero">
-  <svg class="hero-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
-    <path d="M16 46V18l16 18 16-18v28" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
+<section class="hero" role="img" aria-label="도시의 실제 도로와 여러 배송 경로가 하나로 연결되는 MOVB 스마트 딜리버리">
   <div class="hero-inner">
+    <span class="eyebrow">MOVB BRAND</span>
     <h1>흩어진 이동을,<br>하나의 경로로 <em>연결합니다.</em></h1>
     <p>MOVB는 실제 도로 데이터를 기준으로 배송 시간과 요금을 먼저 보여드리고, 방향이 비슷한 주문끼리는 자동으로 묶어 한 번에 옮겨드리는 퀵·스마트 딜리버리 서비스입니다.</p>
     <div class="hero-cta">
@@ -310,7 +318,7 @@
     </div>
     <div class="tech-item">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 11 4M15 20 13 4"/><path d="M12 7.5v2M12 12v2M12 16.5v2"/></svg>
-      <strong>실도로 기준 경로 계산</strong>
+      <strong>자동차 실제 도로 기준 경로 계산</strong>
       <p>지도상 직선거리가 아니라 실제 주행 가능한 경로로 시간과 요금을 계산해요.</p>
     </div>
     <div class="tech-item">
