@@ -93,6 +93,10 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 - 카카오 인증 확인: <http://127.0.0.1:8002/api/kakao/auth-check>
 - 관리자 화면: <http://127.0.0.1:8002/admin>
 - 지식 검색: <http://127.0.0.1:8002/api/knowledge/search?q=대전%20스마트%20딜리버리>
+- 퀵 고객센터 지식: 취급 불가 품목, 기사 미배정, 취소 수수료, 추가 요금,
+  기사 위치와 공식 문의 경로
+- 이용 내역: 기사 좌표가 있으면 실제 위치를 표시하고, Sandbox에서 좌표가
+  없으면 모의 위치임을 표시한 경로 화면 제공
 
 개인 학습용 코드 가이드는 Git에 올라가지 않는 프로젝트 루트의 `private/` 폴더에
 보관합니다.

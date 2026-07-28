@@ -442,6 +442,134 @@
       font-size: 11px;
       font-weight: 800;
     }
+    .match-recovery {
+      margin-top: 10px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+      color: #445066;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    .match-recovery strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+    .tracking-panel {
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .tracking-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .tracking-head strong {
+      color: var(--navy);
+      font-size: 13px;
+    }
+    .tracking-mode {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 750;
+      text-align: right;
+    }
+    .delivery-map {
+      width: 100%;
+      height: 250px;
+      background: #eef1f5;
+    }
+    .tracking-note {
+      margin: 0;
+      padding: 11px 14px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .driver-map-marker {
+      display: grid;
+      width: 38px;
+      height: 38px;
+      place-items: center;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      background: var(--navy);
+      box-shadow: 0 2px 8px rgba(16, 37, 77, .2);
+      color: #fff;
+      font-size: 18px;
+    }
+    .retry-button {
+      border-color: var(--navy) !important;
+      background: var(--navy) !important;
+      color: #fff !important;
+    }
+    .retry-dialog[hidden] { display: none; }
+    .retry-dialog {
+      position: fixed;
+      z-index: 1200;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(16, 37, 77, .42);
+    }
+    .retry-dialog-card {
+      width: min(440px, 100%);
+      border-radius: 10px;
+      padding: 24px;
+      background: #fff;
+    }
+    .retry-dialog-card h2 {
+      margin: 0;
+      color: var(--navy);
+      font-size: 21px;
+    }
+    .retry-dialog-card p {
+      margin: 10px 0 20px;
+      color: #4d586b;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .retry-dialog-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .retry-dialog-actions button,
+    .retry-dialog-actions a {
+      display: inline-flex;
+      min-height: 44px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 850;
+      text-decoration: none;
+    }
+    .retry-dialog-actions .confirm-retry {
+      border-color: var(--yellow);
+      background: var(--yellow);
+    }
+    .retry-dialog-close {
+      width: 100%;
+      margin-top: 8px;
+      border: 0;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    @media (max-width: 640px) {
+      .delivery-map { height: 220px; }
+      .retry-dialog-actions { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -495,6 +623,18 @@
     </div>
   </main>
 
+  <div class="retry-dialog" id="retryDialog" role="dialog" aria-modal="true" aria-labelledby="retryDialogTitle" hidden>
+    <div class="retry-dialog-card">
+      <h2 id="retryDialogTitle">단일 퀵으로 다시 이용할까요?</h2>
+      <p>스마트 딜리버리에서 사용한 출발지·도착지·연락처·물품 정보를 그대로 사용해 일반 퀵 한 건으로 다시 접수합니다.</p>
+      <div class="retry-dialog-actions">
+        <button class="confirm-retry" id="confirmSingleRetry" type="button">단일 퀵 바로 접수</button>
+        <a href="/#smartDelivery">내용을 바꿔 새로 접수</a>
+      </div>
+      <button class="retry-dialog-close" id="closeRetryDialog" type="button">닫기</button>
+    </div>
+  </div>
+
   <script>
     const byId = id => document.getElementById(id);
     const terminalStatuses = new Set([
@@ -530,6 +670,9 @@
     let matchRequests = [];
     let selectedId = "";
     let activeFilter = "ALL";
+    let retryRequestId = "";
+    let kakaoMapsPromise = null;
+    let trackingRefreshInFlight = false;
 
     async function api(path, options = {}) {
       const response = await fetch(path, {
@@ -590,7 +733,10 @@
       const list = byId("matchList");
       list.replaceChildren();
       matchRequests
-        .filter(request => ["WAITING", "MATCHING", "MATCHED"].includes(request.status))
+        .filter(request =>
+          ["WAITING", "MATCHING", "MATCHED", "CANCELED", "EXPIRED", "FAILED"]
+            .includes(request.status)
+        )
         .forEach(request => {
           const card = makeText("article", "match-card", "");
           const head = makeText("div", "match-card-head", "");
@@ -605,7 +751,11 @@
           footer.append(makeText("time", "", formatDate(request.updatedAt)));
           const action = makeText(
             "button", "",
-            request.status === "MATCHED" ? "공동 주문 보기" : "매칭 취소"
+            request.status === "MATCHED"
+              ? "공동 주문 보기"
+              : request.status === "WAITING"
+                ? "매칭 취소"
+                : "단일 퀵으로 다시 이용하기"
           );
           action.type = "button";
           if (request.status === "MATCHED" && request.partnerOrderId) {
@@ -613,16 +763,75 @@
               "click",
               () => selectOrder(request.partnerOrderId)
             );
-          } else {
+          } else if (request.status === "WAITING") {
             action.addEventListener(
               "click",
               () => cancelMatchRequest(request.requestId)
             );
+          } else {
+            action.classList.add("retry-button");
+            action.addEventListener(
+              "click",
+              () => openRetryDialog(request.requestId)
+            );
           }
           footer.append(action);
           card.append(head, route, footer);
+          if (["CANCELED", "EXPIRED", "FAILED"].includes(request.status)) {
+            const recovery = makeText("div", "match-recovery", "");
+            recovery.append(
+              makeText("strong", "", "공동배송을 이어서 기다리지 않아도 돼요."),
+              document.createTextNode(
+                "원래 입력한 정보 그대로 일반 퀵 한 건으로 다시 접수할 수 있습니다."
+              )
+            );
+            card.append(recovery);
+          }
           list.append(card);
         });
+    }
+
+    function openRetryDialog(requestId) {
+      retryRequestId = requestId;
+      byId("retryDialog").hidden = false;
+      byId("confirmSingleRetry").focus();
+    }
+
+    function closeRetryDialog() {
+      retryRequestId = "";
+      byId("retryDialog").hidden = true;
+    }
+
+    async function retryMatchAsSingle() {
+      if (!retryRequestId) return;
+      const button = byId("confirmSingleRetry");
+      const original = button.textContent;
+      button.disabled = true;
+      button.textContent = "단일 퀵 접수 중...";
+      try {
+        const result = await api(
+          `/api/delivery-matches/${encodeURIComponent(retryRequestId)}/single-order`,
+          {
+            method: "POST",
+            headers: {"X-Client-Id": matchClientId}
+          }
+        );
+        const orderResult = result.data?.orderResult || {};
+        const partnerOrderId =
+          orderResult.partnerOrderId || orderResult.order?.partnerOrderId;
+        closeRetryDialog();
+        await loadOrders(false);
+        if (partnerOrderId) await selectOrder(partnerOrderId, false);
+      } catch (error) {
+        button.textContent = error.message;
+      } finally {
+        button.disabled = false;
+        if (!byId("retryDialog").hidden) {
+          window.setTimeout(() => { button.textContent = original; }, 2200);
+        } else {
+          button.textContent = original;
+        }
+      }
     }
 
     async function cancelMatchRequest(requestId) {
@@ -636,6 +845,7 @@
           }
         );
         await loadOrders(false);
+        openRetryDialog(requestId);
       } catch (error) {
         byId("matchList").prepend(makeText("div", "error-box", error.message));
       }
@@ -738,7 +948,180 @@
       });
     }
 
-    function renderDetail(detail, steps) {
+    function routeLocations(detail) {
+      const request = detail.request || {};
+      return [
+        request.pickup?.location,
+        ...(Array.isArray(request.waypoints)
+          ? request.waypoints.map(item => item.location)
+          : []),
+        request.dropoff?.location
+      ].filter(location =>
+        Number.isFinite(Number(location?.latitude))
+        && Number.isFinite(Number(location?.longitude))
+      );
+    }
+
+    function findCoordinate(value, depth = 0) {
+      if (!value || typeof value !== "object" || depth > 5) return null;
+      const latitude = Number(value.latitude ?? value.lat ?? value.y);
+      const longitude = Number(
+        value.longitude ?? value.lng ?? value.lon ?? value.x
+      );
+      if (
+        Number.isFinite(latitude)
+        && Number.isFinite(longitude)
+        && Math.abs(latitude) <= 90
+        && Math.abs(longitude) <= 180
+      ) {
+        return {latitude, longitude};
+      }
+      for (const child of Object.values(value)) {
+        const found = findCoordinate(child, depth + 1);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    function interpolateRoute(points, progress) {
+      if (!points.length) return null;
+      if (points.length === 1) return points[0];
+      const bounded = Math.max(0, Math.min(1, progress));
+      const scaled = bounded * (points.length - 1);
+      const index = Math.min(Math.floor(scaled), points.length - 2);
+      const local = scaled - index;
+      return {
+        latitude:
+          Number(points[index].latitude)
+          + (Number(points[index + 1].latitude) - Number(points[index].latitude)) * local,
+        longitude:
+          Number(points[index].longitude)
+          + (Number(points[index + 1].longitude) - Number(points[index].longitude)) * local
+      };
+    }
+
+    function simulatedPickerPosition(detail, points) {
+      const status = String(detail.status || "").toUpperCase();
+      if (!points.length) return null;
+      if (["PICKUP_STARTED", "PICKUP_COMPLETED", "DROPOFF_WAITING"].includes(status)) {
+        return points[0];
+      }
+      if (status === "DROPOFF_STARTED") {
+        const elapsed = Math.max(0, Date.now() - new Date(detail.updatedAt).getTime());
+        return interpolateRoute(points, Math.min(.92, .12 + elapsed / 900000));
+      }
+      if (["DROPOFF_COMPLETED", "COMPLETED"].includes(status)) {
+        return points[points.length - 1];
+      }
+      return null;
+    }
+
+    async function ensureKakaoMaps() {
+      if (window.kakao?.maps) return window.kakao.maps;
+      if (kakaoMapsPromise) return kakaoMapsPromise;
+      kakaoMapsPromise = (async () => {
+        const config = await api("/api/config");
+        const key = config.data?.kakaoJavascriptKey;
+        if (!key) throw new Error("지도 키가 설정되지 않았습니다.");
+        await new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src =
+            `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&autoload=false`;
+          script.onload = () => window.kakao.maps.load(resolve);
+          script.onerror = () => reject(new Error("카카오 지도를 불러오지 못했습니다."));
+          document.head.append(script);
+        });
+        return window.kakao.maps;
+      })();
+      return kakaoMapsPromise;
+    }
+
+    async function renderTracking(detail, pickerData, mapNode, modeNode, noteNode) {
+      const points = routeLocations(detail);
+      if (points.length < 2) {
+        modeNode.textContent = "경로 정보 없음";
+        noteNode.textContent = "주문에 저장된 좌표가 없어 지도를 표시할 수 없습니다.";
+        return;
+      }
+
+      const livePosition = findCoordinate(pickerData);
+      const simulatedPosition = simulatedPickerPosition(detail, points);
+      const pickerPosition = livePosition || simulatedPosition;
+      const maps = await ensureKakaoMaps();
+      const center = new maps.LatLng(
+        Number(points[0].latitude),
+        Number(points[0].longitude)
+      );
+      const map = new maps.Map(mapNode, {center, level: 6});
+      const bounds = new maps.LatLngBounds();
+      const path = points.map(point => {
+        const position = new maps.LatLng(
+          Number(point.latitude),
+          Number(point.longitude)
+        );
+        bounds.extend(position);
+        return position;
+      });
+      new maps.Polyline({
+        map,
+        path,
+        strokeWeight: 5,
+        strokeColor: "#10254d",
+        strokeOpacity: .82,
+        strokeStyle: "solid"
+      });
+
+      points.forEach((point, index) => {
+        const position = new maps.LatLng(
+          Number(point.latitude),
+          Number(point.longitude)
+        );
+        const label = document.createElement("div");
+        label.style.cssText =
+          "padding:5px 7px;border:1px solid #d7dce4;border-radius:5px;"
+          + "background:#fff;color:#10254d;font-size:10px;font-weight:800;white-space:nowrap;";
+        label.textContent =
+          index === 0 ? "출발지" : index === points.length - 1 ? "도착지" : `경유 ${index}`;
+        new maps.CustomOverlay({
+          map,
+          position,
+          content: label,
+          yAnchor: 2
+        });
+      });
+
+      if (pickerPosition) {
+        const position = new maps.LatLng(
+          pickerPosition.latitude,
+          pickerPosition.longitude
+        );
+        bounds.extend(position);
+        const marker = makeText("div", "driver-map-marker", "🛵");
+        new maps.CustomOverlay({
+          map,
+          position,
+          content: marker,
+          yAnchor: .5
+        });
+      }
+      map.setBounds(bounds, 42, 42, 42, 42);
+
+      if (livePosition) {
+        modeNode.textContent = "카카오 배송 데이터 · 기사 위치";
+        noteNode.textContent =
+          "기사 위치는 픽업 출발~픽업 완료, 배송 출발~배송 완료 상태에서 갱신됩니다.";
+      } else if (simulatedPosition) {
+        modeNode.textContent = "Sandbox 경로 시뮬레이션";
+        noteNode.textContent =
+          "현재 Sandbox는 실제 기사 GPS를 제공하지 않아 주문 상태와 경로로 계산한 모의 위치입니다.";
+      } else {
+        modeNode.textContent = "기사 출발 전";
+        noteNode.textContent =
+          "기사님이 픽업 또는 배송을 출발하면 이 지도에서 이동 위치를 확인할 수 있습니다.";
+      }
+    }
+
+    function renderDetail(detail, steps, pickerData = null) {
       const order = orders.find(item => item.partnerOrderId === detail.partnerOrderId) || detail;
       const body = byId("orderDetail");
       body.className = "detail-body";
@@ -762,6 +1145,26 @@
         grid.append(item);
       });
 
+      const tracking = makeText("section", "tracking-panel", "");
+      const trackingHead = makeText("div", "tracking-head", "");
+      const trackingMode = makeText("span", "tracking-mode", "위치 확인 중");
+      trackingHead.append(
+        makeText("strong", "", "기사 이동 경로"),
+        trackingMode
+      );
+      const mapNode = makeText("div", "delivery-map", "");
+      const trackingNote = makeText(
+        "p",
+        "tracking-note",
+        "배송 위치 데이터를 불러오는 중입니다."
+      );
+      tracking.append(trackingHead, mapNode, trackingNote);
+      renderTracking(detail, pickerData, mapNode, trackingMode, trackingNote)
+        .catch(error => {
+          trackingMode.textContent = "지도 표시 불가";
+          trackingNote.textContent = error.message;
+        });
+
       const stepTitle = makeText("h3", "step-title", "배송 단계");
       const stepList = makeText("div", "step-list", "");
       renderSteps(stepList, steps);
@@ -776,22 +1179,53 @@
       cancelButton.addEventListener("click", cancelSelectedOrder);
       actions.append(refreshButton, cancelButton);
 
-      body.append(summary, grid, stepTitle, stepList, actions);
+      const linkedMatch = matchRequests.find(
+        request => request.partnerOrderId === detail.partnerOrderId
+      );
+      if (
+        linkedMatch
+        && ["CANCELED", "ABORTED", "MATCHING_FAILED", "REQUEST_FAILED"]
+          .includes(String(detail.status || "").toUpperCase())
+      ) {
+        const retryButton = makeText(
+          "button",
+          "retry-button",
+          "단일 퀵으로 다시 이용하기"
+        );
+        retryButton.type = "button";
+        retryButton.addEventListener(
+          "click",
+          () => openRetryDialog(linkedMatch.requestId)
+        );
+        actions.append(retryButton);
+      }
+
+      body.append(summary, grid, tracking, stepTitle, stepList, actions);
     }
 
-    async function selectOrder(id, refresh = false) {
+    async function selectOrder(id, refresh = false, silent = false) {
       selectedId = id;
       renderOrders();
       const body = byId("orderDetail");
-      body.className = "detail-placeholder";
-      body.textContent = refresh ? "카카오 상태를 새로 불러오는 중입니다." : "주문 상세를 불러오는 중입니다.";
+      if (!silent) {
+        body.className = "detail-placeholder";
+        body.textContent = refresh
+          ? "카카오 상태를 새로 불러오는 중입니다."
+          : "주문 상세를 불러오는 중입니다.";
+      }
       try {
-        const [detailResult, stepResult] = await Promise.all([
+        const [detailResult, stepResult, pickerResult] = await Promise.all([
           api(`/api/orders/${encodeURIComponent(id)}?refresh=${refresh}`),
           api(`/api/orders/${encodeURIComponent(id)}/steps?refresh=${refresh}`)
-            .catch(() => ({data: {steps: []}}))
+            .catch(() => ({data: {steps: []}})),
+          api(`/api/orders/${encodeURIComponent(id)}/picker`)
+            .catch(() => ({data: null}))
         ]);
-        renderDetail(detailResult.data, stepResult.data?.steps || []);
+        renderDetail(
+          detailResult.data,
+          stepResult.data?.steps || [],
+          pickerResult.data
+        );
         const url = new URL(location.href);
         url.searchParams.set("order", id);
         history.replaceState(null, "", url);
@@ -850,10 +1284,20 @@
         renderOrders();
       });
     });
+    byId("confirmSingleRetry").addEventListener("click", retryMatchAsSingle);
+    byId("closeRetryDialog").addEventListener("click", closeRetryDialog);
+    byId("retryDialog").addEventListener("click", event => {
+      if (event.target === byId("retryDialog")) closeRetryDialog();
+    });
 
     loadOrders();
     window.setInterval(() => {
-      if (document.visibilityState === "visible") loadOrders(false);
+      if (document.visibilityState !== "visible") return;
+      loadOrders(false);
+      if (!selectedId || trackingRefreshInFlight) return;
+      trackingRefreshInFlight = true;
+      selectOrder(selectedId, true, true)
+        .finally(() => { trackingRefreshInFlight = false; });
     }, 15000);
   </script>
 </body>

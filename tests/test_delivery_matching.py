@@ -222,3 +222,56 @@ class DeliveryMatchingTests(unittest.TestCase):
             canceled.json()["data"]["matching"]["status"],
             "CANCELED",
         )
+
+    def test_canceled_match_can_retry_as_one_idempotent_quick_order(self) -> None:
+        payload = sample_order()
+        payload.pop("partnerOrderId", None)
+        self.client.post(
+            "/api/delivery-matches",
+            headers={
+                "X-Client-Id": "single-retry-computer",
+                "Idempotency-Key": "single-retry-request",
+            },
+            json=payload,
+        )
+        self.client.patch(
+            "/api/delivery-matches/single-retry-request/cancel",
+            headers={"X-Client-Id": "single-retry-computer"},
+        )
+
+        first = self.client.post(
+            "/api/delivery-matches/single-retry-request/single-order",
+            headers={"X-Client-Id": "single-retry-computer"},
+        )
+        second = self.client.post(
+            "/api/delivery-matches/single-retry-request/single-order",
+            headers={"X-Client-Id": "single-retry-computer"},
+        )
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(second.status_code, 201)
+        self.assertEqual(self.fake.create_calls, 1)
+        first_result = first.json()["data"]["orderResult"]
+        second_result = second.json()["data"]["orderResult"]
+        self.assertTrue(first_result["partnerOrderId"].startswith("quick-retry-"))
+        self.assertEqual(second_result["source"], "existing")
+
+    def test_waiting_match_cannot_create_a_duplicate_single_order(self) -> None:
+        payload = sample_order()
+        payload.pop("partnerOrderId", None)
+        self.client.post(
+            "/api/delivery-matches",
+            headers={
+                "X-Client-Id": "still-waiting-computer",
+                "Idempotency-Key": "still-waiting-request",
+            },
+            json=payload,
+        )
+
+        response = self.client.post(
+            "/api/delivery-matches/still-waiting-request/single-order",
+            headers={"X-Client-Id": "still-waiting-computer"},
+        )
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(self.fake.create_calls, 0)
