@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -200,9 +201,34 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn('href="/features"', home.text)
         self.assertIn("묶음퀵 접수하기", home.text)
         self.assertEqual(features.status_code, 200)
-        self.assertIn("한 번 픽업하고", features.text)
+        self.assertIn("여러 곳에서 픽업하고", features.text)
         self.assertIn('href="/bundle"', features.text)
         self.assertIn("기능 소개", features.text)
+
+    def test_customer_pages_use_the_exact_same_shared_header(self) -> None:
+        pages = [
+            self.client.get("/"),
+            self.client.get("/bundle"),
+            self.client.get("/features"),
+        ]
+        headers: list[str] = []
+
+        for response in pages:
+            self.assertEqual(response.status_code, 200)
+            match = re.search(
+                r'<header class="movb-site-header">.*?</header>',
+                response.text,
+                re.DOTALL,
+            )
+            self.assertIsNotNone(match)
+            headers.append(match.group(0))
+
+        self.assertEqual(headers[0], headers[1])
+        self.assertEqual(headers[1], headers[2])
+        self.assertIn("Mobility AI", headers[0])
+        self.assertIn("일반 퀵 접수", headers[0])
+        self.assertIn("이용 내역", headers[0])
+        self.assertIn("로그인", headers[0])
 
     def test_home_has_ollama_toggle_for_local_chat(self) -> None:
         home = self.client.get("/")
