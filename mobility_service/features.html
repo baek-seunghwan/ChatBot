@@ -47,30 +47,23 @@
       .cards,.compare { grid-template-columns:1fr; }
     }
   </style>
+  {{SITE_HEADER_CSS}}
 </head>
 <body>
-  <header>
-    <a class="brand" href="/">MOVB</a>
-    <nav aria-label="주요 메뉴">
-      <a href="/features">기능 소개</a>
-      <a href="/bundle">묶음퀵 접수하기</a>
-      <a href="/#history">이용 내역</a>
-    </nav>
-    <a class="login" href="/?login=1">로그인</a>
-  </header>
+  {{SITE_HEADER}}
   <main>
     <section class="hero">
       <div>
         <span class="eyebrow">BUNDLE QUICK DELIVERY</span>
-        <h1>한 번 픽업하고,<br>여러 곳에 배송해요.</h1>
-        <p>한 사람이 같은 출발지에서 여러 목적지로 보내는 주문을 하나의 경로로 묶습니다. 목적지 순서를 계산하고, 각각 보낼 때와 비교한 예상 절약 금액을 접수 전에 보여줍니다.</p>
+        <h1>여러 곳에서 픽업하고,<br>여러 곳에 배송해요.</h1>
+        <p>보내는 사람과 받는 사람을 + 버튼으로 추가하고 서로 연결합니다. 모든 픽업을 마친 뒤 배송하는 순서와 각각 보낼 때보다 얼마나 절약되는지 접수 전에 보여줍니다.</p>
         <a class="cta" href="/bundle">묶음퀵 견적 확인하기</a>
       </div>
       <div class="route" aria-label="묶음퀵 배송 경로 예시">
         <strong>추천 배송 순서</strong>
-        <div class="stop"><span class="dot">1</span><div>판교역 픽업<small>한 번에 물품 수거</small></div></div>
-        <div class="stop"><span class="dot">2</span><div>정자역 배송<small>첫 번째 목적지</small></div></div>
-        <div class="stop"><span class="dot">3</span><div>서현역 배송<small>두 번째 목적지</small></div></div>
+        <div class="stop"><span class="dot">1</span><div>판교역 픽업<small>보내는 사람 1</small></div></div>
+        <div class="stop"><span class="dot">2</span><div>야탑역 픽업<small>보내는 사람 2</small></div></div>
+        <div class="stop"><span class="dot">3</span><div>정자역·서현역 배송<small>모든 픽업 후 배송 시작</small></div></div>
       </div>
     </section>
 
@@ -78,7 +71,7 @@
       <h2>지금 완성하는 핵심 흐름</h2>
       <p class="section-copy">기능을 넓게 펼치기보다 묶음퀵 하나를 실제로 끝까지 사용할 수 있게 만들었습니다.</p>
       <div class="cards">
-        <article class="card"><b>1. 목적지 입력</b><p>출발지 한 곳과 서로 다른 목적지 2~5곳, 각 수령인 연락처를 입력합니다.</p></article>
+        <article class="card"><b>1. 사람 추가</b><p>보내는 사람 1~5명과 받는 사람 2~5명을 + / − 버튼으로 관리합니다.</p></article>
         <article class="card"><b>2. 서버 견적 계산</b><p>주소를 좌표로 확인한 뒤 추천 순서, 개별 배송 합계, 묶음 가격과 절약액을 계산합니다.</p></article>
         <article class="card"><b>3. 확인 후 접수</b><p>사용자가 최종 경로와 요금에 동의해야 주문이 생성되며, 이후 조회와 취소가 가능합니다.</p></article>
       </div>
@@ -87,8 +80,8 @@
     <section>
       <h2>무엇이 좋아지나요?</h2>
       <div class="compare">
-        <article class="price"><span>목적지마다 각각 접수</span><strong>배송 N건</strong><p class="section-copy">같은 출발지 정보를 반복 입력하고 픽업도 여러 번 진행합니다.</p></article>
-        <article class="price highlight"><span>MOVB 묶음퀵</span><strong>배송 1건</strong><p class="section-copy">한 번 픽업하고 추천 경로대로 여러 목적지에 배송합니다.</p></article>
+        <article class="price"><span>받는 사람마다 각각 접수</span><strong>배송 N건</strong><p class="section-copy">보내는 사람과 받는 사람 정보를 주문마다 반복 입력합니다.</p></article>
+        <article class="price highlight"><span>MOVB 묶음퀵</span><strong>배송 1건</strong><p class="section-copy">여러 곳에서 픽업한 뒤 추천 순서대로 여러 목적지에 배송합니다.</p></article>
       </div>
     </section>
   </main>

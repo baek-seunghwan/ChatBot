@@ -8,18 +8,16 @@ from .geo_math import road_km
 from .geocode import KakaoGeocodeClient
 from .models import (
     BundleOrderRequest,
+    BundleQuoteRequest,
     CreateDeliveryRequest,
     DeliveryDraft,
     DeliveryStop,
     Location,
     OrderType,
     PaymentType,
-    ProductSize,
 )
 
-# 할인 자체는 카카오의 '경유지 추가 혜택'이 이미 제공한다.
-# 이 모듈의 역할은 폼이 해주지 않는 판단 — "따로 보낼까 묶어 보낼까"의 자동 비교와
-# 최적 경유 순서 추천 — 이다.
+MAX_BUNDLE_PICKUPS = 5
 MAX_BUNDLE_DROPOFFS = 5
 
 
@@ -30,19 +28,19 @@ def _total_price(data: Any) -> int | None:
 
 
 async def _nearest_neighbor_order(
-    pickup: Location,
+    start: Location,
     stops: list[Location],
     route_planner: RoutePlanner | None,
 ) -> list[int]:
-    """카카오 실도로 거리를 기준으로 가까운 정차지를 차례로 고른다."""
+    """현재 위치에서 가까운 정차지를 하나씩 선택한다."""
     remaining = list(range(len(stops)))
     order: list[int] = []
-    cursor = pickup
+    cursor = start
     while remaining:
         if route_planner is None:
-            nearest = min(remaining, key=lambda i: road_km(cursor, stops[i]))
+            nearest = min(remaining, key=lambda index: road_km(cursor, stops[index]))
         else:
-            distances = []
+            distances: list[tuple[int, int]] = []
             for index in remaining:
                 route = await route_planner.route_summary(cursor, stops[index])
                 distances.append((route["distanceMeters"], index))
@@ -53,6 +51,155 @@ async def _nearest_neighbor_order(
     return order
 
 
+async def _resolve_locations(
+    geocoder: KakaoGeocodeClient,
+    addresses: list[str],
+    *,
+    label: str,
+) -> list[Location]:
+    locations: list[Location] = []
+    for address in addresses:
+        location = await geocoder.search_address(address)
+        if location is None:
+            raise ValueError(f"{label} 주소를 찾지 못했어요: {address}")
+        locations.append(location)
+    return locations
+
+
+async def _bundle_route_order(
+    pickups: list[Location],
+    dropoffs: list[Location],
+    route_planner: RoutePlanner | None,
+) -> tuple[list[int], list[int]]:
+    """첫 픽업에서 시작해 추가 픽업을 모두 마친 뒤 배송한다.
+
+    물품을 싣기 전에 해당 배송지에 도착하는 일이 없도록 픽업과 배송의 순서를
+    두 단계로 분리한다.
+    """
+    pickup_order = [0]
+    if len(pickups) > 1:
+        additional_order = await _nearest_neighbor_order(
+            pickups[0], pickups[1:], route_planner
+        )
+        pickup_order.extend(index + 1 for index in additional_order)
+
+    dropoff_order = await _nearest_neighbor_order(
+        pickups[pickup_order[-1]],
+        dropoffs,
+        route_planner,
+    )
+    return pickup_order, dropoff_order
+
+
+async def multi_pickup_bundle_quote(
+    client: KakaoMobilityClient,
+    geocoder: KakaoGeocodeClient,
+    request: BundleQuoteRequest,
+    *,
+    route_planner: RoutePlanner | None = None,
+) -> dict[str, Any]:
+    """여러 픽업과 여러 배송을 개별 주문 가격과 하나의 묶음 가격으로 비교한다."""
+    pickup_locations = await _resolve_locations(
+        geocoder,
+        [item.address for item in request.pickups],
+        label="픽업",
+    )
+    dropoff_locations = await _resolve_locations(
+        geocoder,
+        [item.address for item in request.dropoffs],
+        label="배송",
+    )
+
+    individual: list[dict[str, Any]] = []
+    individual_total = 0
+    for dropoff_request, dropoff_location in zip(
+        request.dropoffs, dropoff_locations
+    ):
+        pickup_location = pickup_locations[dropoff_request.pickup_index]
+        draft = DeliveryDraft(
+            orderType=OrderType.QUICK,
+            productSize=request.product_size,
+            pickup=DeliveryStop(location=pickup_location),
+            dropoff=DeliveryStop(location=dropoff_location),
+            fleetOption=request.fleet_option,
+        )
+        try:
+            price = _total_price(await client.price(draft))
+        except KakaoApiError:
+            price = None
+        if price is None:
+            raise ValueError(
+                f"'{dropoff_request.address}' 개별 견적 조회에 실패했어요."
+            )
+        individual.append(
+            {
+                "pickupAddress": pickup_location.basic_address,
+                "address": dropoff_location.basic_address,
+                "pickupIndex": dropoff_request.pickup_index,
+                "price": price,
+            }
+        )
+        individual_total += price
+
+    pickup_order, dropoff_order = await _bundle_route_order(
+        pickup_locations,
+        dropoff_locations,
+        route_planner,
+    )
+    ordered_pickups = [pickup_locations[index] for index in pickup_order]
+    ordered_dropoffs = [dropoff_locations[index] for index in dropoff_order]
+    waypoint_locations = [*ordered_pickups[1:], *ordered_dropoffs[:-1]]
+
+    bundled_draft = DeliveryDraft(
+        orderType=OrderType.QUICK,
+        productSize=request.product_size,
+        pickup=DeliveryStop(location=ordered_pickups[0]),
+        waypoints=[
+            DeliveryStop(location=location) for location in waypoint_locations
+        ],
+        dropoff=DeliveryStop(location=ordered_dropoffs[-1]),
+        fleetOption=request.fleet_option,
+    )
+    bundled_price = _total_price(await client.price(bundled_draft))
+    if bundled_price is None:
+        raise ValueError("묶음 견적 조회에 실패했어요.")
+
+    route_info = (
+        await route_planner.route_summary(
+            ordered_pickups[0],
+            ordered_dropoffs[-1],
+            waypoints=waypoint_locations,
+        )
+        if route_planner
+        else None
+    )
+    pickup_route = [location.basic_address for location in ordered_pickups]
+    dropoff_route = [location.basic_address for location in ordered_dropoffs]
+
+    return {
+        "pickups": [location.basic_address for location in pickup_locations],
+        "individual": individual,
+        "individualTotal": individual_total,
+        "pickupRoute": pickup_route,
+        "dropoffRoute": dropoff_route,
+        "route": [*pickup_route, *dropoff_route],
+        "routeStops": [
+            *(
+                {"kind": "PICKUP", "address": address}
+                for address in pickup_route
+            ),
+            *(
+                {"kind": "DROPOFF", "address": address}
+                for address in dropoff_route
+            ),
+        ],
+        "bundledPrice": bundled_price,
+        "saving": individual_total - bundled_price,
+        "recommendBundle": bundled_price < individual_total,
+        "routeInfo": route_info,
+    }
+
+
 async def bundle_quote(
     client: KakaoMobilityClient,
     geocoder: KakaoGeocodeClient,
@@ -61,79 +208,27 @@ async def bundle_quote(
     product_size: str = "XS",
     route_planner: RoutePlanner | None = None,
 ) -> dict[str, Any]:
-    """여러 도착지를 '각각 따로 보낼 때'와 '한 번에 묶어 보낼 때' 요금을 비교한다.
-
-    경유지는 QUICK만 지원하므로 묶음 견적은 QUICK 기준으로 계산한다.
-    """
-    if not 2 <= len(dropoff_addresses) <= MAX_BUNDLE_DROPOFFS:
-        raise ValueError(f"묶음 배송은 도착지 2~{MAX_BUNDLE_DROPOFFS}곳까지 지원해요.")
-
-    pickup = await geocoder.search_address(pickup_address)
-    if pickup is None:
-        raise ValueError(f"출발지 주소를 찾지 못했어요: {pickup_address}")
-
-    dropoffs: list[Location] = []
-    for address in dropoff_addresses:
-        location = await geocoder.search_address(address)
-        if location is None:
-            raise ValueError(f"도착지 주소를 찾지 못했어요: {address}")
-        dropoffs.append(location)
-
-    size = ProductSize(product_size)
-    pickup_stop = DeliveryStop(location=pickup)
-
-    # 1) 각각 따로 보낼 때: 도착지마다 개별 QUICK 견적
-    individual: list[dict[str, Any]] = []
-    individual_total = 0
-    for address, location in zip(dropoff_addresses, dropoffs):
-        draft = DeliveryDraft(
-            orderType=OrderType.QUICK,
-            productSize=size,
-            pickup=pickup_stop,
-            dropoff=DeliveryStop(location=location),
-        )
-        try:
-            price = _total_price(await client.price(draft))
-        except KakaoApiError:
-            price = None
-        if price is None:
-            raise ValueError(f"'{address}' 개별 견적 조회에 실패했어요.")
-        individual.append({"address": location.basic_address, "price": price})
-        individual_total += price
-
-    # 2) 묶어서 보낼 때: 가까운 곳부터 도는 순서로 경유지 구성
-    order = await _nearest_neighbor_order(pickup, dropoffs, route_planner)
-    ordered = [dropoffs[i] for i in order]
-    bundled_draft = DeliveryDraft(
-        orderType=OrderType.QUICK,
-        productSize=size,
-        pickup=pickup_stop,
-        dropoff=DeliveryStop(location=ordered[-1]),
-        waypoints=[DeliveryStop(location=loc) for loc in ordered[:-1]],
+    """AI 채팅의 기존 한 곳 픽업 묶음 견적을 다중 픽업 엔진에 연결한다."""
+    request = BundleQuoteRequest.model_validate(
+        {
+            "pickups": [{"address": pickup_address}],
+            "dropoffs": [
+                {"address": address, "pickupIndex": 0}
+                for address in dropoff_addresses
+            ],
+            "productSize": product_size,
+        }
     )
-    bundled_price = _total_price(await client.price(bundled_draft))
-    if bundled_price is None:
-        raise ValueError("묶음 견적 조회에 실패했어요.")
-    route_info = (
-        await route_planner.route_summary(
-            pickup,
-            ordered[-1],
-            waypoints=ordered[:-1],
-        )
-        if route_planner
-        else None
+    return await multi_pickup_bundle_quote(
+        client,
+        geocoder,
+        request,
+        route_planner=route_planner,
     )
 
-    return {
-        "pickup": pickup.basic_address,
-        "individual": individual,
-        "individualTotal": individual_total,
-        "route": [ordered_stop.basic_address for ordered_stop in ordered],
-        "bundledPrice": bundled_price,
-        "saving": individual_total - bundled_price,
-        "recommendBundle": bundled_price < individual_total,
-        "routeInfo": route_info,
-    }
+
+def _tagged_note(kind: str, note: str | None) -> str:
+    return f"[{kind}]" + (f" {note}" if note else "")
 
 
 async def prepare_bundle_order(
@@ -144,59 +239,74 @@ async def prepare_bundle_order(
     *,
     route_planner: RoutePlanner | None = None,
 ) -> tuple[dict[str, Any], CreateDeliveryRequest]:
-    """최신 묶음 견적을 다시 계산하고 실제 Sandbox 주문 payload를 만든다.
-
-    클라이언트가 보낸 경유 순서나 가격을 신뢰하지 않고 서버에서 주소 변환,
-    경유 순서, 가격을 다시 계산한다.
-    """
-    pickup = await geocoder.search_address(request.pickup_address)
-    if pickup is None:
-        raise ValueError(
-            f"출발지 주소를 찾지 못했어요: {request.pickup_address}"
-        )
-
-    resolved_dropoffs: list[Location] = []
-    for item in request.dropoffs:
-        location = await geocoder.search_address(item.address)
-        if location is None:
-            raise ValueError(f"도착지 주소를 찾지 못했어요: {item.address}")
-        resolved_dropoffs.append(location)
-
-    order = await _nearest_neighbor_order(
-        pickup, resolved_dropoffs, route_planner
+    """최신 견적을 다시 계산하고 다중 픽업 묶음 주문 payload를 만든다."""
+    pickup_locations = await _resolve_locations(
+        geocoder,
+        [item.address for item in request.pickups],
+        label="픽업",
     )
-    ordered_locations = [resolved_dropoffs[index] for index in order]
-    ordered_requests = [request.dropoffs[index] for index in order]
+    dropoff_locations = await _resolve_locations(
+        geocoder,
+        [item.address for item in request.dropoffs],
+        label="배송",
+    )
+    pickup_order, dropoff_order = await _bundle_route_order(
+        pickup_locations,
+        dropoff_locations,
+        route_planner,
+    )
 
-    # 주문 직전에 견적을 다시 계산해 화면에서 본 오래된 가격을 신뢰하지 않는다.
-    quote = await bundle_quote(
+    quote_request = BundleQuoteRequest.model_validate(
+        {
+            "pickups": [{"address": item.address} for item in request.pickups],
+            "dropoffs": [
+                {
+                    "address": item.address,
+                    "pickupIndex": item.pickup_index,
+                }
+                for item in request.dropoffs
+            ],
+            "productSize": request.product_size,
+            "fleetOption": request.fleet_option,
+        }
+    )
+    quote = await multi_pickup_bundle_quote(
         client,
         geocoder,
-        request.pickup_address,
-        [item.address for item in request.dropoffs],
-        product_size=request.product_size.value,
+        quote_request,
         route_planner=route_planner,
     )
 
-    stops = [
+    ordered_pickup_stops = [
         DeliveryStop(
-            location=location,
-            contact=item.contact,
-            note=item.note,
+            location=pickup_locations[index],
+            contact=request.pickups[index].contact,
+            note=(
+                request.pickups[index].note
+                if position == 0
+                else _tagged_note("추가 픽업", request.pickups[index].note)
+            ),
         )
-        for item, location in zip(ordered_requests, ordered_locations)
+        for position, index in enumerate(pickup_order)
+    ]
+    ordered_dropoff_stops = [
+        DeliveryStop(
+            location=dropoff_locations[index],
+            contact=request.dropoffs[index].contact,
+            note=_tagged_note("배송", request.dropoffs[index].note),
+        )
+        for index in dropoff_order
     ]
     order_request = CreateDeliveryRequest(
         partnerOrderId=partner_order_id,
         orderType=OrderType.QUICK,
         productSize=request.product_size,
-        pickup=DeliveryStop(
-            location=pickup,
-            contact=request.pickup_contact,
-            note=request.pickup_note,
-        ),
-        waypoints=stops[:-1],
-        dropoff=stops[-1],
+        pickup=ordered_pickup_stops[0],
+        waypoints=[
+            *ordered_pickup_stops[1:],
+            *ordered_dropoff_stops[:-1],
+        ],
+        dropoff=ordered_dropoff_stops[-1],
         productName=request.product_name,
         quantity=request.quantity,
         declaredValue=request.declared_value,

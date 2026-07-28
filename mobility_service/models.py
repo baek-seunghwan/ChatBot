@@ -157,28 +157,69 @@ class AgentChatRequest(CamelModel):
     )
 
 
+class BundlePickupQuoteRequest(CamelModel):
+    address: str = Field(min_length=2, max_length=200)
+
+
+class BundleDropoffQuoteRequest(CamelModel):
+    address: str = Field(min_length=2, max_length=200)
+    pickup_index: int = Field(alias="pickupIndex", ge=0, le=4)
+
+
 class BundleQuoteRequest(CamelModel):
-    pickup_address: str = Field(alias="pickupAddress", min_length=2, max_length=200)
-    dropoff_addresses: list[str] = Field(
-        alias="dropoffAddresses", min_length=2, max_length=5
-    )
+    pickups: list[BundlePickupQuoteRequest] = Field(min_length=1, max_length=5)
+    dropoffs: list[BundleDropoffQuoteRequest] = Field(min_length=2, max_length=5)
     product_size: ProductSize = Field(default=ProductSize.XS, alias="productSize")
+    fleet_option: FleetOption | None = Field(default=None, alias="fleetOption")
+
+    @model_validator(mode="after")
+    def validate_bundle_quote(self) -> "BundleQuoteRequest":
+        _validate_bundle_people(self.pickups, self.dropoffs)
+        if self.product_size == ProductSize.L and self.fleet_option is None:
+            raise ValueError("대형(L) 묶음퀵은 차량을 선택해야 합니다.")
+        return self
+
+
+class BundlePickupRequest(CamelModel):
+    address: str = Field(min_length=2, max_length=200)
+    contact: Contact
+    note: str | None = Field(default=None, max_length=500)
 
 
 class BundleDropoffRequest(CamelModel):
     address: str = Field(min_length=2, max_length=200)
     contact: Contact
     note: str | None = Field(default=None, max_length=500)
+    pickup_index: int = Field(alias="pickupIndex", ge=0, le=4)
+
+
+def _validate_bundle_people(
+    pickups: list[BundlePickupQuoteRequest | BundlePickupRequest],
+    dropoffs: list[BundleDropoffQuoteRequest | BundleDropoffRequest],
+) -> None:
+    pickup_addresses = {item.address.strip().casefold() for item in pickups}
+    if len(pickup_addresses) != len(pickups):
+        raise ValueError("보내는 사람의 픽업 주소는 서로 달라야 합니다.")
+
+    dropoff_addresses = {item.address.strip().casefold() for item in dropoffs}
+    if len(dropoff_addresses) != len(dropoffs):
+        raise ValueError("받는 사람의 배송 주소는 서로 달라야 합니다.")
+
+    invalid_indices = [
+        item.pickup_index
+        for item in dropoffs
+        if item.pickup_index >= len(pickups)
+    ]
+    if invalid_indices:
+        raise ValueError("받는 사람과 연결된 보내는 사람을 다시 선택해주세요.")
+
+    referenced_pickups = {item.pickup_index for item in dropoffs}
+    if referenced_pickups != set(range(len(pickups))):
+        raise ValueError("모든 보내는 사람은 받는 사람 한 명 이상과 연결되어야 합니다.")
 
 
 class BundleOrderRequest(CamelModel):
-    pickup_address: str = Field(
-        alias="pickupAddress", min_length=2, max_length=200
-    )
-    pickup_contact: Contact = Field(alias="pickupContact")
-    pickup_note: str | None = Field(
-        default=None, alias="pickupNote", max_length=500
-    )
+    pickups: list[BundlePickupRequest] = Field(min_length=1, max_length=5)
     dropoffs: list[BundleDropoffRequest] = Field(min_length=2, max_length=5)
     product_size: ProductSize = Field(default=ProductSize.XS, alias="productSize")
     product_name: str = Field(
@@ -205,11 +246,7 @@ class BundleOrderRequest(CamelModel):
     def validate_bundle_order(self) -> "BundleOrderRequest":
         if not self.consent:
             raise ValueError("최종 견적과 묶음 배송 경로에 동의해야 접수할 수 있습니다.")
-        normalized_addresses = {
-            item.address.strip().lower() for item in self.dropoffs
-        }
-        if len(normalized_addresses) != len(self.dropoffs):
-            raise ValueError("묶음퀵 도착지는 서로 다른 주소여야 합니다.")
+        _validate_bundle_people(self.pickups, self.dropoffs)
         if (
             self.product_size == ProductSize.L
             and self.fleet_option is None

@@ -42,12 +42,16 @@ class FakeGeocoder:
 
 def bundle_payload(*, consent: bool = True) -> dict:
     return {
-        "pickupAddress": "판교역",
-        "pickupContact": {
-            "name": "테스트 발송자",
-            "phone": "010-1000-0001",
-        },
-        "pickupNote": "1번 출구 앞",
+        "pickups": [
+            {
+                "address": "판교역",
+                "contact": {
+                    "name": "테스트 발송자",
+                    "phone": "010-1000-0001",
+                },
+                "note": "1번 출구 앞",
+            }
+        ],
         "dropoffs": [
             {
                 "address": "정자역",
@@ -56,6 +60,7 @@ def bundle_payload(*, consent: bool = True) -> dict:
                     "phone": "010-1000-0002",
                 },
                 "note": "역무실 앞",
+                "pickupIndex": 0,
             },
             {
                 "address": "서현역",
@@ -63,6 +68,7 @@ def bundle_payload(*, consent: bool = True) -> dict:
                     "name": "두 번째 수령인",
                     "phone": "010-1000-0003",
                 },
+                "pickupIndex": 0,
             },
         ],
         "productSize": "XS",
@@ -96,7 +102,9 @@ class BundleBookingTests(unittest.TestCase):
         response = self.client.get("/bundle")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("목적지 2곳부터 시작", response.text)
+        self.assertIn("+ 보내는 사람 추가", response.text)
+        self.assertIn("+ 받는 사람 추가", response.text)
+        self.assertIn('class="remove-button"', response.text)
         self.assertIn('id="quoteButton"', response.text)
         self.assertIn('id="confirmOrder"', response.text)
         self.assertIn('id="orderButton"', response.text)
@@ -107,8 +115,11 @@ class BundleBookingTests(unittest.TestCase):
         response = self.client.post(
             "/api/bundle/quote",
             json={
-                "pickupAddress": "판교역",
-                "dropoffAddresses": ["정자역", "서현역"],
+                "pickups": [{"address": "판교역"}],
+                "dropoffs": [
+                    {"address": "정자역", "pickupIndex": 0},
+                    {"address": "서현역", "pickupIndex": 0},
+                ],
                 "productSize": "XS",
             },
         )
@@ -119,7 +130,8 @@ class BundleBookingTests(unittest.TestCase):
         self.assertEqual(quote["bundledPrice"], 12000)
         self.assertEqual(quote["saving"], 12000)
         self.assertTrue(quote["recommendBundle"])
-        self.assertEqual(len(quote["route"]), 2)
+        self.assertEqual(quote["pickupRoute"], ["경기 성남시 분당구 판교역"])
+        self.assertEqual(len(quote["route"]), 3)
 
     def test_order_recomputes_quote_and_saves_all_contacts(self) -> None:
         response = self.client.post(
@@ -145,6 +157,40 @@ class BundleBookingTests(unittest.TestCase):
         self.assertEqual(
             receiver_names,
             {"첫 번째 수령인", "두 번째 수령인"},
+        )
+
+    def test_multiple_senders_are_picked_up_before_any_delivery(self) -> None:
+        payload = bundle_payload()
+        payload["pickups"].append(
+            {
+                "address": "야탑역",
+                "contact": {
+                    "name": "두 번째 발송자",
+                    "phone": "010-1000-0004",
+                },
+                "note": "2번 출구 앞",
+            }
+        )
+        payload["dropoffs"][1]["pickupIndex"] = 1
+
+        response = self.client.post(
+            "/api/bundle/orders",
+            headers={"Idempotency-Key": "bundle-multi-pickup-001"},
+            json=payload,
+        )
+
+        self.assertEqual(response.status_code, 201)
+        data = response.json()["data"]
+        self.assertEqual(len(data["quote"]["pickupRoute"]), 2)
+        saved = self.store.get_order("bundle-multi-pickup-001")
+        request = saved["request"]
+        self.assertEqual(request["pickup"]["contact"]["name"], "테스트 발송자")
+        self.assertEqual(
+            request["waypoints"][0]["contact"]["name"],
+            "두 번째 발송자",
+        )
+        self.assertTrue(
+            request["waypoints"][0]["note"].startswith("[추가 픽업]")
         )
 
     def test_same_idempotency_key_does_not_create_twice(self) -> None:
@@ -181,7 +227,24 @@ class BundleBookingTests(unittest.TestCase):
         response = self.client.post("/api/bundle/orders", json=payload)
 
         self.assertEqual(response.status_code, 422)
-        self.assertIn("서로 다른 주소", response.text)
+        self.assertIn("배송 주소는 서로 달라야", response.text)
+
+    def test_every_sender_must_be_connected_to_a_receiver(self) -> None:
+        payload = bundle_payload()
+        payload["pickups"].append(
+            {
+                "address": "야탑역",
+                "contact": {
+                    "name": "연결 안 된 발송자",
+                    "phone": "010-1000-0004",
+                },
+            }
+        )
+
+        response = self.client.post("/api/bundle/orders", json=payload)
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("모든 보내는 사람", response.text)
 
 
 if __name__ == "__main__":

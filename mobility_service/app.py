@@ -20,7 +20,7 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from .agent import DeliveryAgent
-from .bundle import bundle_quote, prepare_bundle_order
+from .bundle import multi_pickup_bundle_quote, prepare_bundle_order
 from .client import KakaoApiError, KakaoMobilityClient
 from .config import Settings
 from .conversation_store import ConversationStore
@@ -522,12 +522,10 @@ def create_app(
     @application.post("/api/bundle/quote", response_model=ApiEnvelope)
     async def bundle_quote_route(request: BundleQuoteRequest) -> ApiEnvelope:
         try:
-            result = await bundle_quote(
+            result = await multi_pickup_bundle_quote(
                 resolved_client,
                 resolved_geocoder,
-                request.pickup_address,
-                request.dropoff_addresses,
-                product_size=request.product_size.value,
+                request,
                 route_planner=resolved_routes,
             )
         except ValueError as exc:
