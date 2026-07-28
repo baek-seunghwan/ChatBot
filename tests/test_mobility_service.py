@@ -205,6 +205,17 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn('href="/#smartDelivery"', features.text)
         self.assertIn("기능 소개", features.text)
 
+    def test_brand_intro_has_hero_image(self) -> None:
+        about = self.client.get("/about")
+        hero = self.client.get("/assets/movb-brand-hero.webp")
+
+        self.assertEqual(about.status_code, 200)
+        self.assertIn('url("/assets/movb-brand-hero.webp")', about.text)
+        self.assertIn("MOVB BRAND", about.text)
+        self.assertEqual(hero.status_code, 200)
+        self.assertEqual(hero.headers["content-type"], "image/webp")
+        self.assertGreater(len(hero.content), 100_000)
+
     def test_smart_delivery_is_integrated_into_home(self) -> None:
         home = self.client.get("/")
         legacy = self.client.get("/bundle", follow_redirects=False)

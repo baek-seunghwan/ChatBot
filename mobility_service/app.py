@@ -19,7 +19,7 @@ from fastapi import (
     Request,
     Response,
 )
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 
 from .agent import DeliveryAgent
 from .bundle import multi_pickup_bundle_quote, prepare_bundle_order
@@ -56,6 +56,7 @@ from .web import ABOUT_HTML, ADMIN_HTML, FEATURES_HTML, HISTORY_HTML, INDEX_HTML
 
 
 SESSION_COOKIE_NAME = "movb_session"
+BRAND_HERO_PATH = Path(__file__).with_name("assets") / "movb-brand-hero.webp"
 
 
 def create_app(
@@ -197,6 +198,18 @@ def create_app(
     @application.get("/about", response_class=HTMLResponse, include_in_schema=False)
     async def about_page() -> str:
         return ABOUT_HTML
+
+    @application.get(
+        "/assets/movb-brand-hero.webp",
+        response_class=FileResponse,
+        include_in_schema=False,
+    )
+    async def brand_hero_image() -> FileResponse:
+        return FileResponse(
+            BRAND_HERO_PATH,
+            media_type="image/webp",
+            headers={"Cache-Control": "public, max-age=604800"},
+        )
 
     @application.get(
         "/admin",
