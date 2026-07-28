@@ -247,6 +247,9 @@ Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결
 | `POST` | `/api/deliveries/estimate` | 배송 ETA + 실도로/미래 운행 정보 |
 | `POST` | `/api/routes/summary` | 자동차·다중 경유지·미래 길찾기 요약 |
 | `POST` | `/api/orders` | 멱등 주문 생성 |
+| `POST` | `/api/delivery-matches` | 다른 사용자 퀵 주문과 공동배송 자동 매칭 |
+| `GET` | `/api/delivery-matches` | 현재 브라우저의 공동배송 대기·완료 상태 |
+| `PATCH` | `/api/delivery-matches/{requestId}/cancel` | 공동배송 매칭 대기 취소 |
 | `GET` | `/api/orders/{partnerOrderId}` | 주문 상태 조회 |
 | `GET` | `/api/orders/{partnerOrderId}/steps` | 정차지별 Step 상세 상태 |
 | `PATCH` | `/api/orders/{partnerOrderId}/cancel` | 주문 취소 |
@@ -267,6 +270,7 @@ mobility_service/
 ├── providers.py             # Anthropic → Gemini 폴백
 ├── client.py                # Kakao Mobility Sandbox API
 ├── directions.py            # 자동차·다중 경유지·미래 운행 길찾기
+├── matching.py              # 서로 다른 사용자의 호환 퀵 주문 공동배송 매칭
 ├── geo_math.py              # 공통 거리 계산
 ├── bundle.py                # 스마트 딜리버리 경로·비교 견적·주문 변환
 ├── store.py                 # 주문·콜백 저장

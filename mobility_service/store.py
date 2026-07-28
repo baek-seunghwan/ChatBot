@@ -86,6 +86,25 @@ class MobilityStore:
 
                 CREATE INDEX IF NOT EXISTS idx_callbacks_order
                 ON callback_events(partner_order_id, received_at);
+
+                CREATE TABLE IF NOT EXISTS delivery_match_requests (
+                    request_id TEXT PRIMARY KEY,
+                    client_id TEXT NOT NULL,
+                    request_json TEXT NOT NULL,
+                    status TEXT NOT NULL,
+                    match_id TEXT,
+                    provider_order_id TEXT,
+                    error TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_delivery_match_status
+                ON delivery_match_requests(status, expires_at, created_at);
+
+                CREATE INDEX IF NOT EXISTS idx_delivery_match_client
+                ON delivery_match_requests(client_id, created_at);
                 """
             )
 
@@ -282,6 +301,236 @@ class MobilityStore:
             ).fetchall()
         by_status = {row["status"]: row["count"] for row in rows}
         return {"total": sum(by_status.values()), "byStatus": by_status}
+
+    @staticmethod
+    def _match_request_from_row(
+        row: sqlite3.Row,
+        *,
+        include_payload: bool = True,
+    ) -> dict[str, Any]:
+        request = json.loads(row["request_json"])
+        pickup = request.get("pickup", {}).get("location", {}).get(
+            "basicAddress", ""
+        )
+        dropoff = request.get("dropoff", {}).get("location", {}).get(
+            "basicAddress", ""
+        )
+        result = {
+            "requestId": row["request_id"],
+            "clientId": row["client_id"],
+            "status": row["status"],
+            "matchId": row["match_id"],
+            "partnerOrderId": row["provider_order_id"],
+            "routeSummary": f"{pickup} → {dropoff}",
+            "error": row["error"],
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+            "expiresAt": row["expires_at"],
+        }
+        if include_payload:
+            result["request"] = request
+        return result
+
+    def reserve_match_request(
+        self,
+        request_id: str,
+        client_id: str,
+        request_payload: dict[str, Any],
+        expires_at: str,
+    ) -> tuple[dict[str, Any], bool]:
+        now = utc_now()
+        created = False
+        try:
+            with self._connect() as connection:
+                connection.execute(
+                    """
+                    INSERT INTO delivery_match_requests (
+                        request_id, client_id, request_json, status,
+                        created_at, updated_at, expires_at
+                    ) VALUES (?, ?, ?, 'WAITING', ?, ?, ?)
+                    """,
+                    (
+                        request_id,
+                        client_id,
+                        json.dumps(request_payload, ensure_ascii=False),
+                        now,
+                        now,
+                        expires_at,
+                    ),
+                )
+            created = True
+        except sqlite3.IntegrityError:
+            pass
+        existing = self.get_match_request(request_id)
+        if existing is None:
+            raise RuntimeError("공동배송 매칭 요청을 저장하지 못했습니다.")
+        return existing, created
+
+    def get_match_request(
+        self,
+        request_id: str,
+        *,
+        client_id: str | None = None,
+    ) -> dict[str, Any] | None:
+        query = """
+            SELECT request_id, client_id, request_json, status, match_id,
+                   provider_order_id, error, created_at, updated_at, expires_at
+            FROM delivery_match_requests
+            WHERE request_id = ?
+        """
+        params: list[Any] = [request_id]
+        if client_id is not None:
+            query += " AND client_id = ?"
+            params.append(client_id)
+        with self._connect() as connection:
+            row = connection.execute(query, params).fetchone()
+        if row is None:
+            return None
+        return self._match_request_from_row(row)
+
+    def list_pending_match_requests(
+        self,
+        *,
+        exclude_request_id: str,
+        exclude_client_id: str,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        now = utc_now()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET status = 'EXPIRED', updated_at = ?
+                WHERE status = 'WAITING' AND expires_at <= ?
+                """,
+                (now, now),
+            )
+            rows = connection.execute(
+                """
+                SELECT request_id, client_id, request_json, status, match_id,
+                       provider_order_id, error, created_at, updated_at, expires_at
+                FROM delivery_match_requests
+                WHERE status = 'WAITING'
+                  AND expires_at > ?
+                  AND request_id != ?
+                  AND client_id != ?
+                ORDER BY created_at ASC
+                LIMIT ?
+                """,
+                (now, exclude_request_id, exclude_client_id, limit),
+            ).fetchall()
+        return [self._match_request_from_row(row) for row in rows]
+
+    def claim_match_requests(
+        self,
+        first_request_id: str,
+        second_request_id: str,
+        match_id: str,
+    ) -> bool:
+        now = utc_now()
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET status = 'MATCHING', match_id = ?, updated_at = ?
+                WHERE request_id IN (?, ?)
+                  AND status = 'WAITING'
+                  AND expires_at > ?
+                """,
+                (
+                    match_id,
+                    now,
+                    first_request_id,
+                    second_request_id,
+                    now,
+                ),
+            )
+            if cursor.rowcount != 2:
+                connection.rollback()
+                return False
+        return True
+
+    def complete_match_requests(
+        self,
+        request_ids: tuple[str, str],
+        provider_order_id: str,
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET status = 'MATCHED', provider_order_id = ?,
+                    error = NULL, updated_at = ?
+                WHERE request_id IN (?, ?)
+                """,
+                (provider_order_id, utc_now(), *request_ids),
+            )
+
+    def fail_match_requests(
+        self,
+        request_ids: tuple[str, str],
+        error: str,
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET status = 'FAILED', error = ?, updated_at = ?
+                WHERE request_id IN (?, ?)
+                """,
+                (error[:1000], utc_now(), *request_ids),
+            )
+
+    def list_match_requests(
+        self,
+        *,
+        client_id: str,
+        limit: int = 30,
+    ) -> list[dict[str, Any]]:
+        now = utc_now()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET status = 'EXPIRED', updated_at = ?
+                WHERE status = 'WAITING' AND expires_at <= ?
+                """,
+                (now, now),
+            )
+            rows = connection.execute(
+                """
+                SELECT request_id, client_id, request_json, status, match_id,
+                       provider_order_id, error, created_at, updated_at, expires_at
+                FROM delivery_match_requests
+                WHERE client_id = ?
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (client_id, limit),
+            ).fetchall()
+        return [
+            self._match_request_from_row(row, include_payload=False)
+            for row in rows
+        ]
+
+    def cancel_match_request(
+        self,
+        request_id: str,
+        *,
+        client_id: str,
+    ) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET status = 'CANCELED', updated_at = ?
+                WHERE request_id = ? AND client_id = ? AND status = 'WAITING'
+                """,
+                (utc_now(), request_id, client_id),
+            )
+        if cursor.rowcount != 1:
+            return None
+        return self.get_match_request(request_id, client_id=client_id)
 
     def record_callback(
         self, partner_order_id: str, event: str, body: dict[str, Any]

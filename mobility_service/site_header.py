@@ -34,8 +34,8 @@ SITE_HEADER_CSS = """
     width: 38px;
     height: 38px;
     place-items: center;
-    border-radius: 12px;
-    background: #fff8b8;
+    border-radius: 8px;
+    background: #fff4b8;
   }
   .movb-brand-mark svg { width: 25px; height: 25px; }
   .movb-brand-copy {
@@ -66,7 +66,7 @@ SITE_HEADER_CSS = """
     align-items: center;
     justify-content: center;
     border: 0;
-    border-radius: 9px;
+    border-radius: 6px;
     padding: 8px 12px;
     background: transparent;
     color: #17191f;
@@ -83,7 +83,7 @@ SITE_HEADER_CSS = """
     color: #17191f;
   }
   .movb-nav-item.active {
-    background: #17191f;
+    background: #10254d;
     color: #fff;
   }
   .movb-login-button {
