@@ -21,6 +21,7 @@
       --mint: #0f8a73;
     }
     * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
     body {
       margin: 0;
       min-height: 100vh;
@@ -287,23 +288,6 @@
     .route-dot.dropoff { background: var(--danger); }
     h2 { margin: 0 0 6px; font-size: 21px; }
     .description { margin: 0 0 22px; color: var(--muted); font-size: 14px; }
-    .quick-options {
-      display: flex;
-      gap: 8px;
-      margin: -6px 0 22px;
-      padding: 5px;
-      border-radius: 14px;
-      background: #f1f2f6;
-    }
-    .quick-option {
-      flex: 1;
-      padding: 10px 12px;
-      background: transparent;
-      color: #656b78;
-      box-shadow: none;
-    }
-    .quick-option:hover { transform: none; box-shadow: none; background: white; }
-    .quick-option.active { background: white; color: var(--ink); box-shadow: 0 3px 10px rgba(25, 25, 25, .08); }
     .quick-heading {
       display: flex;
       align-items: flex-start;
@@ -426,7 +410,94 @@
     .review-item strong { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; font-size: 14px; white-space: nowrap; }
     .quick-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 9px; margin-top: 14px; }
     .quick-actions button { width: 100%; }
-    #quickRequest, #history { scroll-margin-top: 18px; }
+    #quickRequest, #history { scroll-margin-top: 80px; }
+    .smart-mode-guide {
+      margin: 0 0 14px;
+      padding: 14px 16px;
+      border: 1px solid #ecd85d;
+      border-radius: 14px;
+      background: #fffbed;
+      color: #51480f;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .smart-mode-guide strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .smart-mode-guide.active {
+      border-color: #ddc300;
+      background: #fff6ad;
+      box-shadow: inset 4px 0 0 #17191f;
+    }
+    .party-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .party-section-head h3 { margin: 0; }
+    .party-section-head button { flex: 0 0 auto; }
+    .party-description {
+      margin: -3px 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .party-list { display: grid; gap: 12px; }
+    .contact-section .party-list:not(:empty) {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px dashed #d8dbe2;
+    }
+    .party-row {
+      padding: 15px;
+      border: 1px solid #e1e4ea;
+      border-radius: 14px;
+      background: #fafbfc;
+    }
+    .party-row-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 11px;
+    }
+    .party-row-head strong { font-size: 14px; }
+    .party-row-head button {
+      min-height: 36px;
+      padding: 7px 10px;
+      background: #fff0ef;
+      color: var(--danger);
+      font-size: 12px;
+    }
+    .party-fields {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .party-fields > label:first-child { grid-column: 1 / -1; }
+    .party-fields .wide { grid-column: 1 / -1; }
+    .party-address {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px;
+    }
+    .party-address button {
+      min-height: 44px;
+      padding: 9px 11px;
+      border: 1px solid #d8d8d8;
+      background: #f3f3f3;
+      color: var(--ink);
+    }
+    .primary-owner {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #d8dbe2;
+    }
     .section-title {
       margin: 24px 0 12px;
       padding-top: 20px;
@@ -983,60 +1054,20 @@
       padding: 22px;
       box-shadow: 0 5px 20px rgba(23, 25, 31, .045);
     }
-    #smartDelivery {
-      grid-column: 1 / -1;
-      grid-row: 1;
-      padding: 0;
-      overflow: hidden;
-      scroll-margin-top: 80px;
-    }
-    .smart-delivery-heading {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 18px;
-      padding: 24px 26px 20px;
-      border-bottom: 1px solid var(--line);
-      background:
-        linear-gradient(120deg, rgba(254, 229, 0, .18), transparent 55%),
-        #fff;
-    }
-    .smart-delivery-heading h1 { max-width: 780px; }
-    .smart-delivery-heading .description {
-      max-width: 780px;
-      margin: 0;
-    }
-    .smart-delivery-badge {
-      flex: 0 0 auto;
-      padding: 8px 11px;
-      border-radius: 999px;
-      background: #17191f;
-      color: #fff;
-      font-size: 11px;
-      font-weight: 800;
-      white-space: nowrap;
-    }
-    .smart-delivery-frame {
-      display: block;
-      width: 100%;
-      min-height: 1420px;
-      border: 0;
-      background: #f7f8fa;
-    }
     #quickRequest {
       grid-column: 1;
-      grid-row: 2 / span 2;
+      grid-row: 1;
       scroll-margin-top: 80px;
     }
     .map-panel {
       grid-column: 2;
-      grid-row: 2;
+      grid-row: 1;
       padding: 0;
       border-radius: 18px;
     }
     #history {
-      grid-column: 2;
-      grid-row: 3;
+      grid-column: 1 / -1;
+      grid-row: 2;
       align-self: start;
       scroll-margin-top: 80px;
     }
@@ -1087,20 +1118,6 @@
     }
     .booking-step::before { height: 3px; background: #eceef1; }
     .booking-step.active::before { background: var(--yellow); }
-    .quick-options {
-      width: fit-content;
-      min-width: 260px;
-      margin: 0 0 14px;
-      padding: 3px;
-      border-radius: 10px;
-      background: #f0f1f3;
-    }
-    .quick-option {
-      min-height: 36px;
-      border-radius: 8px;
-      padding: 7px 15px;
-      font-size: 12px;
-    }
     .form-sections {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1325,21 +1342,17 @@
         grid-template-columns: 1fr;
         gap: 10px;
       }
-      #smartDelivery {
+      #quickRequest {
         grid-column: 1;
         grid-row: 1;
       }
-      #quickRequest {
+      .map-panel {
         grid-column: 1;
         grid-row: 2;
       }
-      .map-panel {
-        grid-column: 1;
-        grid-row: 3;
-      }
       #history {
         grid-column: 1;
-        grid-row: 4;
+        grid-row: 3;
       }
       .quick-heading { display: flex; }
       .quick-badge { margin: 0; }
@@ -1369,24 +1382,15 @@
       .primary-nav .nav-item { min-height: 36px; padding: 7px 10px; }
       .sandbox span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .panel { border-radius: 14px; padding: 16px; }
-      #smartDelivery { padding: 0; }
-      .smart-delivery-heading {
-        display: block;
-        padding: 20px 18px 16px;
-      }
-      .smart-delivery-badge {
-        display: inline-flex;
-        margin-top: 12px;
-      }
-      .smart-delivery-frame { min-height: 1900px; }
       .map-panel { border-radius: 14px; }
       .quick-heading { display: block; }
       .quick-badge { margin-top: 10px; }
       .booking-step { font-size: 9.5px; }
-      .quick-options { width: 100%; min-width: 0; }
       .service-grid,
       .contact-section .grid,
-      .product-section .grid { grid-template-columns: 1fr; }
+      .product-section .grid,
+      .party-fields { grid-template-columns: 1fr; }
+      .party-fields .wide { grid-column: 1; }
       .map-header { grid-template-columns: 1fr; }
       .map-tools { min-width: 0; }
       .map-stage,
@@ -1471,36 +1475,14 @@
   <div class="sandbox"><b>Sandbox</b><span>테스트용 이름과 전화번호만 사용해주세요.</span></div>
 
   <main>
-    <section class="panel" id="smartDelivery">
-      <div class="smart-delivery-heading">
-        <div>
-          <span class="eyebrow">SMART DELIVERY</span>
-          <h1>여러 사람의 배송을 한 동선으로 묶는 스마트 딜리버리</h1>
-          <p class="description">
-            보내는 사람과 받는 사람을 각각 추가하고 개별 배송 합계와 스마트
-            딜리버리 견적을 비교하세요. 서울뿐 아니라 대전 등 국내 주소를
-            지역 제한 없이 입력할 수 있습니다.
-          </p>
-        </div>
-        <span class="smart-delivery-badge">보내는 사람 1~5명 · 받는 사람 2~5명</span>
-      </div>
-      <iframe
-        class="smart-delivery-frame"
-        id="smartDeliveryFrame"
-        src="/smart-delivery/form"
-        title="스마트 딜리버리 접수 양식"
-        loading="eager"
-      ></iframe>
-    </section>
-
     <section class="panel" id="quickRequest">
       <div class="quick-heading">
         <div>
           <span class="eyebrow">QUICK DELIVERY</span>
-          <h1>퀵 배송 접수</h1>
-          <p class="description">필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
+          <h1 id="quickTitle">퀵 배송 접수</h1>
+          <p class="description" id="quickDescription">필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
         </div>
-        <span class="quick-badge"><span></span>안전한 테스트 접수</span>
+        <span class="quick-badge"><span></span><b id="quickBadgeText">안전한 테스트 접수</b></span>
       </div>
 
       <div class="booking-steps" aria-label="퀵 접수 단계">
@@ -1510,9 +1492,12 @@
         <span class="booking-step" data-step="quote">4. 요금 확인</span>
       </div>
 
-      <div class="quick-options" aria-label="퀵 접수 방식">
-        <button type="button" class="quick-option active" data-quick-mode="single" onclick="selectQuickMode('single')">일반 퀵</button>
-        <button type="button" class="quick-option" data-quick-mode="bundle" onclick="startBundleRequest()">스마트 딜리버리</button>
+      <div class="smart-mode-guide" id="smartModeGuide">
+        <strong id="deliveryModeGuideTitle">한 사람의 퀵 배송을 접수합니다.</strong>
+        <span id="deliveryModeGuideText">
+          다른 사람의 배송도 함께 보내려면 아래에서 보내는 사람이나 받는 사람을 추가하세요.
+          추가하는 즉시 스마트 딜리버리로 자동 전환됩니다.
+        </span>
       </div>
 
       <div class="form-sections">
@@ -1547,7 +1532,7 @@
             </select>
             <small class="field-hint">대형(L) 물품은 차량을 반드시 선택해야 해요.</small>
           </label>
-          <label>픽업 예약 시간
+          <label id="wishTimeField">픽업 예약 시간
             <input id="wishTime" type="datetime-local">
             <small class="field-hint">예약 시 카카오 미래 교통량을 반영해 ETA를 계산해요.</small>
           </label>
@@ -1555,7 +1540,10 @@
       </div>
 
       <div class="form-section contact-section pickup-section">
-        <h3><span class="section-number">2</span>어디에서 픽업할까요?</h3>
+        <div class="party-section-head">
+          <h3><span class="section-number">2</span>어디에서 픽업할까요?</h3>
+          <button type="button" class="secondary" id="addSmartPickup">+ 보내는 사람</button>
+        </div>
         <div class="grid">
           <label>출발지 주소 <span class="required-mark">필수</span>
             <span class="address-input">
@@ -1569,10 +1557,14 @@
           <label>보내는 분 <span class="required-mark">필수</span><input id="pickupName" required autocomplete="name" maxlength="50" placeholder="이름"></label>
           <label>연락처 <span class="required-mark">필수</span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">Sandbox에서는 010-1000-XXXX 형식만 사용할 수 있어요.</small></label>
         </div>
+        <div class="party-list" id="smartPickupList"></div>
       </div>
 
       <div class="form-section contact-section dropoff-section">
-        <h3><span class="section-number">3</span>어디로 배송할까요?</h3>
+        <div class="party-section-head">
+          <h3><span class="section-number">3</span>어디로 배송할까요?</h3>
+          <button type="button" class="secondary" id="addSmartDropoff">+ 받는 사람</button>
+        </div>
         <button type="button" class="copy-contact" onclick="copyPickupContact()">받는 분이 보내는 분과 같아요</button>
         <div class="grid">
           <label>도착지 주소 <span class="required-mark">필수</span>
@@ -1587,6 +1579,11 @@
           <label>받는 분 <span class="required-mark">필수</span><input id="dropoffName" required maxlength="50" placeholder="이름"></label>
           <label>연락처 <span class="required-mark">필수</span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
         </div>
+        <label class="primary-owner" id="primaryOwnerField" hidden>
+          이 물품을 보내는 사람
+          <select id="primaryDropoffPickup"></select>
+        </label>
+        <div class="party-list" id="smartDropoffList"></div>
       </div>
 
       <div class="form-section product-section">
@@ -1651,7 +1648,7 @@
       </div>
     </section>
 
-    <aside class="panel" id="history">
+    <section class="panel" id="history">
       <span class="eyebrow">TRACKING</span>
       <h2>이용 내역</h2>
       <p class="description">
@@ -1676,7 +1673,7 @@
         <div class="order-list" id="orderList"><div class="empty">주문을 불러오는 중입니다.</div></div>
       </details>
 
-    </aside>
+    </section>
   </main>
   <footer>
     모브 (MOVB) · Kakao Mobility Sandbox 연동 ·
@@ -1768,29 +1765,221 @@
 
     function openSmartDelivery() {
       byId("chatWidget").classList.add("hidden");
-      goToSection("smartDelivery", "bundle");
+      setActiveNav("bundle");
+      byId("quickRequest").scrollIntoView({behavior: "smooth", block: "start"});
+      window.history.replaceState(null, "", "#smartDelivery");
     }
 
-    function selectQuickMode(mode) {
-      document.querySelectorAll(".quick-option").forEach(button => {
-        button.classList.toggle("active", button.dataset.quickMode === mode);
-      });
-      goToSection("quickRequest", "quick");
+    let smartPickupCounter = 0;
+    let smartDropoffCounter = 0;
+    let smartOrderKey = null;
+
+    function isSmartDelivery() {
+      return smartPickupNodes().length > 0 || smartDropoffNodes().length > 0;
     }
 
-    function startBundleRequest() {
-      openSmartDelivery();
+    function syncDeliveryMode() {
+      const smart = isSmartDelivery();
+      byId("orderType").disabled = smart;
+      if (smart) byId("orderType").value = "QUICK";
+      byId("wishTimeField").hidden = smart;
+      byId("primaryOwnerField").hidden = smartPickupNodes().length === 0;
+      byId("quickTitle").textContent = smart
+        ? "스마트 딜리버리 접수"
+        : "퀵 배송 접수";
+      byId("quickDescription").textContent = smart
+        ? "추가된 보내는 사람과 받는 사람의 배송을 한 경로로 묶어 견적을 비교합니다."
+        : "필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.";
+      byId("quickBadgeText").textContent = smart
+        ? `스마트 딜리버리 · ${1 + smartPickupNodes().length}명 → ${1 + smartDropoffNodes().length}명`
+        : "안전한 테스트 접수";
+      byId("deliveryModeGuideTitle").textContent = smart
+        ? "스마트 딜리버리로 자동 전환되었습니다."
+        : "한 사람의 퀵 배송을 접수합니다.";
+      byId("deliveryModeGuideText").textContent = smart
+        ? "추가한 사람을 포함해 개별 배송 합계와 묶음 경로의 요금을 비교합니다."
+        : "다른 사람의 배송도 함께 보내려면 보내는 사람이나 받는 사람을 추가하세요. 추가하는 즉시 스마트 딜리버리로 자동 전환됩니다.";
+      byId("smartModeGuide").classList.toggle("active", smart);
+      byId("quoteButton").textContent = smart
+        ? "개별·묶음 견적 비교"
+        : "예상 시간·요금 확인";
+      byId("orderButton").textContent = smart
+        ? "스마트 딜리버리 접수"
+        : "확인하고 Sandbox 접수";
+      updatePickupOwnerOptions();
+      if (smart) setActiveNav("bundle");
     }
-
-    window.addEventListener("message", (event) => {
-      if (event.origin !== location.origin) return;
-      if (event.data?.type !== "movb:smart-delivery-height") return;
-      const height = Number(event.data.height);
-      if (!Number.isFinite(height)) return;
-      byId("smartDeliveryFrame").style.height = `${Math.max(900, height)}px`;
-    });
 
     let quoteReady = false;
+
+    function smartPickupNodes() {
+      return [...byId("smartPickupList").querySelectorAll(".party-row")];
+    }
+
+    function smartDropoffNodes() {
+      return [...byId("smartDropoffList").querySelectorAll(".party-row")];
+    }
+
+    function bindPartyRow(row) {
+      row.querySelectorAll("input, select").forEach(field => {
+        field.addEventListener(field.tagName === "SELECT" ? "change" : "input", () => {
+          if (field.dataset.field === "phone") {
+            field.value = formatPhone(field.value);
+          }
+          field.classList.remove("field-error");
+          updatePickupOwnerOptions();
+          handleQuickFormChange();
+        });
+      });
+      row.querySelector('[data-action="address"]').addEventListener("click", () => {
+        searchPartyAddress(row.querySelector('[data-field="address"]'));
+      });
+      row.querySelector('[data-action="remove"]').addEventListener("click", () => {
+        row.remove();
+        updatePartyLabels();
+        syncDeliveryMode();
+        updatePickupOwnerOptions();
+        handleQuickFormChange();
+      });
+    }
+
+    function addSmartPickup() {
+      if (smartPickupNodes().length >= 4) {
+        showResult("추가할 수 없어요", "보내는 사람은 기본 보내는 사람을 포함해 최대 5명입니다.", true);
+        return;
+      }
+      smartPickupCounter += 1;
+      const row = document.createElement("article");
+      row.className = "party-row";
+      row.dataset.pickupKey = `pickup-${smartPickupCounter}`;
+      row.innerHTML = `
+        <div class="party-row-head">
+          <strong data-label>추가 보내는 사람</strong>
+          <button type="button" data-action="remove">− 삭제</button>
+        </div>
+        <div class="party-fields">
+          <label>픽업 주소 <span class="required-mark">필수</span>
+            <span class="party-address">
+              <input data-field="address" placeholder="도로명 또는 지번 주소">
+              <button type="button" data-action="address">주소 검색</button>
+            </span>
+          </label>
+          <label>이름 <span class="required-mark">필수</span>
+            <input data-field="name" maxlength="50" placeholder="이름">
+          </label>
+          <label>연락처 <span class="required-mark">필수</span>
+            <input data-field="phone" maxlength="13" inputmode="tel" placeholder="010-1000-0003">
+          </label>
+          <label class="wide">픽업 요청사항
+            <input data-field="note" maxlength="500" placeholder="예: 1층 안내데스크에서 픽업">
+          </label>
+        </div>`;
+      byId("smartPickupList").append(row);
+      bindPartyRow(row);
+      updatePartyLabels();
+      syncDeliveryMode();
+      updatePickupOwnerOptions();
+      handleQuickFormChange();
+    }
+
+    function addSmartDropoff() {
+      if (smartDropoffNodes().length >= 4) {
+        showResult("추가할 수 없어요", "받는 사람은 기본 받는 사람을 포함해 최대 5명입니다.", true);
+        return;
+      }
+      smartDropoffCounter += 1;
+      const row = document.createElement("article");
+      row.className = "party-row";
+      row.innerHTML = `
+        <div class="party-row-head">
+          <strong data-label>추가 받는 사람</strong>
+          <button type="button" data-action="remove">− 삭제</button>
+        </div>
+        <div class="party-fields">
+          <label>배송 주소 <span class="required-mark">필수</span>
+            <span class="party-address">
+              <input data-field="address" placeholder="도로명 또는 지번 주소">
+              <button type="button" data-action="address">주소 검색</button>
+            </span>
+          </label>
+          <label>이름 <span class="required-mark">필수</span>
+            <input data-field="name" maxlength="50" placeholder="이름">
+          </label>
+          <label>연락처 <span class="required-mark">필수</span>
+            <input data-field="phone" maxlength="13" inputmode="tel" placeholder="010-1000-0004">
+          </label>
+          <label>이 물품을 보내는 사람
+            <select data-field="pickupKey"></select>
+          </label>
+          <label class="wide">전달 요청사항
+            <input data-field="note" maxlength="500" placeholder="예: 도착 전 연락">
+          </label>
+        </div>`;
+      byId("smartDropoffList").append(row);
+      bindPartyRow(row);
+      updatePartyLabels();
+      syncDeliveryMode();
+      updatePickupOwnerOptions();
+      handleQuickFormChange();
+    }
+
+    function updatePartyLabels() {
+      smartPickupNodes().forEach((row, index) => {
+        row.querySelector("[data-label]").textContent = `보내는 사람 ${index + 2}`;
+      });
+      smartDropoffNodes().forEach((row, index) => {
+        row.querySelector("[data-label]").textContent = `받는 사람 ${index + 2}`;
+      });
+    }
+
+    function pickupOwnerChoices() {
+      const primaryName = byId("pickupName").value.trim() || "기본 보내는 사람";
+      return [
+        {key: "primary", label: `보내는 사람 1 · ${primaryName}`},
+        ...smartPickupNodes().map((row, index) => ({
+          key: row.dataset.pickupKey,
+          label: `보내는 사람 ${index + 2} · ${
+            row.querySelector('[data-field="name"]').value.trim() || "이름 미입력"
+          }`,
+        })),
+      ];
+    }
+
+    function updatePickupOwnerOptions() {
+      const choices = pickupOwnerChoices();
+      const selects = [
+        byId("primaryDropoffPickup"),
+        ...smartDropoffNodes().map(row => row.querySelector('[data-field="pickupKey"]')),
+      ];
+      selects.forEach(select => {
+        const previous = select.value;
+        select.replaceChildren();
+        choices.forEach(choice => {
+          const option = document.createElement("option");
+          option.value = choice.key;
+          option.textContent = choice.label;
+          select.append(option);
+        });
+        select.value = choices.some(choice => choice.key === previous)
+          ? previous
+          : "primary";
+      });
+    }
+
+    function searchPartyAddress(input) {
+      const Postcode = window.daum?.Postcode || window.kakao?.Postcode;
+      if (!Postcode) {
+        showResult("주소 검색 실패", "카카오 주소 검색을 아직 불러오지 못했습니다.", true);
+        return;
+      }
+      new Postcode({
+        oncomplete(data) {
+          input.value = data.roadAddress || data.address || "";
+          input.classList.remove("field-error");
+          handleQuickFormChange();
+        },
+      }).open();
+    }
 
     function copyPickupContact() {
       byId("dropoffName").value = byId("pickupName").value;
@@ -1809,12 +1998,18 @@
     function syncQuickReview() {
       const pickup = byId("pickupAddress").value.trim();
       const dropoff = byId("dropoffAddress").value.trim();
+      const pickupCount = 1 + smartPickupNodes().length;
+      const dropoffCount = 1 + smartDropoffNodes().length;
       byId("reviewRoute").textContent = pickup && dropoff
-        ? `${pickup} → ${dropoff}`
+        ? isSmartDelivery()
+          ? `${pickupCount}곳 픽업 → ${dropoffCount}곳 배송`
+          : `${pickup} → ${dropoff}`
         : "출발지와 도착지를 입력해주세요.";
       const fleet = byId("fleet").value;
       byId("reviewService").textContent = [
-        orderTypeLabel(byId("orderType").value),
+        isSmartDelivery()
+          ? "스마트 딜리버리"
+          : orderTypeLabel(byId("orderType").value),
         fleet ? fleetLabel(fleet) : "차량 자동 추천"
       ].join(" · ");
       byId("reviewProduct").textContent = byId("productName").value.trim() || "입력 전";
@@ -1832,6 +2027,7 @@
     function resetQuoteState() {
       if (quoteReady) byId("result").classList.remove("visible");
       quoteReady = false;
+      smartOrderKey = null;
       byId("quoteStatus").textContent = "요금 확인 전";
       byId("quoteStatus").classList.remove("ready");
       byId("reviewPrice").textContent = "조회 전";
@@ -1870,6 +2066,48 @@
         showResult("주소 확인이 필요해요", "주소를 직접 입력하지 말고 주소 검색 버튼이나 지도를 이용해 위치를 선택해주세요.", true);
         return false;
       }
+      if (isSmartDelivery()) {
+        const pickupRows = smartPickupNodes();
+        const dropoffRows = smartDropoffNodes();
+        if (dropoffRows.length < 1) {
+          showResult("받는 사람을 추가해주세요", "스마트 딜리버리는 받는 사람이 2명 이상이어야 합니다.", true);
+          byId("addSmartDropoff").focus();
+          return false;
+        }
+        const requiredPartyFields = [
+          ...pickupRows.flatMap(row => [
+            [row.querySelector('[data-field="address"]'), "추가 보내는 사람의 픽업 주소를 입력해주세요."],
+            [row.querySelector('[data-field="name"]'), "추가 보내는 사람의 이름을 입력해주세요."],
+            [row.querySelector('[data-field="phone"]'), "추가 보내는 사람의 연락처를 입력해주세요."],
+          ]),
+          ...dropoffRows.flatMap(row => [
+            [row.querySelector('[data-field="address"]'), "추가 받는 사람의 배송 주소를 입력해주세요."],
+            [row.querySelector('[data-field="name"]'), "추가 받는 사람의 이름을 입력해주세요."],
+            [row.querySelector('[data-field="phone"]'), "추가 받는 사람의 연락처를 입력해주세요."],
+          ]),
+        ];
+        for (const [input, message] of requiredPartyFields) {
+          if (!input.value.trim()) {
+            input.classList.add("field-error");
+            input.focus();
+            showResult("입력 내용을 확인해주세요", message, true);
+            return false;
+          }
+        }
+        const selectedOwners = new Set([
+          byId("primaryDropoffPickup").value,
+          ...dropoffRows.map(row => row.querySelector('[data-field="pickupKey"]').value),
+        ]);
+        const unusedPickup = pickupOwnerChoices().find(choice => !selectedOwners.has(choice.key));
+        if (unusedPickup) {
+          showResult(
+            "받는 사람 연결이 필요해요",
+            `${unusedPickup.label}의 물품을 받을 사람을 한 명 이상 선택해주세요.`,
+            true
+          );
+          return false;
+        }
+      }
       if (
         byId("productSize").value === "L"
         && byId("orderType").value !== "DOBO"
@@ -1881,10 +2119,20 @@
         return false;
       }
       const sandboxPhone = /^010-1000-\d{4}$/;
-      for (const id of ["pickupPhone", "dropoffPhone"]) {
-        if (!sandboxPhone.test(byId(id).value.trim())) {
-          byId(id).classList.add("field-error");
-          byId(id).focus();
+      const phoneFields = [
+        byId("pickupPhone"),
+        byId("dropoffPhone"),
+        ...(isSmartDelivery()
+          ? [
+              ...smartPickupNodes().map(row => row.querySelector('[data-field="phone"]')),
+              ...smartDropoffNodes().map(row => row.querySelector('[data-field="phone"]')),
+            ]
+          : []),
+      ];
+      for (const field of phoneFields) {
+        if (!sandboxPhone.test(field.value.trim())) {
+          field.classList.add("field-error");
+          field.focus();
           showResult("연락처를 확인해주세요", "Sandbox에서는 010-1000-XXXX 형식의 테스트 전화번호만 사용할 수 있어요.", true);
           return false;
         }
@@ -2320,6 +2568,91 @@
       return payload;
     }
 
+    function smartPickupValues() {
+      return [
+        {
+          key: "primary",
+          address: [
+            byId("pickupAddress").value.trim(),
+            byId("pickupDetailAddress").value.trim(),
+          ].filter(Boolean).join(" "),
+          contact: {
+            name: byId("pickupName").value.trim(),
+            phone: byId("pickupPhone").value.trim(),
+          },
+          note: null,
+        },
+        ...smartPickupNodes().map(row => ({
+          key: row.dataset.pickupKey,
+          address: row.querySelector('[data-field="address"]').value.trim(),
+          contact: {
+            name: row.querySelector('[data-field="name"]').value.trim(),
+            phone: row.querySelector('[data-field="phone"]').value.trim(),
+          },
+          note: row.querySelector('[data-field="note"]').value.trim() || null,
+        })),
+      ];
+    }
+
+    function smartDropoffValues() {
+      const pickupKeys = smartPickupValues().map(item => item.key);
+      return [
+        {
+          address: [
+            byId("dropoffAddress").value.trim(),
+            byId("dropoffDetailAddress").value.trim(),
+          ].filter(Boolean).join(" "),
+          contact: {
+            name: byId("dropoffName").value.trim(),
+            phone: byId("dropoffPhone").value.trim(),
+          },
+          note: null,
+          pickupIndex: pickupKeys.indexOf(byId("primaryDropoffPickup").value),
+        },
+        ...smartDropoffNodes().map(row => ({
+          address: row.querySelector('[data-field="address"]').value.trim(),
+          contact: {
+            name: row.querySelector('[data-field="name"]').value.trim(),
+            phone: row.querySelector('[data-field="phone"]').value.trim(),
+          },
+          note: row.querySelector('[data-field="note"]').value.trim() || null,
+          pickupIndex: pickupKeys.indexOf(
+            row.querySelector('[data-field="pickupKey"]').value
+          ),
+        })),
+      ];
+    }
+
+    function smartQuotePayload() {
+      const fleet = byId("fleet").value;
+      return {
+        pickups: smartPickupValues().map(item => ({address: item.address})),
+        dropoffs: smartDropoffValues().map(item => ({
+          address: item.address,
+          pickupIndex: item.pickupIndex,
+        })),
+        productSize: byId("productSize").value,
+        fleetOption: fleet ? {fleet, type: "REQUIRED"} : null,
+      };
+    }
+
+    function smartOrderPayload() {
+      const declaredRaw = byId("declaredValue").value.trim();
+      const fleet = byId("fleet").value;
+      const pickups = smartPickupValues().map(({key, ...item}) => item);
+      const dropoffs = smartDropoffValues();
+      return {
+        pickups,
+        dropoffs,
+        productName: byId("productName").value.trim(),
+        productSize: byId("productSize").value,
+        quantity: `${dropoffs.length}건`,
+        declaredValue: declaredRaw ? Number(declaredRaw) : null,
+        fleetOption: fleet ? {fleet, type: "REQUIRED"} : null,
+        consent: true,
+      };
+    }
+
     async function api(path, options = {}) {
       const response = await fetch(path, {
         ...options,
@@ -2473,6 +2806,41 @@
       };
     }
 
+    function formatSmartQuoteResult(data) {
+      const route = data.routeInfo || {};
+      return {
+        mode: "cards",
+        requestId: "SMART-DELIVERY",
+        highlightText: data.saving > 0
+          ? `${won(data.saving)} 절약 예상`
+          : "가격 비교 완료",
+        items: [
+          {
+            orderType: "INDIVIDUAL",
+            fleet: `${data.individual.length}건`,
+            orderTypeLabel: "각각 따로 배송",
+            fleetLabel: `${data.individual.length}건`,
+            timeText: "-",
+            fareText: won(data.individualTotal),
+            discountText: "-",
+            selected: false,
+          },
+          {
+            orderType: "SMART_DELIVERY",
+            fleet: byId("fleet").value || "AUTO",
+            orderTypeLabel: "스마트 딜리버리",
+            fleetLabel: byId("fleet").value
+              ? fleetLabel(byId("fleet").value)
+              : "차량 자동 추천",
+            timeText: route.durationMinutes ? `약 ${route.durationMinutes}분` : "-",
+            fareText: won(data.bundledPrice),
+            discountText: data.saving > 0 ? won(data.saving) : "절약 없음",
+            selected: Boolean(data.recommendBundle),
+          },
+        ],
+      };
+    }
+
     async function withButton(button, job) {
       button.disabled = true;
       try { await job(); }
@@ -2490,6 +2858,28 @@
     async function callPrice(button) {
       if (!validateQuickForm()) return;
       await withButton(button, async () => {
+        if (isSmartDelivery()) {
+          const quoteResult = await api("/api/smart-delivery/quote", {
+            method: "POST",
+            body: JSON.stringify(smartQuotePayload()),
+          });
+          const quote = quoteResult.data;
+          showResult("스마트 딜리버리 비교 견적", formatSmartQuoteResult(quote));
+          byId("reviewPrice").textContent = won(quote.bundledPrice);
+          byId("reviewRoute").textContent = [
+            `픽업 ${quote.pickupRoute.join(" → ")}`,
+            `배송 ${quote.dropoffRoute.join(" → ")}`,
+          ].join(" / ");
+          byId("quoteStatus").textContent = quote.routeInfo?.durationMinutes
+            ? `약 ${quote.routeInfo.durationMinutes}분 · ${
+                quote.saving > 0 ? won(quote.saving) + " 절약" : "가격 비교 완료"
+              }`
+            : "비교 견적 확인 완료";
+          byId("quoteStatus").classList.add("ready");
+          quoteReady = true;
+          byId("orderButton").disabled = false;
+          return;
+        }
         const requestDraft = draft();
         const priceResult = await api("/api/deliveries/price", {method: "POST", body: JSON.stringify(requestDraft)});
         let estimateResult = null;
@@ -2539,10 +2929,31 @@
       }
 
       await withButton(button, async () => {
-        const result = await api("/api/orders", {method: "POST", body: JSON.stringify(draft())});
-        const id = result.data.partnerOrderId || result.data.order?.partnerOrderId;
+        let result;
+        let id;
+        if (isSmartDelivery()) {
+          smartOrderKey ||= `smart-web-${crypto.randomUUID().replaceAll("-", "")}`;
+          result = await api("/api/smart-delivery/orders", {
+            method: "POST",
+            headers: {"Idempotency-Key": smartOrderKey},
+            body: JSON.stringify(smartOrderPayload()),
+          });
+          const orderResult = result.data.orderResult || {};
+          id = orderResult.partnerOrderId || orderResult.order?.partnerOrderId;
+        } else {
+          result = await api("/api/orders", {
+            method: "POST",
+            body: JSON.stringify(draft()),
+          });
+          id = result.data.partnerOrderId || result.data.order?.partnerOrderId;
+        }
         if (id) byId("trackingId").value = id;
-        showResult("주문 접수 결과", result.data);
+        showResult(
+          isSmartDelivery()
+            ? "스마트 딜리버리 접수 결과"
+            : "주문 접수 결과",
+          result.data
+        );
         await loadOrders();
       });
     }
@@ -2883,7 +3294,7 @@
         openAuthModal();
       }
       if (location.hash === "#smartDelivery") {
-        setActiveNav("bundle");
+        openSmartDelivery();
       }
       if (location.hash === "#history") {
         setActiveNav("history");
@@ -2920,6 +3331,10 @@
         if (id === "wishTime") updateDistance();
       });
     });
+    byId("addSmartPickup").addEventListener("click", addSmartPickup);
+    byId("addSmartDropoff").addEventListener("click", addSmartDropoff);
+    byId("primaryDropoffPickup").addEventListener("change", handleQuickFormChange);
+    syncDeliveryMode();
     syncQuickReview();
     updateDistance();
     initialize();

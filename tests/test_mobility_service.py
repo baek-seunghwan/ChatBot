@@ -208,19 +208,22 @@ class MobilityApiTests(unittest.TestCase):
     def test_smart_delivery_is_integrated_into_home(self) -> None:
         home = self.client.get("/")
         legacy = self.client.get("/bundle", follow_redirects=False)
-        embedded = self.client.get("/smart-delivery/form")
+        old_form = self.client.get("/smart-delivery/form", follow_redirects=False)
 
         self.assertEqual(home.status_code, 200)
-        self.assertIn('id="smartDelivery"', home.text)
-        self.assertIn('src="/smart-delivery/form"', home.text)
+        self.assertNotIn('src="/smart-delivery/form"', home.text)
+        self.assertIn('id="addSmartPickup"', home.text)
+        self.assertIn('id="addSmartDropoff"', home.text)
+        self.assertIn("function isSmartDelivery()", home.text)
+        self.assertIn("추가하는 즉시 스마트 딜리버리로 자동 전환", home.text)
         self.assertIn("스마트 딜리버리", home.text)
-        self.assertIn("대전", home.text)
         self.assertEqual(legacy.status_code, 307)
         self.assertEqual(legacy.headers["location"], "/#smartDelivery")
-        self.assertEqual(embedded.status_code, 200)
-        self.assertIn('<body class="embedded">', embedded.text)
-        self.assertIn("/api/smart-delivery/quote", embedded.text)
-        self.assertIn("/api/smart-delivery/orders", embedded.text)
+        self.assertEqual(old_form.status_code, 307)
+        self.assertEqual(old_form.headers["location"], "/#smartDelivery")
+        self.assertIn("/api/smart-delivery/quote", home.text)
+        self.assertIn("/api/smart-delivery/orders", home.text)
+        self.assertIn("grid-column: 1 / -1", home.text)
 
     def test_home_keeps_chat_shortcuts_and_use_history(self) -> None:
         home = self.client.get("/")
@@ -231,12 +234,12 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("배송 상태", home.text)
         self.assertIn("서비스 안내", home.text)
         self.assertIn("<h2>이용 내역</h2>", home.text)
-        self.assertIn("movb:smart-delivery-height", home.text)
+        self.assertIn('id="smartPickupList"', home.text)
+        self.assertIn('id="smartDropoffList"', home.text)
 
     def test_customer_pages_use_the_exact_same_shared_header(self) -> None:
         pages = [
             self.client.get("/"),
-            self.client.get("/smart-delivery/form"),
             self.client.get("/features"),
         ]
         headers: list[str] = []
@@ -252,7 +255,6 @@ class MobilityApiTests(unittest.TestCase):
             headers.append(match.group(0))
 
         self.assertEqual(headers[0], headers[1])
-        self.assertEqual(headers[1], headers[2])
         self.assertIn("Mobility AI", headers[0])
         self.assertNotIn("일반 퀵 접수", headers[0])
         self.assertIn("이용 내역", headers[0])
@@ -294,10 +296,9 @@ class MobilityApiTests(unittest.TestCase):
 
     def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
         home = self.client.get("/")
-        bundle = self.client.get("/smart-delivery/form")
         features = self.client.get("/features")
 
-        for response in (home, bundle, features):
+        for response in (home, features):
             self.assertEqual(response.status_code, 200)
             self.assertIn("system-ui, -apple-system", response.text)
             self.assertIn("focus-visible", response.text)
@@ -305,8 +306,6 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("min-height: 44px", home.text)
         self.assertIn("font-size: 16px", home.text)
         self.assertIn("color: #707070", home.text)
-        self.assertIn("min-height: 44px", bundle.text)
-        self.assertIn("--muted: #666", bundle.text)
 
     def test_local_chat_uses_selected_own_engine(self) -> None:
         with patch(

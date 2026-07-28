@@ -157,8 +157,8 @@ def site_header(active: str = "bundle") -> str:
   <nav class="movb-primary-nav" aria-label="주요 메뉴">
     <a class="movb-nav-item{active_class("bundle")}" data-nav="bundle"
       href="/#smartDelivery"
-      onclick="if (typeof goToSection === 'function') {{
-        event.preventDefault(); goToSection('smartDelivery', 'bundle');
+      onclick="if (typeof openSmartDelivery === 'function') {{
+        event.preventDefault(); openSmartDelivery();
       }}">스마트 딜리버리</a>
     <a class="movb-nav-item{active_class("history")}" data-nav="history"
       href="/#history"
