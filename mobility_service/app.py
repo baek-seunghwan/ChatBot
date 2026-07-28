@@ -20,7 +20,7 @@ from fastapi import (
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from .agent import DeliveryAgent
-from .bundle import bundle_quote
+from .bundle import bundle_quote, prepare_bundle_order
 from .client import KakaoApiError, KakaoMobilityClient
 from .config import Settings
 from .conversation_store import ConversationStore
@@ -31,10 +31,9 @@ from .local_responder import local_model_reply, ollama_status
 from .models import (
     AgentChatRequest,
     ApiEnvelope,
+    BundleOrderRequest,
     BundleQuoteRequest,
     CallbackBody,
-    CarpoolBookingRequest,
-    CarpoolPlanRequest,
     CreateDeliveryRequest,
     DeliveryDraft,
     LoginRequest,
@@ -42,17 +41,15 @@ from .models import (
     RouteSummaryRequest,
     SandboxStatusChange,
 )
-from .rideshare import carpool_plan
 from .orders import (
     cancel_order_by_id,
     get_order_status,
     get_order_steps,
     place_order,
 )
-from .pool_store import PoolStore
 from .store import MobilityStore
 from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
-from .web import ADMIN_HTML, FEATURES_HTML, INDEX_HTML, TAXI_HTML
+from .web import ADMIN_HTML, BUNDLE_HTML, FEATURES_HTML, INDEX_HTML
 
 
 SESSION_COOKIE_NAME = "movb_session"
@@ -67,7 +64,6 @@ def create_app(
     directions: KakaoDirectionsClient | None = None,
     conversations: ConversationStore | None = None,
     agent: DeliveryAgent | None = None,
-    pool_store: PoolStore | None = None,
     user_store: UserStore | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings.from_env()
@@ -77,7 +73,6 @@ def create_app(
     resolved_directions = directions or KakaoDirectionsClient(resolved_settings)
     resolved_routes = RoutePlanner(resolved_directions)
     resolved_conversations = conversations or ConversationStore(resolved_settings.database_path)
-    resolved_pools = pool_store or PoolStore(resolved_settings.database_path)
     resolved_users = user_store or UserStore(resolved_settings.database_path)
     resolved_knowledge = default_knowledge_base()
     if resolved_settings.admin_configured:
@@ -87,8 +82,7 @@ def create_app(
         )
     resolved_agent = agent or DeliveryAgent(
         resolved_client, resolved_geocoder, resolved_store, resolved_conversations,
-        pools=resolved_pools, knowledge_base=resolved_knowledge,
-        route_planner=resolved_routes,
+        knowledge_base=resolved_knowledge, route_planner=resolved_routes,
     )
     owns_client = client is None
     owns_geocoder = geocoder is None
@@ -171,9 +165,9 @@ def create_app(
     async def index() -> str:
         return INDEX_HTML
 
-    @application.get("/taxi", response_class=HTMLResponse, include_in_schema=False)
-    async def taxi_page() -> str:
-        return TAXI_HTML
+    @application.get("/bundle", response_class=HTMLResponse, include_in_schema=False)
+    async def bundle_page() -> str:
+        return BUNDLE_HTML
 
     @application.get("/features", response_class=HTMLResponse, include_in_schema=False)
     async def features_page() -> str:
@@ -323,7 +317,6 @@ def create_app(
             data={
                 "users": resolved_users.user_counts(),
                 "orders": resolved_store.order_counts(),
-                "openPoolRequests": len(resolved_pools.list_open()),
             }
         )
 
@@ -541,97 +534,43 @@ def create_app(
             raise HTTPException(status_code=422, detail=str(exc))
         return ApiEnvelope(data=result)
 
-    async def build_carpool_plan(
-        request: CarpoolPlanRequest, *, departure_time: str | None = None
-    ) -> dict[str, Any]:
-        origin = await resolved_geocoder.search_address(request.origin_address)
-        if origin is None:
-            raise HTTPException(
-                status_code=422, detail=f"출발지 주소를 찾지 못했습니다: {request.origin_address}"
-            )
-        passengers = []
-        for passenger in request.passengers:
-            location = await resolved_geocoder.search_address(passenger.address)
-            if location is None:
-                raise HTTPException(
-                    status_code=422, detail=f"목적지 주소를 찾지 못했습니다: {passenger.address}"
-                )
-            passengers.append({"name": passenger.name, "location": location})
+    @application.post(
+        "/api/bundle/orders",
+        response_model=ApiEnvelope,
+        status_code=201,
+    )
+    async def create_bundle_order(
+        request: BundleOrderRequest,
+        idempotency_key: str | None = Header(
+            default=None, alias="Idempotency-Key", max_length=100
+        ),
+    ) -> ApiEnvelope:
+        partner_order_id = (
+            request.partner_order_id
+            or idempotency_key
+            or f"bundle-{uuid4().hex[:20]}"
+        )
         try:
-            plan = await carpool_plan(
-                origin,
-                passengers,
+            quote, order_request = await prepare_bundle_order(
+                resolved_client,
+                resolved_geocoder,
+                request,
+                partner_order_id,
                 route_planner=resolved_routes,
-                departure_time=departure_time,
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc))
-        return plan
-
-    @application.post("/api/carpool/plan", response_model=ApiEnvelope)
-    async def carpool_plan_route(request: CarpoolPlanRequest) -> ApiEnvelope:
+        result = await place_order(
+            resolved_client,
+            resolved_store,
+            order_request,
+            partner_order_id,
+        )
+        message = result.pop("message", None)
         return ApiEnvelope(
-            data=await build_carpool_plan(
-                request, departure_time=request.departure_at
-            )
+            data={"quote": quote, "orderResult": result},
+            message=message or "묶음퀵 Sandbox 주문이 접수되었습니다.",
         )
-
-    @application.post("/api/carpool/requests", response_model=ApiEnvelope)
-    async def create_carpool_request(
-        request: CarpoolBookingRequest,
-    ) -> ApiEnvelope:
-        plan = await build_carpool_plan(
-            request,
-            departure_time=(
-                request.departure_at if request.departure_mode == "scheduled" else None
-            ),
-        )
-        saved = resolved_store.create_taxi_request(
-            request.model_dump(mode="json", by_alias=True), plan
-        )
-        return ApiEnvelope(
-            data=saved,
-            message=(
-                "택시 합승 접수가 저장되었습니다. "
-                "현재는 실제 택시 배차가 아닌 경로·요금 접수 기능입니다."
-            ),
-        )
-
-    @application.get("/api/carpool/requests/{request_id}", response_model=ApiEnvelope)
-    async def get_carpool_request(request_id: str) -> ApiEnvelope:
-        saved = resolved_store.get_taxi_request(request_id)
-        if saved is None:
-            raise HTTPException(status_code=404, detail="택시 합승 접수를 찾지 못했습니다.")
-        return ApiEnvelope(data=saved)
-
-    @application.get("/api/pool/requests", response_model=ApiEnvelope)
-    async def list_pool_requests() -> ApiEnvelope:
-        """합승 대기 보드: 진행 중인 합승 요청 목록 (개인정보 제외 요약)."""
-        board = [
-            {
-                "id": request["id"],
-                "pickupAddress": request["pickup"]["address"],
-                "dropoffAddress": request["dropoff"]["address"],
-                "productName": request["product"].get("productName", "물품"),
-                "soloPrice": request["soloPrice"],
-                "createdAt": request["createdAt"],
-            }
-            for request in resolved_pools.list_open()
-        ]
-        return ApiEnvelope(data=board)
-
-    @application.delete("/api/pool/requests/{request_id}", response_model=ApiEnvelope)
-    async def cancel_pool_request(
-        request_id: int,
-        x_session_id: str | None = Header(default=None, alias="X-Session-Id"),
-    ) -> ApiEnvelope:
-        if not x_session_id:
-            raise HTTPException(status_code=422, detail="X-Session-Id 헤더가 필요합니다.")
-        if not resolved_pools.cancel_request(request_id, x_session_id):
-            raise HTTPException(
-                status_code=404, detail="취소할 수 있는 합승 요청을 찾지 못했습니다."
-            )
-        return ApiEnvelope(data={"canceled": request_id})
 
     return application
 

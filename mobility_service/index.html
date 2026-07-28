@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MOVB 택시·퀵</title>
+  <title>MOVB 묶음퀵</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23fff'/%3E%3Cpath%20d='M16%2046V18l16%2018%2016-18v28'%20fill='none'%20stroke='%2310254d'%20stroke-width='10'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Crect%20x='22'%20y='53'%20width='20'%20height='6'%20rx='3'%20fill='%23ffcc00'/%3E%3C/svg%3E">
   <style>
     :root {
@@ -1345,10 +1345,9 @@
       </div>
     </a>
     <nav class="primary-nav" aria-label="주요 메뉴">
-      <a class="nav-item" href="/features">기능 소개</a>
-      <button type="button" class="nav-item" data-nav="taxi" onclick="startTaxiRequest()">택시 접수하기</button>
-      <button type="button" class="nav-item active" data-nav="quick" onclick="goToSection('quickRequest', 'quick')">퀵 배송</button>
-      <button type="button" class="nav-item" data-nav="history" onclick="goToSection('history', 'history')">주문 조회</button>
+      <a class="nav-item active" href="/bundle">묶음퀵 접수하기</a>
+      <button type="button" class="nav-item" data-nav="quick" onclick="goToSection('quickRequest', 'quick')">일반 퀵 접수</button>
+      <button type="button" class="nav-item" data-nav="history" onclick="goToSection('history', 'history')">이용 내역</button>
     </nav>
     <button type="button" class="login-button" id="loginButton" onclick="openAuthModal()">로그인</button>
     <span class="visually-hidden" id="status" aria-live="polite">연동 상태 확인 중</span>
@@ -1359,7 +1358,7 @@
       <div class="auth-head">
         <div>
           <h2 id="authTitle">MOVB 로그인</h2>
-          <p>택시·퀵 접수 내역을 한 곳에서 관리하세요.</p>
+          <p>묶음퀵과 일반 퀵 접수 내역을 한 곳에서 관리하세요.</p>
         </div>
         <button type="button" class="auth-close" onclick="closeAuthModal()" aria-label="로그인 창 닫기">✕</button>
       </div>
@@ -1581,18 +1580,12 @@
         <div class="order-list" id="orderList"><div class="empty">주문을 불러오는 중입니다.</div></div>
       </details>
 
-      <details class="history-group">
-        <summary>퀵 합승 대기</summary>
-        <p class="description">같은 방향의 배송을 묶어 비용을 나눠요.</p>
-        <div class="order-list" id="poolList"><div class="empty">합승 대기 건을 불러오는 중입니다.</div></div>
-        <div class="actions">
-          <button class="secondary" onclick="startPoolChat()">채팅으로 신청</button>
-          <button class="secondary" onclick="loadPoolBoard()">새로고침</button>
-        </div>
-      </details>
     </aside>
   </main>
-  <footer>모브 (MOVB) · Kakao Mobility Sandbox 연동</footer>
+  <footer>
+    모브 (MOVB) · Kakao Mobility Sandbox 연동 ·
+    <a href="/features">묶음퀵 기능 소개</a>
+  </footer>
 
   <button class="chat-fab" id="chatFab" onclick="toggleChat()" aria-label="채팅 열기">
     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1668,10 +1661,6 @@
       input.focus();
     }
 
-    function startTaxiRequest() {
-      location.href = "/taxi";
-    }
-
     function selectQuickMode(mode) {
       document.querySelectorAll(".quick-option").forEach(button => {
         button.classList.toggle("active", button.dataset.quickMode === mode);
@@ -1680,8 +1669,7 @@
     }
 
     function startBundleRequest() {
-      selectQuickMode("bundle");
-      openChatWithPrompt("묶음 퀵 견적을 보고 싶어요. 판교역에서 정자역과 서현역으로 서류를 보내요.");
+      location.href = "/bundle";
     }
 
     let quoteReady = false;
@@ -2730,7 +2718,6 @@
           result.data?.reply || "응답을 받았지만 표시할 내용이 없어요."
         );
         appendChatActions(responseBubble, result.data?.actions);
-        loadPoolBoard();
         if (result.data?.order) loadOrders();
       } catch (error) {
         loading.remove();
@@ -2746,35 +2733,14 @@
     });
     updateOllamaUi();
 
-    async function loadPoolBoard() {
-      const list = byId("poolList");
-      try {
-        const result = await api("/api/pool/requests");
-        if (!result.data.length) {
-          list.innerHTML = '<div class="empty">지금 대기 중인 합승이 없어요. 첫 번째로 등록해보세요!</div>';
-          return;
-        }
-        list.innerHTML = result.data.map(request => `
-          <div class="order">
-            <div class="order-top">
-              <span class="order-id">${request.pickupAddress} → ${request.dropoffAddress}</span>
-              <span class="badge">대기중</span>
-            </div>
-            <time>${request.productName}${request.soloPrice ? " · 단독가 " + request.soloPrice.toLocaleString("ko-KR") + "원" : ""} · ${new Date(request.createdAt).toLocaleString("ko-KR")}</time>
-          </div>`).join("");
-      } catch (error) {
-        list.innerHTML = `<div class="empty error">${error.message}</div>`;
-      }
-    }
-
-    function startPoolChat() {
-      openChatWithPrompt("합승으로 싸게 보내고 싶어요. 강남역에서 대전 유성구로 서류, 보내는 사람 홍길동 010-1000-0001, 받는 사람 김철수 010-1000-0002");
-    }
-
     async function initialize() {
       await loadCurrentUser();
       await refreshOllamaStatus();
-      if (new URLSearchParams(location.search).get("admin") === "1") {
+      const query = new URLSearchParams(location.search);
+      if (query.get("login") === "1") {
+        openAuthModal();
+      }
+      if (query.get("admin") === "1") {
         if (currentUser?.role === "ADMIN") {
           location.replace("/admin");
           return;
@@ -2792,7 +2758,6 @@
         byId("mapMessage").textContent = "지도 설정을 확인하지 못했습니다.";
       }
       await loadOrders();
-      await loadPoolBoard();
     }
     const quickFormFields = [
       "orderType", "productSize", "fleet", "wishTime", "pickupAddress", "pickupDetailAddress",

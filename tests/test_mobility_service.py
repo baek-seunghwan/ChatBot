@@ -198,12 +198,10 @@ class MobilityApiTests(unittest.TestCase):
 
         self.assertEqual(home.status_code, 200)
         self.assertIn('href="/features"', home.text)
-        self.assertLess(
-            home.text.index('href="/features"'),
-            home.text.index("택시 접수하기"),
-        )
+        self.assertIn("묶음퀵 접수하기", home.text)
         self.assertEqual(features.status_code, 200)
-        self.assertIn("새로 추가한 기능은 두 가지입니다", features.text)
+        self.assertIn("한 번 픽업하고", features.text)
+        self.assertIn('href="/bundle"', features.text)
         self.assertIn("기능 소개", features.text)
 
     def test_home_has_ollama_toggle_for_local_chat(self) -> None:
@@ -242,10 +240,10 @@ class MobilityApiTests(unittest.TestCase):
 
     def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
         home = self.client.get("/")
-        taxi = self.client.get("/taxi")
+        bundle = self.client.get("/bundle")
         features = self.client.get("/features")
 
-        for response in (home, taxi, features):
+        for response in (home, bundle, features):
             self.assertEqual(response.status_code, 200)
             self.assertIn("system-ui, -apple-system", response.text)
             self.assertIn("focus-visible", response.text)
@@ -253,8 +251,8 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("min-height: 44px", home.text)
         self.assertIn("font-size: 16px", home.text)
         self.assertIn("color: #707070", home.text)
-        self.assertIn("min-height: 44px", taxi.text)
-        self.assertIn("color: #707070", taxi.text)
+        self.assertIn("min-height: 44px", bundle.text)
+        self.assertIn("--muted: #666", bundle.text)
 
     def test_local_chat_uses_selected_own_engine(self) -> None:
         with patch(

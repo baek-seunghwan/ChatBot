@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MOVB · 묶음퀵 접수</title>
+  <style>
+    :root {
+      --ink: #191919;
+      --muted: #666;
+      --line: #e7e7e7;
+      --surface: #fff;
+      --soft: #f7f8fa;
+      --brand: #ffd400;
+      --brand-strong: #f5c400;
+      --success: #08783e;
+      --danger: #c62828;
+      --shadow: 0 16px 40px rgba(0, 0, 0, .08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--soft);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        "Noto Sans KR", sans-serif;
+      line-height: 1.55;
+    }
+    button, input, select, textarea { font: inherit; }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    a { color: inherit; text-decoration: none; }
+    :focus-visible {
+      outline: 3px solid rgba(0, 114, 255, .28);
+      outline-offset: 2px;
+    }
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(255, 255, 255, .96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(12px);
+    }
+    .topbar-inner {
+      width: min(1180px, calc(100% - 32px));
+      min-height: 72px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+    .logo {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.04em;
+    }
+    .logo-mark {
+      display: inline-grid;
+      width: 34px;
+      height: 34px;
+      margin-right: 8px;
+      place-items: center;
+      border-radius: 11px;
+      background: var(--brand);
+    }
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav a {
+      min-height: 44px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      font-weight: 700;
+    }
+    .nav a.active { background: #fff5bd; }
+    .nav a:hover { background: var(--soft); }
+    .login-link { margin-left: auto; font-weight: 700; }
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 34px auto 80px;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: 1.4fr .8fr;
+      gap: 24px;
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+    .hero-copy, .hero-guide {
+      padding: 30px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .eyebrow {
+      display: inline-flex;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: #fff4a8;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    h1 {
+      margin: 14px 0 10px;
+      font-size: clamp(30px, 4vw, 48px);
+      line-height: 1.15;
+      letter-spacing: -.045em;
+    }
+    .hero p { margin: 0; color: var(--muted); font-size: 17px; }
+    .hero-guide h2 { margin: 0 0 14px; font-size: 18px; }
+    .steps { display: grid; gap: 12px; }
+    .step { display: flex; gap: 12px; align-items: flex-start; }
+    .step b {
+      display: grid;
+      flex: 0 0 28px;
+      height: 28px;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--brand);
+      font-size: 13px;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 380px;
+      gap: 24px;
+      align-items: start;
+    }
+    .card {
+      padding: 26px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .form-card { display: grid; gap: 26px; }
+    .section {
+      padding-bottom: 26px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section:last-child { padding-bottom: 0; border-bottom: 0; }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+    .section h2 { margin: 0; font-size: 20px; }
+    .section-note { margin: 4px 0 0; color: var(--muted); font-size: 14px; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .field { display: grid; gap: 7px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-size: 14px; font-weight: 750; }
+    .required::after { content: " *"; color: var(--danger); }
+    input, select, textarea {
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 13px;
+      border: 1px solid #cfcfcf;
+      border-radius: 11px;
+      color: var(--ink);
+      background: #fff;
+    }
+    textarea { min-height: 82px; resize: vertical; }
+    input:focus, select:focus, textarea:focus {
+      border-color: #777;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(0, 0, 0, .06);
+    }
+    .address-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .button {
+      min-height: 48px;
+      padding: 11px 18px;
+      border: 0;
+      border-radius: 12px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    .button:disabled { cursor: not-allowed; opacity: .48; }
+    .button.primary { background: var(--brand); color: #111; }
+    .button.primary:hover:not(:disabled) { background: var(--brand-strong); }
+    .button.secondary { background: #222; color: #fff; }
+    .button.ghost { border: 1px solid var(--line); background: #fff; }
+    .button.danger { background: #fff0f0; color: var(--danger); }
+    .dropoffs { display: grid; gap: 14px; }
+    .dropoff {
+      position: relative;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fbfbfc;
+    }
+    .dropoff-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .dropoff-title h3 { margin: 0; font-size: 16px; }
+    .remove-button {
+      border: 0;
+      color: var(--danger);
+      background: transparent;
+      font-weight: 750;
+      cursor: pointer;
+    }
+    .summary-card {
+      position: sticky;
+      top: 96px;
+      display: grid;
+      gap: 18px;
+    }
+    .summary-card h2 { margin: 0; font-size: 20px; }
+    .empty {
+      padding: 22px 16px;
+      border-radius: 14px;
+      color: var(--muted);
+      background: var(--soft);
+      text-align: center;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .metric {
+      padding: 14px;
+      border-radius: 14px;
+      background: var(--soft);
+    }
+    .metric span { display: block; color: var(--muted); font-size: 12px; }
+    .metric strong { display: block; margin-top: 4px; font-size: 20px; }
+    .metric.saving { grid-column: 1 / -1; background: #eaf8f0; color: var(--success); }
+    .route {
+      margin: 0;
+      padding: 15px;
+      border-radius: 14px;
+      background: #fff9dc;
+      white-space: pre-wrap;
+    }
+    .individual-list { display: grid; gap: 8px; }
+    .individual-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 14px;
+    }
+    .check {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      padding: 14px;
+      border-radius: 12px;
+      background: var(--soft);
+    }
+    .check input { width: 20px; min-height: 20px; margin: 2px 0 0; }
+    .actions { display: grid; gap: 10px; }
+    .status {
+      display: none;
+      padding: 14px;
+      border-radius: 12px;
+      white-space: pre-wrap;
+    }
+    .status.show { display: block; }
+    .status.error { background: #fff0f0; color: #9d1d1d; }
+    .status.success { background: #eaf8f0; color: #075d33; }
+    .receipt {
+      display: none;
+      padding: 18px;
+      border: 1px solid #b8e1ca;
+      border-radius: 16px;
+      background: #f2fbf6;
+    }
+    .receipt.show { display: grid; gap: 10px; }
+    .receipt h3 { margin: 0; }
+    .receipt dl {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 12px;
+      margin: 0;
+      font-size: 14px;
+    }
+    .receipt dt { color: var(--muted); }
+    .receipt dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
+    .small { color: var(--muted); font-size: 13px; }
+    @media (max-width: 900px) {
+      .hero, .layout { grid-template-columns: 1fr; }
+      .summary-card { position: static; }
+    }
+    @media (max-width: 640px) {
+      .topbar-inner { gap: 12px; min-height: 64px; }
+      .nav a { display: none; }
+      .nav a.active { display: inline-flex; align-items: center; }
+      .login-link { font-size: 14px; }
+      main { width: min(100% - 20px, 1180px); margin-top: 18px; }
+      .hero { display: block; }
+      .hero-copy { padding: 22px; }
+      .hero-guide { display: none; }
+      .card { padding: 18px; border-radius: 18px; }
+      .grid-2 { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: 1fr; }
+      .metric.saving { grid-column: auto; }
+      .address-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="logo" href="/"><span class="logo-mark">M</span>MOVB</a>
+      <nav class="nav" aria-label="주요 메뉴">
+        <a class="active" href="/bundle">묶음퀵 접수하기</a>
+        <a href="/#history">이용 내역</a>
+      </nav>
+      <a class="login-link" href="/?login=1">로그인</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <span class="eyebrow">목적지 2곳부터 시작 · 최대 5곳</span>
+        <h1>따로 보낼지, 묶어서 보낼지<br>가격부터 비교하세요.</h1>
+        <p>
+          도착지 2~5곳의 개별 요금과 묶음 요금을 비교하고,
+          추천 경유 순서를 확인한 뒤 한 번의 Sandbox 주문으로 접수합니다.
+        </p>
+      </div>
+      <aside class="hero-guide" aria-label="묶음퀵 접수 단계">
+        <h2>접수 순서</h2>
+        <div class="steps">
+          <div class="step"><b>1</b><span>출발지와 도착지를 입력합니다.</span></div>
+          <div class="step"><b>2</b><span>개별·묶음 견적과 경로를 비교합니다.</span></div>
+          <div class="step"><b>3</b><span>연락처와 주문 내용을 확인합니다.</span></div>
+          <div class="step"><b>4</b><span>명시적으로 동의한 뒤 접수합니다.</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="layout">
+      <form id="bundleForm" class="card form-card">
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h2>1. 보내는 곳</h2>
+              <p class="section-note">모든 물품이 출발하는 공통 출발지입니다.</p>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field full">
+              <label class="required" for="pickupAddress">출발지 주소</label>
+              <div class="address-row">
+                <input id="pickupAddress" required maxlength="200"
+                  placeholder="예: 경기도 성남시 분당구 판교역로 152">
+                <button type="button" class="button ghost"
+                  onclick="searchAddress('pickupAddress')">주소 검색</button>
+              </div>
+            </div>
+            <div class="field">
+              <label class="required" for="pickupName">보내는 분</label>
+              <input id="pickupName" required maxlength="50" placeholder="이름">
+            </div>
+            <div class="field">
+              <label class="required" for="pickupPhone">연락처</label>
+              <input id="pickupPhone" required maxlength="20"
+                inputmode="tel" placeholder="010-1234-5678">
+            </div>
+            <div class="field full">
+              <label for="pickupNote">픽업 요청사항</label>
+              <textarea id="pickupNote" maxlength="500"
+                placeholder="예: 1층 안내데스크에 맡겨주세요."></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h2>2. 받는 곳</h2>
+              <p class="section-note">2곳부터 최대 5곳까지 추가할 수 있습니다.</p>
+            </div>
+            <button type="button" id="addDropoff" class="button ghost">
+              + 도착지 추가
+            </button>
+          </div>
+          <div id="dropoffs" class="dropoffs"></div>
+        </section>
+
+        <section class="section">
+          <div class="section-head">
+            <div>
+              <h2>3. 물품 정보</h2>
+              <p class="section-note">묶음 주문 전체에 적용되는 정보입니다.</p>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="field">
+              <label class="required" for="productName">물품명</label>
+              <input id="productName" required maxlength="100"
+                value="서류" placeholder="예: 계약 서류">
+            </div>
+            <div class="field">
+              <label class="required" for="productSize">물품 크기</label>
+              <select id="productSize" required>
+                <option value="XS">XS · 소형</option>
+                <option value="S">S · 중소형</option>
+                <option value="M">M · 중형</option>
+                <option value="L">L · 대형</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="quantity">수량 설명</label>
+              <input id="quantity" maxlength="20" value="1"
+                placeholder="예: 3박스">
+            </div>
+            <div class="field">
+              <label for="declaredValue">신고 금액</label>
+              <input id="declaredValue" type="number" min="0"
+                placeholder="선택 입력">
+            </div>
+            <div class="field full">
+              <label for="fleet">차량 선택</label>
+              <select id="fleet">
+                <option value="">자동 추천</option>
+                <option value="MOTORCYCLE">오토바이</option>
+                <option value="DAMAS">다마스</option>
+                <option value="LABO">라보</option>
+                <option value="TON">1톤</option>
+              </select>
+              <span class="small">대형(L)은 차량을 반드시 선택해야 합니다.</span>
+            </div>
+          </div>
+        </section>
+      </form>
+
+      <aside class="card summary-card" aria-live="polite">
+        <h2>견적 및 접수</h2>
+        <div id="quoteEmpty" class="empty">
+          주소를 입력하고 견적을 확인해주세요.
+        </div>
+        <div id="quoteResult" hidden>
+          <div class="metrics">
+            <div class="metric">
+              <span>각각 보낼 때</span>
+              <strong id="individualTotal">-</strong>
+            </div>
+            <div class="metric">
+              <span>묶어서 보낼 때</span>
+              <strong id="bundledPrice">-</strong>
+            </div>
+            <div class="metric saving">
+              <span>예상 절약액</span>
+              <strong id="saving">-</strong>
+            </div>
+          </div>
+          <p id="routeText" class="route"></p>
+          <div id="individualList" class="individual-list"></div>
+          <p id="routeMeta" class="small"></p>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="quoteButton" class="button secondary">
+            비교 견적 확인하기
+          </button>
+          <label class="check">
+            <input id="confirmOrder" type="checkbox">
+            <span>
+              추천 경유 순서, 예상 요금과 입력한 연락처를 확인했습니다.
+              Sandbox 주문 접수에 동의합니다.
+            </span>
+          </label>
+          <button type="button" id="orderButton" class="button primary" disabled>
+            묶음퀵 접수하기
+          </button>
+        </div>
+
+        <div id="status" class="status" role="status"></div>
+        <div id="receipt" class="receipt">
+          <h3>묶음퀵 접수가 완료됐어요.</h3>
+          <dl>
+            <dt>주문번호</dt><dd id="receiptId"></dd>
+            <dt>상태</dt><dd id="receiptStatus"></dd>
+          </dl>
+          <div class="actions">
+            <button type="button" id="refreshButton" class="button ghost">
+              주문 상태 새로고침
+            </button>
+            <button type="button" id="cancelButton" class="button danger">
+              주문 취소
+            </button>
+          </div>
+        </div>
+        <p class="small">
+          현재는 카카오모빌리티 Sandbox 환경입니다. 실제 결제와 기사 배정은
+          발생하지 않습니다.
+        </p>
+      </aside>
+    </div>
+  </main>
+
+  <script src="https://t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+  <script>
+    const byId = (id) => document.getElementById(id);
+    const dropoffs = byId("dropoffs");
+    let dropoffSequence = 0;
+    let latestQuote = null;
+    let latestOrderId = null;
+    let idempotencyKey = null;
+
+    function won(value) {
+      return `${Number(value || 0).toLocaleString("ko-KR")}원`;
+    }
+
+    function setStatus(message, type = "") {
+      const node = byId("status");
+      node.textContent = message;
+      node.className = `status show ${type}`.trim();
+    }
+
+    function clearStatus() {
+      byId("status").className = "status";
+      byId("status").textContent = "";
+    }
+
+    function invalidateQuote() {
+      latestQuote = null;
+      idempotencyKey = null;
+      byId("quoteEmpty").hidden = false;
+      byId("quoteResult").hidden = true;
+      byId("confirmOrder").checked = false;
+      byId("orderButton").disabled = true;
+      byId("receipt").classList.remove("show");
+      clearStatus();
+    }
+
+    function updateDropoffLabels() {
+      [...dropoffs.querySelectorAll(".dropoff")].forEach((node, index) => {
+        node.querySelector(".dropoff-number").textContent = `도착지 ${index + 1}`;
+        const remove = node.querySelector(".remove-button");
+        remove.hidden = dropoffs.children.length <= 2;
+      });
+      byId("addDropoff").disabled = dropoffs.children.length >= 5;
+    }
+
+    function createDropoff() {
+      if (dropoffs.children.length >= 5) return;
+      dropoffSequence += 1;
+      const id = dropoffSequence;
+      const node = document.createElement("article");
+      node.className = "dropoff";
+      node.dataset.dropoffId = String(id);
+      node.innerHTML = `
+        <div class="dropoff-title">
+          <h3 class="dropoff-number"></h3>
+          <button type="button" class="remove-button">삭제</button>
+        </div>
+        <div class="grid-2">
+          <div class="field full">
+            <label class="required" for="dropoffAddress${id}">도착지 주소</label>
+            <div class="address-row">
+              <input id="dropoffAddress${id}" data-field="address" required
+                maxlength="200" placeholder="받는 곳 주소">
+              <button type="button" class="button ghost address-search">주소 검색</button>
+            </div>
+          </div>
+          <div class="field">
+            <label class="required" for="dropoffName${id}">받는 분</label>
+            <input id="dropoffName${id}" data-field="name" required maxlength="50"
+              placeholder="이름">
+          </div>
+          <div class="field">
+            <label class="required" for="dropoffPhone${id}">연락처</label>
+            <input id="dropoffPhone${id}" data-field="phone" required maxlength="20"
+              inputmode="tel" placeholder="010-1234-5678">
+          </div>
+          <div class="field full">
+            <label for="dropoffNote${id}">전달 요청사항</label>
+            <textarea id="dropoffNote${id}" data-field="note" maxlength="500"
+              placeholder="예: 도착 전 연락해주세요."></textarea>
+          </div>
+        </div>
+      `;
+      node.querySelector(".remove-button").addEventListener("click", () => {
+        node.remove();
+        updateDropoffLabels();
+        invalidateQuote();
+      });
+      node.querySelector(".address-search").addEventListener("click", () => {
+        searchAddress(`dropoffAddress${id}`);
+      });
+      node.querySelectorAll("input, textarea").forEach((input) => {
+        input.addEventListener("input", invalidateQuote);
+      });
+      dropoffs.appendChild(node);
+      updateDropoffLabels();
+    }
+
+    function searchAddress(inputId) {
+      if (!window.daum?.Postcode) {
+        setStatus("주소 검색을 불러오지 못했습니다. 주소를 직접 입력해주세요.", "error");
+        return;
+      }
+      new daum.Postcode({
+        oncomplete(data) {
+          const value = data.roadAddress || data.jibunAddress || data.address;
+          byId(inputId).value = value;
+          byId(inputId).dispatchEvent(new Event("input", {bubbles: true}));
+          byId(inputId).focus();
+        }
+      }).open();
+    }
+
+    function dropoffValues() {
+      return [...dropoffs.querySelectorAll(".dropoff")].map((node) => ({
+        address: node.querySelector('[data-field="address"]').value.trim(),
+        contact: {
+          name: node.querySelector('[data-field="name"]').value.trim(),
+          phone: node.querySelector('[data-field="phone"]').value.trim(),
+        },
+        note: node.querySelector('[data-field="note"]').value.trim() || null,
+      }));
+    }
+
+    function validateForm() {
+      const form = byId("bundleForm");
+      if (!form.reportValidity()) return false;
+      if (dropoffs.children.length < 2) {
+        setStatus("도착지는 2곳 이상 입력해주세요.", "error");
+        return false;
+      }
+      if (byId("productSize").value === "L" && !byId("fleet").value) {
+        setStatus("대형(L) 물품은 차량을 선택해주세요.", "error");
+        byId("fleet").focus();
+        return false;
+      }
+      return true;
+    }
+
+    function quotePayload() {
+      return {
+        pickupAddress: byId("pickupAddress").value.trim(),
+        dropoffAddresses: dropoffValues().map((item) => item.address),
+        productSize: byId("productSize").value,
+      };
+    }
+
+    function orderPayload() {
+      const fleet = byId("fleet").value;
+      const declared = byId("declaredValue").value;
+      return {
+        pickupAddress: byId("pickupAddress").value.trim(),
+        pickupContact: {
+          name: byId("pickupName").value.trim(),
+          phone: byId("pickupPhone").value.trim(),
+        },
+        pickupNote: byId("pickupNote").value.trim() || null,
+        dropoffs: dropoffValues(),
+        productName: byId("productName").value.trim(),
+        productSize: byId("productSize").value,
+        quantity: byId("quantity").value.trim() || "1",
+        declaredValue: declared ? Number(declared) : null,
+        fleetOption: fleet ? {fleet, type: "REQUIRED"} : null,
+        consent: byId("confirmOrder").checked,
+      };
+    }
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {}),
+        },
+      });
+      let body;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+      if (!response.ok) {
+        const detail = body?.detail || body?.message || `HTTP ${response.status}`;
+        throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+      }
+      return body;
+    }
+
+    function renderQuote(data) {
+      latestQuote = data;
+      byId("quoteEmpty").hidden = true;
+      byId("quoteResult").hidden = false;
+      byId("individualTotal").textContent = won(data.individualTotal);
+      byId("bundledPrice").textContent = won(data.bundledPrice);
+      byId("saving").textContent = (
+        data.saving > 0 ? `${won(data.saving)} 절약` : "절약 없음"
+      );
+      byId("routeText").textContent = `추천 경유 순서\n${data.route.join(" → ")}`;
+      const route = data.routeInfo;
+      byId("routeMeta").textContent = route
+        ? `예상 ${route.distanceKm}km · 약 ${route.durationMinutes}분`
+        : "";
+      const list = byId("individualList");
+      list.replaceChildren();
+      data.individual.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "individual-row";
+        const address = document.createElement("span");
+        address.textContent = item.address;
+        const price = document.createElement("strong");
+        price.textContent = won(item.price);
+        row.append(address, price);
+        list.appendChild(row);
+      });
+      byId("orderButton").disabled = !byId("confirmOrder").checked;
+    }
+
+    async function loadQuote() {
+      if (!validateForm()) return;
+      const button = byId("quoteButton");
+      button.disabled = true;
+      setStatus("개별 요금과 묶음 경로를 계산하고 있습니다.");
+      try {
+        const response = await api("/api/bundle/quote", {
+          method: "POST",
+          body: JSON.stringify(quotePayload()),
+        });
+        renderQuote(response.data);
+        setStatus("최신 비교 견적을 확인했습니다.", "success");
+      } catch (error) {
+        setStatus(error.message, "error");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function createOrder() {
+      if (!latestQuote) {
+        setStatus("먼저 비교 견적을 확인해주세요.", "error");
+        return;
+      }
+      if (!validateForm() || !byId("confirmOrder").checked) {
+        setStatus("주문 내용을 확인하고 접수 동의에 체크해주세요.", "error");
+        return;
+      }
+      if (!idempotencyKey) {
+        idempotencyKey = `bundle-web-${crypto.randomUUID().replaceAll("-", "")}`;
+      }
+      const button = byId("orderButton");
+      button.disabled = true;
+      setStatus("서버에서 견적을 다시 확인하고 Sandbox 주문을 접수하고 있습니다.");
+      try {
+        const response = await api("/api/bundle/orders", {
+          method: "POST",
+          headers: {"Idempotency-Key": idempotencyKey},
+          body: JSON.stringify(orderPayload()),
+        });
+        const result = response.data.orderResult;
+        const order = result.order || {};
+        latestOrderId = result.partnerOrderId || order.partnerOrderId;
+        byId("receiptId").textContent = latestOrderId || "-";
+        byId("receiptStatus").textContent = order.status || "접수됨";
+        byId("receipt").classList.add("show");
+        setStatus(response.message || "묶음퀵 주문이 접수되었습니다.", "success");
+      } catch (error) {
+        setStatus(error.message, "error");
+        button.disabled = false;
+      }
+    }
+
+    async function refreshOrder() {
+      if (!latestOrderId) return;
+      try {
+        const response = await api(
+          `/api/orders/${encodeURIComponent(latestOrderId)}?refresh=true`
+        );
+        byId("receiptStatus").textContent = response.data.status;
+        setStatus("주문 상태를 새로고침했습니다.", "success");
+      } catch (error) {
+        setStatus(error.message, "error");
+      }
+    }
+
+    async function cancelOrder() {
+      if (!latestOrderId || !confirm("이 Sandbox 주문을 취소할까요?")) return;
+      try {
+        const response = await api(
+          `/api/orders/${encodeURIComponent(latestOrderId)}/cancel`,
+          {method: "PATCH"}
+        );
+        byId("receiptStatus").textContent = response.data.order.status;
+        byId("cancelButton").disabled = true;
+        setStatus("주문을 취소했습니다.", "success");
+      } catch (error) {
+        setStatus(error.message, "error");
+      }
+    }
+
+    byId("addDropoff").addEventListener("click", createDropoff);
+    byId("quoteButton").addEventListener("click", loadQuote);
+    byId("orderButton").addEventListener("click", createOrder);
+    byId("refreshButton").addEventListener("click", refreshOrder);
+    byId("cancelButton").addEventListener("click", cancelOrder);
+    byId("confirmOrder").addEventListener("change", () => {
+      byId("orderButton").disabled = !latestQuote || !byId("confirmOrder").checked;
+    });
+    byId("bundleForm").addEventListener("input", (event) => {
+      if (!event.target.closest(".dropoff")) invalidateQuote();
+    });
+    byId("bundleForm").addEventListener("change", invalidateQuote);
+
+    createDropoff();
+    createDropoff();
+  </script>
+</body>
+</html>
