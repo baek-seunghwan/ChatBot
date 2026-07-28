@@ -1559,7 +1559,8 @@
     .delivery-option-section,
     .product-section,
     .handling-section,
-    .driver-note-section {
+    .driver-note-section,
+    .payment-section {
       grid-column: 1 / -1;
     }
     .visually-hidden {
@@ -1873,6 +1874,97 @@
       gap: 7px;
       cursor: pointer;
     }
+    .payment-methods {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .payment-card {
+      display: flex;
+      min-width: 0;
+      align-items: flex-start;
+      gap: 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .payment-card.active {
+      border: 2px solid var(--navy);
+      padding: 11px;
+      background: #eef3fa;
+    }
+    .payment-card input { margin-top: 2px; }
+    input[type="checkbox"],
+    input[type="radio"] {
+      width: auto;
+      min-height: 0;
+      padding: 0;
+    }
+    .payment-card span { min-width: 0; }
+    .payment-card strong,
+    .payment-card small { display: block; }
+    .payment-card strong { color: var(--navy); font-size: 12px; }
+    .payment-card small {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 9.5px;
+      line-height: 1.4;
+    }
+    .payment-card.disabled {
+      opacity: .48;
+      cursor: not-allowed;
+    }
+    .payment-help {
+      margin: 10px 0 0;
+      border-left: 3px solid var(--yellow);
+      padding: 8px 10px;
+      background: #fff9da;
+      color: #665513;
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+    .quick-review .review-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .fare-current-title {
+      grid-column: 1 / -1;
+      margin: 0;
+      color: var(--navy);
+      font-size: 12px;
+    }
+    .fare-current-title + .fare-card { grid-column: 1 / -1; }
+    .fare-alternatives {
+      grid-column: 1 / -1;
+      margin-top: 4px;
+      border-top: 1px solid var(--line);
+      padding-top: 10px;
+    }
+    .fare-alternatives summary {
+      cursor: pointer;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .fare-alternative-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+    button.fare-card {
+      width: 100%;
+      color: var(--ink);
+      text-align: left;
+      box-shadow: none;
+    }
+    button.fare-card:hover {
+      transform: none;
+      border-color: var(--navy);
+      background: #f8faff;
+      box-shadow: none;
+    }
     button:focus-visible,
     a:focus-visible,
     input:focus-visible,
@@ -1996,11 +2088,14 @@
       .address-actions { justify-content: flex-start; }
       .address-pair,
       .product-options-grid,
-      .handling-grid { grid-template-columns: 1fr; }
+      .handling-grid,
+      .payment-methods,
+      .fare-alternative-grid { grid-template-columns: 1fr; }
       .vehicle-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .delivery-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .choice-card { min-height: 104px; }
       .pickup-time-field { grid-template-columns: 1fr; }
+      .quick-review .review-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
@@ -2058,14 +2153,14 @@
         <div>
           <span class="eyebrow">QUICK DELIVERY</span>
           <h1 id="quickTitle">퀵 배송 접수</h1>
-          <p class="description" id="quickDescription">필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
+          <p class="description" id="quickDescription">필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
         </div>
         <span class="quick-badge"><span></span><b id="quickBadgeText">안전한 테스트 접수</b></span>
       </div>
 
       <div class="form-flow-note">
         <b>한 화면에서 순서대로 입력해요.</b>
-        주소 정보 → 배송 수단 → 배송 옵션 → 물품 정보 → 물품 운반 → 기사님 전달사항 → 요금 확인
+        주소 정보 → 배송 수단 → 배송 옵션 → 물품 정보 → 물품 운반 → 기사님 전달사항 → 결제 방법 → 요금 확인
       </div>
 
       <div class="form-sections">
@@ -2294,6 +2389,30 @@
           </div>
           <textarea id="driverNote" maxlength="400" placeholder="기사님께 전달할 내용을 입력하세요. 예: 주차장 정문으로 와주세요"></textarea>
         </section>
+
+        <section class="form-section payment-section">
+          <div class="section-heading">
+            <h3><span class="section-number">7</span>결제 방법</h3>
+            <small>Sandbox에서는 실제 금액이 결제되지 않습니다.</small>
+          </div>
+          <div class="payment-methods">
+            <label class="payment-card active">
+              <input type="radio" name="paymentType" value="CARD" checked>
+              <span><strong>카드 선결제</strong><small>접수 금액을 등록 카드로 결제</small></span>
+            </label>
+            <label class="payment-card">
+              <input type="radio" name="paymentType" value="CASH_ON_PICKUP">
+              <span><strong>출발지 현금</strong><small>픽업할 때 현장 결제</small></span>
+            </label>
+            <label class="payment-card">
+              <input type="radio" name="paymentType" value="CASH_ON_DROPOFF">
+              <span><strong>도착지 현금</strong><small>배송 완료 시 현장 결제</small></span>
+            </label>
+          </div>
+          <p class="payment-help" id="paymentHelp">
+            실제 서비스에서는 등록 카드의 결제 확인 후 접수됩니다. 현재는 Sandbox라 결제 없이 주문 흐름만 시험합니다.
+          </p>
+        </section>
       </div>
 
       <div class="quick-review" id="quickReview">
@@ -2305,6 +2424,7 @@
         <div class="review-grid">
           <div class="review-item"><span>배송 상품</span><strong id="reviewService">퀵</strong></div>
           <div class="review-item"><span>물품</span><strong id="reviewProduct">입력 전</strong></div>
+          <div class="review-item"><span>결제</span><strong id="reviewPayment">카드 선결제</strong></div>
           <div class="review-item"><span>예상 요금</span><strong id="reviewPrice">조회 전</strong></div>
         </div>
       </div>
@@ -2535,6 +2655,41 @@
       }[value] || value;
     }
 
+    function paymentTypeValue() {
+      return document.querySelector('input[name="paymentType"]:checked')?.value || "CARD";
+    }
+
+    function paymentTypeLabel(value) {
+      return {
+        CARD: "카드 선결제",
+        CASH_ON_PICKUP: "출발지 현금",
+        CASH_ON_DROPOFF: "도착지 현금",
+      }[value] || value;
+    }
+
+    function syncPaymentUi() {
+      const cardOnly = isSmartDelivery() || byId("roundTrip").checked;
+      const radios = document.querySelectorAll('input[name="paymentType"]');
+      if (cardOnly) {
+        document.querySelector('input[name="paymentType"][value="CARD"]').checked = true;
+      }
+      radios.forEach(input => {
+        input.disabled = cardOnly && input.value !== "CARD";
+        input.closest(".payment-card").classList.toggle(
+          "disabled",
+          input.disabled
+        );
+        input.closest(".payment-card").classList.toggle(
+          "active",
+          input.checked
+        );
+      });
+      byId("paymentHelp").textContent = cardOnly
+        ? "경유지·왕복·스마트 딜리버리는 카드 선결제만 지원합니다. Sandbox에서는 실제 금액이 결제되지 않습니다."
+        : "실제 서비스에서는 선택한 방식으로 결제한 뒤 접수됩니다. 현재는 Sandbox라 결제 없이 주문 흐름만 시험합니다.";
+      byId("reviewPayment").textContent = paymentTypeLabel(paymentTypeValue());
+    }
+
     function handlingUnitPrice(value) {
       const fleet = byId("fleet").value;
       const prices = {
@@ -2546,7 +2701,8 @@
     }
 
     function updateHandlingUi() {
-      const eligible = ["DAMAS", "LABO", "TON"].includes(byId("fleet").value);
+      const eligible = byId("productSize").value === "L"
+        && ["DAMAS", "LABO", "TON"].includes(byId("fleet").value);
       document.querySelectorAll(
         'input[name="pickupHandling"], input[name="dropoffHandling"]'
       ).forEach(input => {
@@ -2560,7 +2716,7 @@
         ? total
           ? `선택한 운반 신청 예상 추가요금 ${won(total)} · 상차와 하차는 각각 계산됩니다.`
           : "운반을 신청하면 선택한 차량 기준 예상 추가요금을 안내해 드려요."
-        : "물품 운반 신청은 다마스·라보·1톤을 선택했을 때 이용할 수 있어요.";
+        : "물품 운반 신청은 물품 크기 L과 다마스·라보·1톤을 선택했을 때 이용할 수 있어요.";
     }
 
     function composeDriverNote(kind) {
@@ -2605,7 +2761,7 @@
         ? "추가된 보내는 사람과 받는 사람의 배송을 한 경로로 묶어 견적을 비교합니다."
         : autoMatch
           ? "내 주문과 방향이 비슷한 다른 사용자의 주문을 서버에서 찾아 한 번에 배송합니다."
-          : "필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.";
+          : "필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.";
       byId("quickBadgeText").textContent = smart
         ? `스마트 딜리버리 · ${1 + smartPickupNodes().length}명 → ${1 + smartDropoffNodes().length}명`
         : autoMatch ? "공동배송 자동 매칭" : "일반 퀵 바로 접수";
@@ -2629,6 +2785,7 @@
         ? "스마트 딜리버리 접수"
         : autoMatch ? "공동배송 매칭 접수" : "일반 퀵 바로 접수";
       updatePickupOwnerOptions();
+      syncPaymentUi();
       if (smart) setActiveNav("bundle");
     }
 
@@ -2844,6 +3001,7 @@
         byId("productName").value.trim() || "입력 전",
         handlingCount ? `운반 ${handlingCount}곳 신청` : "",
       ].filter(Boolean).join(" · ");
+      byId("reviewPayment").textContent = paymentTypeLabel(paymentTypeValue());
 
     }
 
@@ -3165,7 +3323,7 @@
         return;
       }
       const token = ++routeLookupToken;
-      byId("routeDistance").textContent = "· 카카오 실도로 경로를 계산하는 중입니다.";
+      byId("routeDistance").textContent = "· 🚗 자동차 실제 도로 경로를 계산하는 중입니다.";
       const payload = {
         origin: {basicAddress: "출발지", ...pickup},
         destination: byId("roundTrip").checked
@@ -3185,7 +3343,7 @@
         });
         if (token !== routeLookupToken) return;
         const route = result.data;
-        const source = route.actualRoadData ? "카카오 실도로" : "보정 거리";
+        const source = route.actualRoadData ? "🚗 자동차 실제 도로" : "예상 거리";
         const future = route.futureTrafficApplied ? " · 예약 교통량 반영" : "";
         byId("routeDistance").textContent =
           `· ${source} ${route.distanceKm}km · 약 ${route.durationMinutes}분${future}`;
@@ -3423,7 +3581,7 @@
             longitude: dropoff.longitude
           }
         },
-        paymentType: "CARD",
+        paymentType: paymentTypeValue(),
         waypoints: []
       };
       const fleet = byId("fleet").value;
@@ -3438,6 +3596,19 @@
       if (dropoffContact) payload.dropoff.contact = dropoffContact;
       payload.pickup.note = composeDriverNote("pickup");
       payload.dropoff.note = composeDriverNote("dropoff");
+      if (
+        payload.orderType === "QUICK"
+        && payload.productSize === "L"
+        && ["DAMAS", "LABO", "TON"].includes(fleet)
+      ) {
+        const loadingMethod = {
+          NONE: "USER",
+          TOGETHER: "TOGETHER",
+          ALONE: "PICKER",
+        };
+        payload.pickup.loadingMethod = loadingMethod[handlingChoice("pickupHandling")];
+        payload.dropoff.loadingMethod = loadingMethod[handlingChoice("dropoffHandling")];
+      }
       const productName = byId("productName").value.trim();
       if (productName) payload.productName = productName;
       const declaredRaw = byId("declaredValue").value.trim();
@@ -3551,7 +3722,19 @@
       catch { body = {message: await response.text()}; }
       if (!response.ok) {
         const detail = body.message || body.detail || `HTTP ${response.status}`;
-        throw new Error(typeof detail === "string" ? detail : JSON.stringify(detail));
+        const detailText = typeof detail === "string"
+          ? detail
+          : JSON.stringify(detail);
+        if (
+          (response.status === 400 || body.providerStatus === 400)
+          && path === "/api/orders"
+          && detailText.includes("잘못된 요청")
+        ) {
+          throw new Error(
+            "카카오 Sandbox가 접수 정보를 거절했습니다. 주소 검색으로 출발지·도착지를 다시 선택하고, 010-1000-XXXX 테스트 연락처와 물품 정보를 확인한 뒤 다시 시도해주세요."
+          );
+        }
+        throw new Error(detailText);
       }
       return body;
     }
@@ -3570,16 +3753,49 @@
           ? `<span class="result-chip">${value.highlightText}</span>`
           : `<span class="result-chip">${value.items.length}개 옵션</span>`;
         meta.innerHTML = `<span>요청 ID: <b>${requestId}</b></span>${extraChip}`;
-        grid.innerHTML = value.items.map(item => `
-          <article class="fare-card${item.selected ? " selected" : ""}">
-            ${item.selected ? '<span class="fare-tag">가격 조회 선택값</span>' : ""}
-            <h4 class="fare-title">${item.orderTypeLabel}<span>${item.fleetLabel}</span></h4>
-            <p class="fare-sub">${item.orderType} · ${item.fleet}</p>
-            <div class="fare-row"><span class="fare-label">예상 시간</span><span class="fare-value">${item.timeText}</span></div>
-            <div class="fare-row"><span class="fare-label">총 요금</span><span class="fare-value">${item.fareText}</span></div>
-            <div class="fare-row"><span class="fare-label">할인</span><span class="fare-value">${item.discountText}</span></div>
-          </article>
-        `).join("");
+        const fareContents = (item, badge = "") => `
+          ${badge ? `<span class="fare-tag">${badge}</span>` : ""}
+          <h4 class="fare-title">${item.orderTypeLabel}<span>${item.fleetLabel}</span></h4>
+          <p class="fare-sub">${item.orderType} · ${item.fleet}</p>
+          <div class="fare-row"><span class="fare-label">예상 시간</span><span class="fare-value">${item.timeText}</span></div>
+          <div class="fare-row"><span class="fare-label">총 요금</span><span class="fare-value">${item.fareText}</span></div>
+          <div class="fare-row"><span class="fare-label">할인</span><span class="fare-value">${item.discountText}</span></div>
+        `;
+        if (value.comparison) {
+          grid.innerHTML = value.items.map(item => `
+            <article class="fare-card${item.selected ? " selected" : ""}">
+              ${fareContents(item, item.selected ? "추천" : "")}
+            </article>
+          `).join("");
+        } else {
+          const current = value.items.find(item => item.selected) || value.items[0];
+          const alternatives = value.items.filter(item => item !== current);
+          grid.innerHTML = `
+            <p class="fare-current-title">현재 폼에서 선택한 조건의 견적입니다.</p>
+            <article class="fare-card selected">
+              ${fareContents(current, "현재 선택")}
+            </article>
+            ${alternatives.length ? `
+              <details class="fare-alternatives">
+                <summary>다른 배송 옵션 ${alternatives.length}개 비교·선택</summary>
+                <div class="fare-alternative-grid">
+                  ${alternatives.map(item => `
+                    <button type="button" class="fare-card"
+                      data-fare-order="${item.orderType}" data-fare-fleet="${item.fleet}">
+                      ${fareContents(item, "이 옵션으로 변경")}
+                    </button>
+                  `).join("")}
+                </div>
+              </details>
+            ` : ""}
+          `;
+          grid.querySelectorAll("[data-fare-order]").forEach(card => {
+            card.addEventListener("click", () => chooseFareOption(
+              card.dataset.fareOrder,
+              card.dataset.fareFleet
+            ));
+          });
+        }
         body.textContent = "";
         body.className = "result-body hidden";
       } else {
@@ -3587,6 +3803,17 @@
         body.className = error ? "result-body error" : "result-body";
       }
       byId("result").classList.add("visible");
+    }
+
+    function chooseFareOption(orderType, fleet) {
+      selectDeliveryOption(orderType);
+      selectFleet(fleet === "-" ? "" : fleet);
+      byId("result").classList.remove("visible");
+      byId("quoteButton").focus();
+      showResult(
+        "배송 옵션을 변경했어요",
+        `${orderTypeLabel(orderType)} · ${fleetLabel(fleet)}로 변경했습니다. 예상 시간·요금을 다시 확인해주세요.`
+      );
     }
 
     function secondsToKorean(seconds) {
@@ -3627,6 +3854,7 @@
       if (!rows.length) return JSON.stringify(data, null, 2);
       return {
         mode: "cards",
+        comparison: true,
         requestId: data.requestId || "-",
         items: rows
           .slice()
@@ -3644,7 +3872,12 @@
       };
     }
 
-    function formatPriceResult(priceData, estimateData, selectedOrderType) {
+    function formatPriceResult(
+      priceData,
+      estimateData,
+      selectedOrderType,
+      selectedFleet
+    ) {
       const rows = Array.isArray(estimateData?.lists) ? estimateData.lists : [];
       const selectedPrice = Number(priceData?.totalPrice ?? NaN);
       if (!rows.length) {
@@ -3652,7 +3885,7 @@
         return {
           mode: "cards",
           requestId: priceData?.requestId || "-",
-          highlightText: `선택 요금 ${won(selectedPrice)}`,
+          highlightText: `현재 견적 ${won(selectedPrice)}`,
           items: [{
             orderType: selectedOrderType,
             fleet: "-",
@@ -3666,22 +3899,27 @@
         };
       }
 
-      const pickIndex = rows.findIndex(item => {
+      const selectedRow = rows.find(item => {
         if (item.orderType !== selectedOrderType) return false;
+        const fleet = item.fleetOption?.fleet || item.fleet;
+        if (selectedFleet && fleet !== selectedFleet) return false;
         if (!Number.isFinite(selectedPrice)) return true;
         return Number(item.totalFareAmount) === selectedPrice;
-      });
+      }) || rows.find(item => (
+        item.orderType === selectedOrderType
+        && Number(item.totalFareAmount) === selectedPrice
+      )) || rows.find(item => item.orderType === selectedOrderType) || rows[0];
 
       return {
         mode: "cards",
         requestId: priceData?.requestId || estimateData?.requestId || "-",
         highlightText: Number.isFinite(selectedPrice)
-          ? `선택 요금 ${won(selectedPrice)}`
+          ? `현재 견적 ${won(selectedPrice)}`
           : `${rows.length}개 옵션`,
         items: rows
           .slice()
           .sort((a, b) => (Number(a.totalFareAmount) || 0) - (Number(b.totalFareAmount) || 0))
-          .map((item, index) => ({
+          .map(item => ({
             orderType: item.orderType,
             fleet: item.fleetOption?.fleet || item.fleet,
             orderTypeLabel: orderTypeLabel(item.orderType),
@@ -3689,7 +3927,7 @@
             timeText: item.estimatedTime ? secondsToKorean(item.estimatedTime) : "-",
             fareText: won(item.totalFareAmount),
             discountText: won(item.discountAmount),
-            selected: index === pickIndex
+            selected: item === selectedRow
           }))
       };
     }
@@ -3698,6 +3936,7 @@
       const route = data.routeInfo || {};
       return {
         mode: "cards",
+        comparison: true,
         requestId: "SMART-DELIVERY",
         highlightText: data.saving > 0
           ? `${won(data.saving)} 절약 예상`
@@ -3777,8 +4016,13 @@
           // 가격 API는 성공했지만 옵션 조회가 실패할 수 있으므로 단일 카드로라도 보여준다.
         }
         showResult(
-          "가격 조회 결과",
-          formatPriceResult(priceResult.data, estimateResult?.data, requestDraft.orderType)
+          "현재 선택한 배송 견적",
+          formatPriceResult(
+            priceResult.data,
+            estimateResult?.data,
+            requestDraft.orderType,
+            requestDraft.fleetOption?.fleet
+          )
         );
         const price = Number(priceResult.data?.totalPrice ?? NaN);
         const estimateRows = Array.isArray(estimateResult?.data?.lists) ? estimateResult.data.lists : [];
@@ -3786,7 +4030,7 @@
         const roadRoute = estimateResult?.data?.routeInfo;
         byId("reviewPrice").textContent = Number.isFinite(price) ? won(price) : "요금 확인 완료";
         byId("quoteStatus").textContent = roadRoute?.durationMinutes
-          ? `실도로 약 ${roadRoute.durationMinutes}분${roadRoute.futureTrafficApplied ? " · 예약 반영" : ""}`
+          ? `🚗 자동차 도로 약 ${roadRoute.durationMinutes}분${roadRoute.futureTrafficApplied ? " · 예약 반영" : ""}`
           : selectedEstimate?.estimatedTime
           ? `약 ${secondsToKorean(selectedEstimate.estimatedTime)}`
           : "요금 확인 완료";
@@ -3808,7 +4052,10 @@
         openAuthModal();
         return;
       }
-      if (!confirm("Sandbox 테스트 주문만 허용됩니다. 계속할까요?")) return;
+      if (!confirm(
+        `결제 방법: ${paymentTypeLabel(paymentTypeValue())}\n`
+        + "Sandbox에서는 실제 결제 없이 테스트 주문만 생성됩니다. 접수할까요?"
+      )) return;
 
       const phrase = prompt("실제 주문이 아님을 확인했습니다. 계속하려면 SANDBOX 를 입력하세요.", "");
       if ((phrase || "").trim().toUpperCase() !== "SANDBOX") {
@@ -4229,6 +4476,7 @@
           if (field.value === "DOBO") byId("fleet").value = "";
           syncDeliveryMode();
         }
+        if (id === "productSize") updateHandlingUi();
         if (id === "pickupPhone" || id === "dropoffPhone") {
           field.value = formatPhone(field.value);
         }
@@ -4265,11 +4513,18 @@
         handleQuickFormChange();
       });
     });
+    document.querySelectorAll('input[name="paymentType"]').forEach(input => {
+      input.addEventListener("change", () => {
+        syncPaymentUi();
+        handleQuickFormChange();
+      });
+    });
     byId("primaryDropoffPickup").addEventListener("change", handleQuickFormChange);
     populatePickupTimes();
     setSectionTab("address");
     selectFleet("");
     updateHandlingUi();
+    syncPaymentUi();
     syncDeliveryMode();
     syncQuickReview();
     updateDistance();

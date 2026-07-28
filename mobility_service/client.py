@@ -150,6 +150,7 @@ class KakaoMobilityClient:
             product["price"] = request.declared_value
 
         product_info: dict[str, Any] = {
+            "trayCount": 1,
             "size": request.product_size.value,
             "products": [product],
         }
