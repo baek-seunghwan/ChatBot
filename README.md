@@ -250,6 +250,7 @@ Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결
 | `POST` | `/api/delivery-matches` | 다른 사용자 퀵 주문과 공동배송 자동 매칭 |
 | `GET` | `/api/delivery-matches` | 현재 브라우저의 공동배송 대기·완료 상태 |
 | `PATCH` | `/api/delivery-matches/{requestId}/cancel` | 공동배송 매칭 대기 취소 |
+| `POST` | `/api/delivery-matches/{requestId}/single-order` | 취소·만료·실패한 공동배송을 단일 퀵으로 중복 없이 재접수 |
 | `GET` | `/api/orders/{partnerOrderId}` | 주문 상태 조회 |
 | `GET` | `/api/orders/{partnerOrderId}/steps` | 정차지별 Step 상세 상태 |
 | `PATCH` | `/api/orders/{partnerOrderId}/cancel` | 주문 취소 |

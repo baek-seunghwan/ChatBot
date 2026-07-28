@@ -102,5 +102,29 @@
   {
     "question": "길찾기 REST 키와 퀵 배송 Vendor 키는 같은 거야?",
     "expectedSource": "06-routes-and-eta"
+  },
+  {
+    "question": "퀵 취소 수수료가 얼마야?",
+    "expectedSource": "07-quick-customer-support"
+  },
+  {
+    "question": "기사 배정이 안 되면 어떻게 해야 해?",
+    "expectedSource": "07-quick-customer-support"
+  },
+  {
+    "question": "퀵으로 보내면 안 되는 물건은 뭐야?",
+    "expectedSource": "07-quick-customer-support"
+  },
+  {
+    "question": "과적료와 대기료가 얼마야?",
+    "expectedSource": "07-quick-customer-support"
+  },
+  {
+    "question": "기사님 위치는 언제부터 보여?",
+    "expectedSource": "07-quick-customer-support"
+  },
+  {
+    "question": "카카오 퀵 고객센터는 어디에서 찾아?",
+    "expectedSource": "07-quick-customer-support"
   }
 ]

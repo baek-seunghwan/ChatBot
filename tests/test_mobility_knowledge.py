@@ -35,6 +35,8 @@ class MobilityKnowledgeTests(unittest.TestCase):
             "주문 상태는 어떻게 확인해?": "03-order-lifecycle",
             "묶음퀵 요금은 어떻게 계산해?": "04-bundle-quick",
             "Sandbox에서 실제 결제가 돼?": "05-sandbox-and-safety",
+            "퀵 취소 수수료가 얼마야?": "07-quick-customer-support",
+            "기사님 위치는 언제 보여?": "07-quick-customer-support",
         }
 
         for question, expected_source in cases.items():
@@ -91,6 +93,23 @@ class MobilityKnowledgeTests(unittest.TestCase):
         self.assertTrue(
             any(result.chunk_id.startswith("06-homepage-crawl") for result in results)
         )
+
+    def test_quick_customer_support_knowledge_covers_core_policies(self) -> None:
+        knowledge = default_knowledge_base()
+        for question in (
+            "퀵에서 보낼 수 없는 물건은 뭐야?",
+            "기사 배정이 안 되면 어떻게 해?",
+            "과적료와 대기료가 얼마야?",
+            "카카오 퀵 고객센터는 어디야?",
+        ):
+            with self.subTest(question=question):
+                results = knowledge.search(question, limit=3)
+                self.assertTrue(
+                    any(
+                        result.chunk_id.startswith("07-quick-customer-support")
+                        for result in results
+                    )
+                )
 
 
 class AgentKnowledgeRouteTests(unittest.TestCase):

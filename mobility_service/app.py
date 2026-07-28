@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -579,6 +580,79 @@ def create_app(
         return ApiEnvelope(
             data={"matching": public_match_request(canceled)},
             message="공동배송 매칭 대기를 취소했습니다.",
+        )
+
+    @application.post(
+        "/api/delivery-matches/{request_id}/single-order",
+        response_model=ApiEnvelope,
+        status_code=201,
+    )
+    async def retry_delivery_match_as_single(
+        request_id: str,
+        x_client_id: str = Header(
+            alias="X-Client-Id",
+            min_length=8,
+            max_length=100,
+        ),
+        session_token: str | None = Cookie(
+            default=None,
+            alias=SESSION_COOKIE_NAME,
+        ),
+    ) -> ApiEnvelope:
+        owner_id = match_owner_id(x_client_id, session_token)
+        match_request = resolved_store.get_match_request(
+            request_id,
+            client_id=owner_id,
+        )
+        if match_request is None:
+            raise HTTPException(
+                status_code=404,
+                detail="본인의 스마트 딜리버리 요청을 찾을 수 없습니다.",
+            )
+
+        retryable = match_request["status"] in {"CANCELED", "EXPIRED", "FAILED"}
+        if match_request["status"] == "MATCHED":
+            pooled_order_id = match_request.get("partnerOrderId")
+            pooled_order = (
+                resolved_store.get_order(pooled_order_id)
+                if pooled_order_id
+                else None
+            )
+            retryable = bool(
+                pooled_order
+                and pooled_order["status"]
+                in {
+                    "CANCELED",
+                    "ABORTED",
+                    "MATCHING_FAILED",
+                    "REQUEST_FAILED",
+                }
+            )
+        if not retryable:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "매칭이 취소·만료·실패했거나 공동배송 주문이 취소된 뒤에만 "
+                    "단일 퀵으로 다시 접수할 수 있습니다."
+                ),
+            )
+
+        digest = hashlib.sha256(
+            f"{owner_id}|{request_id}|single-retry".encode("utf-8")
+        ).hexdigest()[:20]
+        partner_order_id = f"quick-retry-{digest}"
+        single_request = CreateDeliveryRequest.model_validate(
+            match_request["request"]
+        )
+        result = await place_order(
+            resolved_client,
+            resolved_store,
+            single_request,
+            partner_order_id,
+        )
+        return ApiEnvelope(
+            data={"orderResult": result},
+            message="원래 배송 정보로 단일 퀵을 다시 접수했습니다.",
         )
 
     @application.get("/api/orders", response_model=ApiEnvelope)

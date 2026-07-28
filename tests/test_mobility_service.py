@@ -244,6 +244,11 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn('id="orderList"', history.text)
         self.assertIn('id="orderDetail"', history.text)
         self.assertIn("/api/orders?limit=50", history.text)
+        self.assertIn("단일 퀵으로 다시 이용하기", history.text)
+        self.assertIn('id="retryDialog"', history.text)
+        self.assertIn("기사 이동 경로", history.text)
+        self.assertIn("/picker", history.text)
+        self.assertIn("Sandbox 경로 시뮬레이션", history.text)
 
     def test_customer_pages_use_the_exact_same_shared_header(self) -> None:
         pages = [
@@ -375,6 +380,13 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("차량", difference_reply)
         self.assertIn("도보", difference_reply)
         self.assertNotIn("택시 동승", difference_reply)
+
+    def test_own_model_answers_quick_customer_support_questions(self) -> None:
+        self.assertIn("15%", own_model_reply("퀵 취소 수수료가 얼마야?"))
+        self.assertIn("140cm", own_model_reply("보내면 안 되는 물건 알려줘"))
+        self.assertIn("2,000원", own_model_reply("기사 대기료가 얼마야?"))
+        self.assertIn("픽업 출발", own_model_reply("기사님 위치는 언제 보여?"))
+        self.assertIn("서비스 문의", own_model_reply("고객센터 어디야?"))
 
     def test_own_model_answers_general_chat_without_ollama(self) -> None:
         self.assertIn("힘드셨겠어요", own_model_reply("오늘 기분이 안 좋아"))
