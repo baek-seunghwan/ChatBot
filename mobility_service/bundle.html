@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MOVB · 묶음퀵 접수</title>
+  <title>MOVB · 스마트 딜리버리</title>
   <style>
     :root {
       --ink: #191919;
@@ -26,6 +26,16 @@
         "Noto Sans KR", sans-serif;
       line-height: 1.55;
     }
+    body.embedded {
+      min-height: 0;
+      background: transparent;
+    }
+    body.embedded .movb-site-header { display: none; }
+    body.embedded main {
+      width: 100%;
+      margin: 0;
+    }
+    body.embedded .hero { display: none; }
     button, input, select, textarea { font: inherit; }
     button, a { -webkit-tap-highlight-color: transparent; }
     a { color: inherit; text-decoration: none; }
@@ -324,18 +334,19 @@
   <main>
     <section class="hero">
       <div class="hero-copy">
-        <span class="eyebrow">보내는 사람과 받는 사람을 + 버튼으로 추가</span>
-        <h1>따로 보낼지, 묶어서 보낼지<br>가격부터 비교하세요.</h1>
+        <span class="eyebrow">여러 사람의 배송을 하나의 동선으로</span>
+        <h1>스마트 딜리버리로<br>가격부터 비교하세요.</h1>
         <p>
           보내는 사람 1~5명과 받는 사람 2~5명을 연결해 개별 요금과 묶음
-          요금을 비교하고, 모든 픽업을 마친 뒤 배송하는 순서를 확인합니다.
+          요금을 비교합니다. 서울뿐 아니라 대전 등 카카오 주소 검색이 가능한
+          국내 주소를 입력할 수 있습니다.
         </p>
       </div>
-      <aside class="hero-guide" aria-label="묶음퀵 접수 단계">
+      <aside class="hero-guide" aria-label="스마트 딜리버리 접수 단계">
         <h2>접수 순서</h2>
         <div class="steps">
           <div class="step"><b>1</b><span>보내는 사람과 받는 사람을 추가합니다.</span></div>
-          <div class="step"><b>2</b><span>개별·묶음 견적과 경로를 비교합니다.</span></div>
+          <div class="step"><b>2</b><span>개별·스마트 딜리버리 견적과 경로를 비교합니다.</span></div>
           <div class="step"><b>3</b><span>연락처와 주문 내용을 확인합니다.</span></div>
           <div class="step"><b>4</b><span>명시적으로 동의한 뒤 접수합니다.</span></div>
         </div>
@@ -374,7 +385,7 @@
           <div class="section-head">
             <div>
               <h2>3. 물품 정보</h2>
-              <p class="section-note">묶음 주문 전체에 적용되는 정보입니다.</p>
+              <p class="section-note">스마트 딜리버리 주문 전체에 적용되는 정보입니다.</p>
             </div>
           </div>
           <div class="grid-2">
@@ -429,7 +440,7 @@
               <strong id="individualTotal">-</strong>
             </div>
             <div class="metric">
-              <span>묶어서 보낼 때</span>
+              <span>스마트 딜리버리</span>
               <strong id="bundledPrice">-</strong>
             </div>
             <div class="metric saving">
@@ -454,13 +465,13 @@
             </span>
           </label>
           <button type="button" id="orderButton" class="button primary" disabled>
-            묶음퀵 접수하기
+            스마트 딜리버리 접수하기
           </button>
         </div>
 
         <div id="status" class="status" role="status"></div>
         <div id="receipt" class="receipt">
-          <h3>묶음퀵 접수가 완료됐어요.</h3>
+          <h3>스마트 딜리버리 접수가 완료됐어요.</h3>
           <dl>
             <dt>주문번호</dt><dd id="receiptId"></dd>
             <dt>상태</dt><dd id="receiptStatus"></dd>
@@ -827,7 +838,7 @@
       button.disabled = true;
       setStatus("개별 요금과 묶음 경로를 계산하고 있습니다.");
       try {
-        const response = await api("/api/bundle/quote", {
+        const response = await api("/api/smart-delivery/quote", {
           method: "POST",
           body: JSON.stringify(quotePayload()),
         });
@@ -850,13 +861,13 @@
         return;
       }
       if (!idempotencyKey) {
-        idempotencyKey = `bundle-web-${crypto.randomUUID().replaceAll("-", "")}`;
+        idempotencyKey = `smart-web-${crypto.randomUUID().replaceAll("-", "")}`;
       }
       const button = byId("orderButton");
       button.disabled = true;
       setStatus("서버에서 견적을 다시 확인하고 Sandbox 주문을 접수하고 있습니다.");
       try {
-        const response = await api("/api/bundle/orders", {
+        const response = await api("/api/smart-delivery/orders", {
           method: "POST",
           headers: {"Idempotency-Key": idempotencyKey},
           body: JSON.stringify(orderPayload()),
@@ -867,7 +878,10 @@
         byId("receiptId").textContent = latestOrderId || "-";
         byId("receiptStatus").textContent = order.status || "접수됨";
         byId("receipt").classList.add("show");
-        setStatus(response.message || "묶음퀵 주문이 접수되었습니다.", "success");
+        setStatus(
+          response.message || "스마트 딜리버리 주문이 접수되었습니다.",
+          "success"
+        );
       } catch (error) {
         setStatus(error.message, "error");
         button.disabled = false;
@@ -917,6 +931,21 @@
     createPickup();
     createDropoff();
     createDropoff();
+
+    if (document.body.classList.contains("embedded")) {
+      const reportHeight = () => {
+        window.parent.postMessage(
+          {
+            type: "movb:smart-delivery-height",
+            height: Math.ceil(document.documentElement.scrollHeight),
+          },
+          location.origin
+        );
+      };
+      new ResizeObserver(reportHeight).observe(document.body);
+      window.addEventListener("load", reportHeight);
+      reportHeight();
+    }
   </script>
 </body>
 </html>

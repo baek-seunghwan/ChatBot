@@ -176,7 +176,7 @@ class BundleQuoteRequest(CamelModel):
     def validate_bundle_quote(self) -> "BundleQuoteRequest":
         _validate_bundle_people(self.pickups, self.dropoffs)
         if self.product_size == ProductSize.L and self.fleet_option is None:
-            raise ValueError("대형(L) 묶음퀵은 차량을 선택해야 합니다.")
+            raise ValueError("대형(L) 스마트 딜리버리는 차량을 선택해야 합니다.")
         return self
 
 
@@ -251,7 +251,7 @@ class BundleOrderRequest(CamelModel):
             self.product_size == ProductSize.L
             and self.fleet_option is None
         ):
-            raise ValueError("대형(L) 묶음퀵은 차량을 선택해야 합니다.")
+            raise ValueError("대형(L) 스마트 딜리버리는 차량을 선택해야 합니다.")
         return self
 
 

@@ -53,8 +53,8 @@ KOREAN_FIELD_LABELS = {
 }
 
 CHITCHAT_SYSTEM = (
-    "당신은 묶음퀵 서비스 'MOVB(모브)'의 도우미입니다. "
-    "친절하고 간결한 한국어로 답하세요. 아래 서비스 정보를 근거로 묶음퀵과 배송 관련 "
+    "당신은 스마트 딜리버리 서비스 'MOVB(모브)'의 도우미입니다. "
+    "친절하고 간결한 한국어로 답하세요. 아래 서비스 정보를 근거로 스마트 딜리버리와 배송 관련 "
     "질문에 구체적으로 답하고, 정보에 없는 내용은 지어내지 마세요. "
     "배송 주문을 원하면 출발지/도착지/물품 정보를 알려달라고 안내하세요.\n\n"
     + SERVICE_FACTS
@@ -84,8 +84,8 @@ INTENT_PROMPT = """다음은 배송 주문 챗봇과 사용자의 대화입니�
 - confirm: 견적을 보고 주문을 확정/진행하겠다는 의사표시 (예/네/진행해줘/주문해줘)
 - cancel: 주문 작성을 그만두거나, 이미 접수된 주문을 취소하려는 경우
 - status_query: 주문 상태/배송 현황을 물어보는 경우
-- bundle: 여러 도착지에 한꺼번에 보내는 묶음 배송 견적/할인을 물어보는 경우
-- question: 서비스 자체에 대한 궁금증 — 요금 체계, 배송 상품 차이, 묶음퀵 방식 등을 물어보는 경우 (지금 주문하려는 게 아님)
+- bundle: 여러 사람의 배송을 한 동선으로 묶는 스마트 딜리버리 견적/할인을 물어보는 경우
+- question: 서비스 자체에 대한 궁금증 — 요금 체계, 배송 상품 차이, 스마트 딜리버리 방식 등을 물어보는 경우 (지금 주문하려는 게 아님)
 - vehicle_select: 주문에 사용할 차량 종류를 선택하거나 선택지를 보고 싶은 경우
 - chitchat: 배송과 무관한 인사/잡담
 
@@ -350,7 +350,7 @@ class DeliveryAgent:
         action_request = bool(
             re.search(r"(보내|접수|등록|주문|견적|계산|나눠|매칭|싸게|진행)", text)
         )
-        if "묶음" in text:
+        if "묶음" in text or "스마트 딜리버리" in text:
             if re.search(
                 r"(요금|가격).*(어떻게|기준|방식|계산)|"
                 r"(어떻게|기준|방식).*(요금|가격|계산)",
@@ -834,7 +834,7 @@ class DeliveryAgent:
     async def _status_query(self, state: AgentState) -> AgentState:
         partner_order_id = state.get("partner_order_id")
         explicit_id = re.search(
-            r"\b(?:agent|moveops|bundle)-[A-Za-z0-9._-]+\b",
+            r"\b(?:agent|moveops|bundle|smart)-[A-Za-z0-9._-]+\b",
             state["message"],
         )
         if explicit_id:
@@ -844,7 +844,11 @@ class DeliveryAgent:
                 "reply": "아직 이 대화에서 접수된 주문이 없어요. 주문번호가 있다면 알려주세요.",
                 "actions": [
                     {"label": "배송 주문 시작", "message": "퀵 배송 주문하고 싶어"},
-                    {"label": "묶음퀵 안내", "message": "묶음퀵 이용 방법 알려줘"},
+                    {
+                        "label": "스마트 딜리버리",
+                        "message": "스마트 딜리버리 이용 방법 알려줘",
+                        "target": "smartDelivery",
+                    },
                 ],
                 "trace": state.get("trace", []) + ["status_query:no_order"],
             }
@@ -921,16 +925,25 @@ class DeliveryAgent:
         return parsed if isinstance(parsed, dict) else {}
 
     async def _bundle_flow(self, state: AgentState) -> AgentState:
-        """묶음퀵: 각각 보낼 때와 한 주문으로 보낼 때의 가격과 경로를 비교한다."""
+        """스마트 딜리버리: 개별 배송과 하나의 묶음 경로를 비교한다."""
         parsed = await self._llm_json(BUNDLE_EXTRACT_PROMPT.format(message=state["message"]))
         pickup = parsed.get("pickup")
         dropoffs = [d for d in (parsed.get("dropoffs") or []) if isinstance(d, str) and d.strip()]
         if not pickup or len(dropoffs) < 2:
             return {
                 "reply": (
-                    "묶음 배송 견적을 내려면 출발지 1곳과 도착지 2곳 이상이 필요해요.\n"
-                    "예: \"판교역에서 정자역이랑 서현역으로 서류 보낼 건데 묶으면 얼마야?\""
+                    "스마트 딜리버리는 여러 사람의 배송을 한 동선으로 묶어 "
+                    "비교해요. 홈페이지 접수 영역에서 보내는 사람 1~5명과 "
+                    "받는 사람 2~5명을 연결해주세요. 서울뿐 아니라 대전 등 "
+                    "국내 주소도 입력할 수 있어요."
                 ),
+                "actions": [
+                    {
+                        "label": "접수 화면 열기",
+                        "message": "스마트 딜리버리 접수 화면 열기",
+                        "target": "smartDelivery",
+                    }
+                ],
                 "trace": state.get("trace", []) + ["bundle:need_info"],
             }
         try:
@@ -943,7 +956,7 @@ class DeliveryAgent:
             )
         except (ValueError, KakaoApiError) as exc:
             return {
-                "reply": f"묶음 견적 계산 중 문제가 있었어요: {exc}",
+                "reply": f"스마트 딜리버리 견적 계산 중 문제가 있었어요: {exc}",
                 "trace": state.get("trace", []) + ["bundle:error"],
             }
 
@@ -959,19 +972,19 @@ class DeliveryAgent:
             else ""
         )
         reply = (
-            f"묶음 배송 비교 견적이에요! (출발: {result['pickup']})\n\n"
+            f"스마트 딜리버리 비교 견적이에요! (출발: {result['pickup']})\n\n"
             f"[각각 따로 보낼 때]\n{individual_lines}\n"
             f"합계: {result['individualTotal']:,}원\n\n"
             f"[한 번에 묶어 보낼 때 — 경유지 추가 혜택 적용]\n"
             f"추천 경유 순서: {route_text}\n"
             f"{road_text}"
-            f"묶음 견적: {result['bundledPrice']:,}원\n\n"
+            f"스마트 딜리버리 견적: {result['bundledPrice']:,}원\n\n"
         )
         if result["recommendBundle"]:
             reply += (
-                f"→ 묶어서 보내면 {result['saving']:,}원 절약돼요!\n"
-                "실제 접수는 /bundle 화면에서 보내는 분과 받는 분 연락처를 "
-                "확인한 뒤 진행할 수 있어요."
+                f"→ 스마트 딜리버리로 보내면 {result['saving']:,}원 절약돼요!\n"
+                "홈페이지 접수 영역에서 보내는 분과 받는 분 연락처를 확인한 "
+                "뒤 진행할 수 있어요."
             )
         else:
             reply += "→ 이번 건은 따로 보내는 게 더 유리해요."
@@ -980,9 +993,14 @@ class DeliveryAgent:
             "reply": reply,
             "actions": [
                 {
-                    "label": "묶음퀵 준비물",
-                    "message": "묶음퀵 접수에 필요한 정보를 알려줘",
-                }
+                    "label": "접수 화면 열기",
+                    "message": "스마트 딜리버리 접수 화면 열기",
+                    "target": "smartDelivery",
+                },
+                {
+                    "label": "준비물",
+                    "message": "스마트 딜리버리 접수에 필요한 정보를 알려줘",
+                },
             ],
             "trace": state.get("trace", []) + [f"bundle:ok({len(dropoffs)}곳)"],
         }
@@ -1054,7 +1072,8 @@ class DeliveryAgent:
             reply = await self._llm(state["message"], system=CHITCHAT_SYSTEM, max_tokens=200)
         except RuntimeError:
             reply = (
-                "안녕하세요! MOVB에서는 일반 퀵과 묶음퀵의 견적·주문·상태 확인을 "
+                "안녕하세요! MOVB에서는 일반 퀵과 스마트 딜리버리의 "
+                "견적·주문·상태 확인을 "
                 "도와드려요. "
                 "예를 들어 “퀵과 도보 배송은 뭐가 달라?” 또는 "
                 "“판교역에서 정자역으로 서류 보내줘”라고 말씀해보세요."
@@ -1062,6 +1081,11 @@ class DeliveryAgent:
         return {
             "reply": reply,
             "actions": [
+                {
+                    "label": "스마트 딜리버리",
+                    "message": "스마트 딜리버리 접수 화면 열기",
+                    "target": "smartDelivery",
+                },
                 {"label": "배송 주문", "message": "퀵 배송 주문하고 싶어"},
                 {"label": "차량 선택", "message": "차량 선택지를 보여줘"},
                 {"label": "예약 ETA", "message": "예약 배송을 시작하고 싶어"},

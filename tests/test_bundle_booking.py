@@ -34,6 +34,21 @@ class FakeGeocoder:
             latitude=37.4113,
             longitude=127.1287,
         ),
+        "대전역": Location(
+            basicAddress="대전 동구 중앙로 215",
+            latitude=36.3324,
+            longitude=127.4342,
+        ),
+        "대전시청": Location(
+            basicAddress="대전 서구 둔산로 100",
+            latitude=36.3504,
+            longitude=127.3848,
+        ),
+        "유성온천역": Location(
+            basicAddress="대전 유성구 계룡로 97",
+            latitude=36.3537,
+            longitude=127.3414,
+        ),
     }
 
     async def search_address(self, query: str) -> Location | None:
@@ -99,7 +114,7 @@ class BundleBookingTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def test_bundle_page_has_quote_consent_and_order_flow(self) -> None:
-        response = self.client.get("/bundle")
+        response = self.client.get("/smart-delivery/form")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("+ 보내는 사람 추가", response.text)
@@ -113,7 +128,7 @@ class BundleBookingTests(unittest.TestCase):
 
     def test_quote_compares_individual_and_bundled_prices(self) -> None:
         response = self.client.post(
-            "/api/bundle/quote",
+            "/api/smart-delivery/quote",
             json={
                 "pickups": [{"address": "판교역"}],
                 "dropoffs": [
@@ -131,11 +146,30 @@ class BundleBookingTests(unittest.TestCase):
         self.assertEqual(quote["saving"], 12000)
         self.assertTrue(quote["recommendBundle"])
         self.assertEqual(quote["pickupRoute"], ["경기 성남시 분당구 판교역"])
+
+    def test_smart_delivery_accepts_daejeon_addresses(self) -> None:
+        response = self.client.post(
+            "/api/smart-delivery/quote",
+            json={
+                "pickups": [{"address": "대전역"}],
+                "dropoffs": [
+                    {"address": "대전시청", "pickupIndex": 0},
+                    {"address": "유성온천역", "pickupIndex": 0},
+                ],
+                "productSize": "XS",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        quote = response.json()["data"]
+        self.assertEqual(quote["pickup"], "대전 동구 중앙로 215")
+        self.assertEqual(len(quote["dropoffRoute"]), 2)
+        self.assertEqual(len(quote["route"]), 3)
         self.assertEqual(len(quote["route"]), 3)
 
     def test_order_recomputes_quote_and_saves_all_contacts(self) -> None:
         response = self.client.post(
-            "/api/bundle/orders",
+            "/api/smart-delivery/orders",
             headers={"Idempotency-Key": "bundle-test-001"},
             json=bundle_payload(),
         )
@@ -158,6 +192,9 @@ class BundleBookingTests(unittest.TestCase):
             receiver_names,
             {"첫 번째 수령인", "두 번째 수령인"},
         )
+        history = self.client.get("/api/orders").json()["data"]
+        self.assertEqual(history[0]["serviceType"], "SMART_DELIVERY")
+        self.assertIn("경유 1곳", history[0]["routeSummary"])
 
     def test_multiple_senders_are_picked_up_before_any_delivery(self) -> None:
         payload = bundle_payload()
@@ -174,7 +211,7 @@ class BundleBookingTests(unittest.TestCase):
         payload["dropoffs"][1]["pickupIndex"] = 1
 
         response = self.client.post(
-            "/api/bundle/orders",
+            "/api/smart-delivery/orders",
             headers={"Idempotency-Key": "bundle-multi-pickup-001"},
             json=payload,
         )
@@ -197,10 +234,10 @@ class BundleBookingTests(unittest.TestCase):
         headers = {"Idempotency-Key": "bundle-same-001"}
 
         first = self.client.post(
-            "/api/bundle/orders", headers=headers, json=bundle_payload()
+            "/api/smart-delivery/orders", headers=headers, json=bundle_payload()
         )
         second = self.client.post(
-            "/api/bundle/orders", headers=headers, json=bundle_payload()
+            "/api/smart-delivery/orders", headers=headers, json=bundle_payload()
         )
 
         self.assertEqual(first.status_code, 201)
@@ -213,7 +250,7 @@ class BundleBookingTests(unittest.TestCase):
 
     def test_order_requires_explicit_consent(self) -> None:
         response = self.client.post(
-            "/api/bundle/orders",
+            "/api/smart-delivery/orders",
             json=bundle_payload(consent=False),
         )
 
@@ -224,7 +261,7 @@ class BundleBookingTests(unittest.TestCase):
         payload = bundle_payload()
         payload["dropoffs"][1]["address"] = "정자역"
 
-        response = self.client.post("/api/bundle/orders", json=payload)
+        response = self.client.post("/api/smart-delivery/orders", json=payload)
 
         self.assertEqual(response.status_code, 422)
         self.assertIn("배송 주소는 서로 달라야", response.text)
@@ -241,7 +278,7 @@ class BundleBookingTests(unittest.TestCase):
             }
         )
 
-        response = self.client.post("/api/bundle/orders", json=payload)
+        response = self.client.post("/api/smart-delivery/orders", json=payload)
 
         self.assertEqual(response.status_code, 422)
         self.assertIn("모든 보내는 사람", response.text)

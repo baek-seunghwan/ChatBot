@@ -18,8 +18,8 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e2b")
 OLLAMA_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
 
 _SYSTEM_PROMPT = (
-    "당신은 MOVB 묶음퀵 서비스의 로컬 챗봇입니다. "
-    "한국어로 짧고 친절하게 답하세요. 아래 서비스 정보를 근거로 묶음퀵과 배송 관련 "
+    "당신은 MOVB 스마트 딜리버리 서비스의 로컬 챗봇입니다. "
+    "한국어로 짧고 친절하게 답하세요. 아래 서비스 정보를 근거로 스마트 딜리버리와 배송 관련 "
     "질문에 구체적으로 답하고, 정보에 없는 내용은 지어내지 마세요. "
     "실제 주문 접수/조회/취소는 이 모드에서 처리할 수 없으니, "
     "접수를 원하면 'AI 채팅' 모드를 쓰라고 안내하세요.\n\n"

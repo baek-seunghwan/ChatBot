@@ -28,10 +28,11 @@ Sandbox 업무를 연결하는 FastAPI 웹 서비스입니다.
 - 중복 콜백 제거 및 역순 상태 변경 방지
 - LangGraph 배송 Agent
 - 서비스 질문과 업무 요청을 분리하는 하이브리드 의도 분류
-- 6개 MOVB 문서를 검색하는 BM25 + 문자 n-gram Knowledge RAG
+- 홈페이지 안내를 포함한 7개 MOVB 문서를 검색하는 BM25 + 문자 n-gram Knowledge RAG
 - LLM 미설정 시 근거 문서를 이용한 추출형 답변
 - Anthropic 호출 실패 시 Gemini 자동 폴백
-- 묶음퀵 추천 경로, 비교 견적, 동의 후 주문 접수
+- 홈페이지에 통합된 스마트 딜리버리 추천 경로, 비교 견적, 동의 후 주문 접수
+- 공개 홈페이지 문구 수집과 Knowledge RAG 반영
 
 ## 환경변수
 
@@ -85,12 +86,12 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 ```
 
 - 웹 화면: <http://127.0.0.1:8002>
-- 묶음퀵 접수: <http://127.0.0.1:8002/bundle>
+- 스마트 딜리버리: <http://127.0.0.1:8002/#smartDelivery>
 - API 문서: <http://127.0.0.1:8002/docs>
 - 상태 확인: <http://127.0.0.1:8002/health>
 - 카카오 인증 확인: <http://127.0.0.1:8002/api/kakao/auth-check>
 - 관리자 화면: <http://127.0.0.1:8002/admin>
-- 지식 검색: <http://127.0.0.1:8002/api/knowledge/search?q=묶음퀵%20요금>
+- 지식 검색: <http://127.0.0.1:8002/api/knowledge/search?q=대전%20스마트%20딜리버리>
 
 개인 학습용 코드 가이드는 Git에 올라가지 않는 프로젝트 루트의 `private/` 폴더에
 보관합니다.
@@ -123,6 +124,7 @@ PUT /api/v1/callback/orders/{orderId}/steps/{stepId}
 ```bash
 uv run python -m unittest discover -s tests -v
 uv run python scripts/evaluate_mobility_knowledge.py
+uv run python scripts/crawl_movb_site.py --base-url https://movb.onrender.com
 ```
 
 검증 항목:
@@ -138,8 +140,10 @@ uv run python scripts/evaluate_mobility_knowledge.py
 - 일반 사용자와 관리자의 접근 권한 분리
 - 서비스 질문의 Knowledge RAG 경로와 출처 반환
 - LLM이 없는 환경의 추출형 답변
-- 질문과 묶음퀵 견적 요청의 의도 구분
-- 묶음퀵 주문의 주소·연락처·동의 검증과 중복 접수 방지
+- 질문과 스마트 딜리버리 견적 요청의 의도 구분
+- 스마트 딜리버리 주문의 주소·연락처·동의 검증과 중복 접수 방지
+- 홈페이지 통합 화면, `/bundle` 이동, 채팅 바로가기와 이용 내역
+- 홈페이지 공개 문구 수집과 지식 검색
 - 차량 선택 버튼과 슬롯 저장
 - 자동차·다중 경유지·미래 운행 요청 형식
 - Step 상태 단건 조회와 관리자 Sandbox 상태 변경

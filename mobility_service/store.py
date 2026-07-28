@@ -224,23 +224,52 @@ class MobilityStore:
         with self._connect() as connection:
             rows = connection.execute(
                 """
-                SELECT partner_order_id, status, error, created_at, updated_at
+                SELECT partner_order_id, status, request_json, error,
+                       created_at, updated_at
                 FROM delivery_orders
                 ORDER BY created_at DESC
                 LIMIT ?
                 """,
                 (limit,),
             ).fetchall()
-        return [
-            {
-                "partnerOrderId": row["partner_order_id"],
-                "status": row["status"],
-                "error": row["error"],
-                "createdAt": row["created_at"],
-                "updatedAt": row["updated_at"],
-            }
-            for row in rows
-        ]
+
+        orders: list[dict[str, Any]] = []
+        for row in rows:
+            request = json.loads(row["request_json"])
+            waypoints = request.get("waypoints") or []
+            is_smart = (
+                row["partner_order_id"].startswith(("smart-", "bundle-"))
+                or any(
+                    str(item.get("note") or "").startswith("[추가 픽업]")
+                    for item in waypoints
+                    if isinstance(item, dict)
+                )
+            )
+            pickup = request.get("pickup", {}).get("location", {}).get(
+                "basicAddress", ""
+            )
+            dropoff = request.get("dropoff", {}).get("location", {}).get(
+                "basicAddress", ""
+            )
+            route_summary = (
+                f"{pickup} → 경유 {len(waypoints)}곳 → {dropoff}"
+                if waypoints
+                else f"{pickup} → {dropoff}"
+            )
+            orders.append(
+                {
+                    "partnerOrderId": row["partner_order_id"],
+                    "status": row["status"],
+                    "serviceType": (
+                        "SMART_DELIVERY" if is_smart else request.get("orderType")
+                    ),
+                    "routeSummary": route_summary,
+                    "error": row["error"],
+                    "createdAt": row["created_at"],
+                    "updatedAt": row["updated_at"],
+                }
+            )
+        return orders
 
     def order_counts(self) -> dict[str, Any]:
         with self._connect() as connection:

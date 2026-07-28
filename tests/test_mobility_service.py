@@ -199,16 +199,44 @@ class MobilityApiTests(unittest.TestCase):
 
         self.assertEqual(home.status_code, 200)
         self.assertIn('href="/features"', home.text)
-        self.assertIn("묶음퀵 접수하기", home.text)
+        self.assertIn("스마트 딜리버리", home.text)
         self.assertEqual(features.status_code, 200)
         self.assertIn("여러 곳에서 픽업하고", features.text)
-        self.assertIn('href="/bundle"', features.text)
+        self.assertIn('href="/#smartDelivery"', features.text)
         self.assertIn("기능 소개", features.text)
+
+    def test_smart_delivery_is_integrated_into_home(self) -> None:
+        home = self.client.get("/")
+        legacy = self.client.get("/bundle", follow_redirects=False)
+        embedded = self.client.get("/smart-delivery/form")
+
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('id="smartDelivery"', home.text)
+        self.assertIn('src="/smart-delivery/form"', home.text)
+        self.assertIn("스마트 딜리버리", home.text)
+        self.assertIn("대전", home.text)
+        self.assertEqual(legacy.status_code, 307)
+        self.assertEqual(legacy.headers["location"], "/#smartDelivery")
+        self.assertEqual(embedded.status_code, 200)
+        self.assertIn('<body class="embedded">', embedded.text)
+        self.assertIn("/api/smart-delivery/quote", embedded.text)
+        self.assertIn("/api/smart-delivery/orders", embedded.text)
+
+    def test_home_keeps_chat_shortcuts_and_use_history(self) -> None:
+        home = self.client.get("/")
+
+        self.assertIn("배송 주문", home.text)
+        self.assertIn("차량 선택", home.text)
+        self.assertIn("예약 ETA", home.text)
+        self.assertIn("배송 상태", home.text)
+        self.assertIn("서비스 안내", home.text)
+        self.assertIn("<h2>이용 내역</h2>", home.text)
+        self.assertIn("movb:smart-delivery-height", home.text)
 
     def test_customer_pages_use_the_exact_same_shared_header(self) -> None:
         pages = [
             self.client.get("/"),
-            self.client.get("/bundle"),
+            self.client.get("/smart-delivery/form"),
             self.client.get("/features"),
         ]
         headers: list[str] = []
@@ -266,7 +294,7 @@ class MobilityApiTests(unittest.TestCase):
 
     def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
         home = self.client.get("/")
-        bundle = self.client.get("/bundle")
+        bundle = self.client.get("/smart-delivery/form")
         features = self.client.get("/features")
 
         for response in (home, bundle, features):

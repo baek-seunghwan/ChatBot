@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MOVB 묶음퀵</title>
+  <title>MOVB 스마트 딜리버리</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23fff'/%3E%3Cpath%20d='M16%2046V18l16%2018%2016-18v28'%20fill='none'%20stroke='%2310254d'%20stroke-width='10'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Crect%20x='22'%20y='53'%20width='20'%20height='6'%20rx='3'%20fill='%23ffcc00'/%3E%3C/svg%3E">
   <style>
     :root {
@@ -613,6 +613,15 @@
       font-size: 12px;
       font-weight: 800;
     }
+    .order small {
+      display: block;
+      margin-top: 6px;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .order time { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; }
     .tracking { display: flex; gap: 8px; margin-top: 14px; }
     .tracking button { flex: 0 0 auto; }
@@ -974,20 +983,60 @@
       padding: 22px;
       box-shadow: 0 5px 20px rgba(23, 25, 31, .045);
     }
+    #smartDelivery {
+      grid-column: 1 / -1;
+      grid-row: 1;
+      padding: 0;
+      overflow: hidden;
+      scroll-margin-top: 80px;
+    }
+    .smart-delivery-heading {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 24px 26px 20px;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(120deg, rgba(254, 229, 0, .18), transparent 55%),
+        #fff;
+    }
+    .smart-delivery-heading h1 { max-width: 780px; }
+    .smart-delivery-heading .description {
+      max-width: 780px;
+      margin: 0;
+    }
+    .smart-delivery-badge {
+      flex: 0 0 auto;
+      padding: 8px 11px;
+      border-radius: 999px;
+      background: #17191f;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .smart-delivery-frame {
+      display: block;
+      width: 100%;
+      min-height: 1420px;
+      border: 0;
+      background: #f7f8fa;
+    }
     #quickRequest {
       grid-column: 1;
-      grid-row: 1 / span 2;
+      grid-row: 2 / span 2;
       scroll-margin-top: 80px;
     }
     .map-panel {
       grid-column: 2;
-      grid-row: 1;
+      grid-row: 2;
       padding: 0;
       border-radius: 18px;
     }
     #history {
       grid-column: 2;
-      grid-row: 2;
+      grid-row: 3;
       align-self: start;
       scroll-margin-top: 80px;
     }
@@ -1221,9 +1270,28 @@
       bottom: 82px;
       left: auto;
       width: min(390px, calc(100vw - 32px));
+      height: min(620px, calc(100vh - 110px));
       max-height: min(620px, calc(100vh - 110px));
       border-radius: 18px;
       box-shadow: 0 20px 60px rgba(23, 25, 31, .2);
+    }
+    .chat-log {
+      min-width: 0;
+      min-height: 0;
+      overflow-x: hidden;
+    }
+    .chat-bubble {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
+    .chat-actions button {
+      max-width: 100%;
+      white-space: normal;
+    }
+    .chat-suggestions {
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      overflow: visible;
     }
     .chat-widget-header {
       padding: 14px 16px;
@@ -1257,17 +1325,21 @@
         grid-template-columns: 1fr;
         gap: 10px;
       }
-      #quickRequest {
+      #smartDelivery {
         grid-column: 1;
         grid-row: 1;
       }
-      .map-panel {
+      #quickRequest {
         grid-column: 1;
         grid-row: 2;
       }
-      #history {
+      .map-panel {
         grid-column: 1;
         grid-row: 3;
+      }
+      #history {
+        grid-column: 1;
+        grid-row: 4;
       }
       .quick-heading { display: flex; }
       .quick-badge { margin: 0; }
@@ -1297,6 +1369,16 @@
       .primary-nav .nav-item { min-height: 36px; padding: 7px 10px; }
       .sandbox span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
       .panel { border-radius: 14px; padding: 16px; }
+      #smartDelivery { padding: 0; }
+      .smart-delivery-heading {
+        display: block;
+        padding: 20px 18px 16px;
+      }
+      .smart-delivery-badge {
+        display: inline-flex;
+        margin-top: 12px;
+      }
+      .smart-delivery-frame { min-height: 1900px; }
       .map-panel { border-radius: 14px; }
       .quick-heading { display: block; }
       .quick-badge { margin-top: 10px; }
@@ -1318,7 +1400,16 @@
         right: 8px;
         bottom: 68px;
         width: calc(100vw - 16px);
+        height: calc(100vh - 88px);
         max-height: calc(100vh - 88px);
+      }
+      .chat-suggestions {
+        gap: 5px;
+        padding: 8px 10px;
+      }
+      .chat-suggestions button {
+        padding: 6px 8px;
+        font-size: 10.5px;
       }
       .chat-fab {
         right: 8px;
@@ -1339,7 +1430,7 @@
       <div class="auth-head">
         <div>
           <h2 id="authTitle">MOVB 로그인</h2>
-          <p>묶음퀵 접수 내역을 한 곳에서 관리하세요.</p>
+          <p>스마트 딜리버리 접수 내역을 한 곳에서 관리하세요.</p>
         </div>
         <button type="button" class="auth-close" onclick="closeAuthModal()" aria-label="로그인 창 닫기">✕</button>
       </div>
@@ -1380,6 +1471,28 @@
   <div class="sandbox"><b>Sandbox</b><span>테스트용 이름과 전화번호만 사용해주세요.</span></div>
 
   <main>
+    <section class="panel" id="smartDelivery">
+      <div class="smart-delivery-heading">
+        <div>
+          <span class="eyebrow">SMART DELIVERY</span>
+          <h1>여러 사람의 배송을 한 동선으로 묶는 스마트 딜리버리</h1>
+          <p class="description">
+            보내는 사람과 받는 사람을 각각 추가하고 개별 배송 합계와 스마트
+            딜리버리 견적을 비교하세요. 서울뿐 아니라 대전 등 국내 주소를
+            지역 제한 없이 입력할 수 있습니다.
+          </p>
+        </div>
+        <span class="smart-delivery-badge">보내는 사람 1~5명 · 받는 사람 2~5명</span>
+      </div>
+      <iframe
+        class="smart-delivery-frame"
+        id="smartDeliveryFrame"
+        src="/smart-delivery/form"
+        title="스마트 딜리버리 접수 양식"
+        loading="eager"
+      ></iframe>
+    </section>
+
     <section class="panel" id="quickRequest">
       <div class="quick-heading">
         <div>
@@ -1399,7 +1512,7 @@
 
       <div class="quick-options" aria-label="퀵 접수 방식">
         <button type="button" class="quick-option active" data-quick-mode="single" onclick="selectQuickMode('single')">일반 퀵</button>
-        <button type="button" class="quick-option" data-quick-mode="bundle" onclick="startBundleRequest()">묶음 퀵</button>
+        <button type="button" class="quick-option" data-quick-mode="bundle" onclick="startBundleRequest()">스마트 딜리버리</button>
       </div>
 
       <div class="form-sections">
@@ -1540,8 +1653,10 @@
 
     <aside class="panel" id="history">
       <span class="eyebrow">TRACKING</span>
-      <h2>주문 조회</h2>
-      <p class="description">주문 번호로 현재 배송 상태를 확인하세요.</p>
+      <h2>이용 내역</h2>
+      <p class="description">
+        최근 스마트 딜리버리와 일반 배송 주문을 확인하고 상태를 조회하세요.
+      </p>
       <div class="tracking">
         <input id="trackingId" placeholder="partnerOrderId">
         <button onclick="trackOrder()">조회</button>
@@ -1565,7 +1680,7 @@
   </main>
   <footer>
     모브 (MOVB) · Kakao Mobility Sandbox 연동 ·
-    <a href="/features">묶음퀵 기능 소개</a>
+    <a href="/features">스마트 딜리버리 기능 소개</a>
   </footer>
 
   <button class="chat-fab" id="chatFab" onclick="toggleChat()" aria-label="채팅 열기">
@@ -1608,6 +1723,7 @@
       </div>
     </div>
     <div class="chat-suggestions" aria-label="추천 질문">
+      <button type="button" onclick="openSmartDelivery()">스마트 딜리버리</button>
       <button type="button" onclick="openChatWithPrompt('퀵 배송 주문하고 싶어')">배송 주문</button>
       <button type="button" onclick="openChatWithPrompt('차량 선택지를 보여줘')">차량 선택</button>
       <button type="button" onclick="openChatWithPrompt('예약 배송을 시작하고 싶어')">예약 ETA</button>
@@ -1632,6 +1748,14 @@
     function goToSection(sectionId, navName) {
       setActiveNav(navName);
       byId(sectionId)?.scrollIntoView({behavior: "smooth", block: "start"});
+      if (sectionId === "history") {
+        const group = document.querySelector("#history .history-group");
+        if (group) group.open = true;
+        loadOrders();
+      }
+      if (location.hash !== `#${sectionId}`) {
+        window.history.replaceState(null, "", `#${sectionId}`);
+      }
     }
 
     function openChatWithPrompt(promptText) {
@@ -1642,6 +1766,11 @@
       input.focus();
     }
 
+    function openSmartDelivery() {
+      byId("chatWidget").classList.add("hidden");
+      goToSection("smartDelivery", "bundle");
+    }
+
     function selectQuickMode(mode) {
       document.querySelectorAll(".quick-option").forEach(button => {
         button.classList.toggle("active", button.dataset.quickMode === mode);
@@ -1650,8 +1779,16 @@
     }
 
     function startBundleRequest() {
-      location.href = "/bundle";
+      openSmartDelivery();
     }
+
+    window.addEventListener("message", (event) => {
+      if (event.origin !== location.origin) return;
+      if (event.data?.type !== "movb:smart-delivery-height") return;
+      const height = Number(event.data.height);
+      if (!Number.isFinite(height)) return;
+      byId("smartDeliveryFrame").style.height = `${Math.max(900, height)}px`;
+    });
 
     let quoteReady = false;
 
@@ -2484,15 +2621,23 @@
       try {
         const result = await api("/api/orders?limit=20");
         if (!result.data.length) {
-          list.innerHTML = '<div class="empty">아직 저장된 주문이 없습니다.</div>';
+          list.innerHTML = (
+            '<div class="empty">아직 이용 내역이 없습니다.<br>' +
+            '스마트 딜리버리 견적을 확인하고 접수하면 여기에 표시됩니다.</div>'
+          );
           return;
         }
         list.innerHTML = result.data.map(order => `
           <div class="order" onclick="selectOrder('${order.partnerOrderId.replaceAll("'", "\\'")}')">
             <div class="order-top">
-              <span class="order-id">${order.partnerOrderId}</span>
+              <span class="order-id">${
+                order.serviceType === "SMART_DELIVERY"
+                  ? "스마트 딜리버리"
+                  : "일반 배송"
+              } · ${order.partnerOrderId}</span>
               <span class="badge">${order.status}</span>
             </div>
+            <small>${order.routeSummary || "배송 경로 정보 확인 중"}</small>
             <time>${new Date(order.updatedAt).toLocaleString("ko-KR")}</time>
           </div>`).join("");
       } catch (error) {
@@ -2643,12 +2788,21 @@
       const container = document.createElement("div");
       container.className = "chat-actions";
       actions.slice(0, 6).forEach(action => {
-        if (!action?.label || !action?.message) return;
+        if (!action?.label || (!action?.message && !action?.target)) return;
         const button = document.createElement("button");
         button.type = "button";
         button.textContent = action.label;
         button.addEventListener("click", () => {
           container.querySelectorAll("button").forEach(item => item.disabled = true);
+          if (action.target === "smartDelivery") {
+            openSmartDelivery();
+            return;
+          }
+          if (action.target === "history") {
+            byId("chatWidget").classList.add("hidden");
+            goToSection("history", "history");
+            return;
+          }
           byId("chatInput").value = action.message;
           sendChatMessage();
         }, {once: true});
@@ -2727,6 +2881,12 @@
           return;
         }
         openAuthModal();
+      }
+      if (location.hash === "#smartDelivery") {
+        setActiveNav("bundle");
+      }
+      if (location.hash === "#history") {
+        setActiveNav("history");
       }
       try {
         const config = await api("/api/config");
