@@ -657,7 +657,7 @@ class DeliveryAgent:
                     lines.append(f"- 카카오 추천 차량: {fleet}")
             if isinstance(route, dict):
                 source = (
-                    "카카오 실도로"
+                    "자동차 실제 도로"
                     if route.get("actualRoadData")
                     else "보정 거리(길찾기 키 미연결)"
                 )
@@ -966,7 +966,7 @@ class DeliveryAgent:
         route_text = " → ".join(result["route"])
         route_info = result.get("routeInfo") or {}
         road_text = (
-            f"실도로 {route_info.get('distanceKm')}km · "
+            f"🚗 자동차 실제 도로 {route_info.get('distanceKm')}km · "
             f"약 {route_info.get('durationMinutes')}분\n"
             if route_info
             else ""

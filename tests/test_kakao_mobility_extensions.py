@@ -140,7 +140,11 @@ class FleetAndLogisticsClientTests(unittest.IsolatedAsyncioTestCase):
                 transport=httpx.MockTransport(handler),
             )
             payload = sample_order("fleet-order")
+            payload["productSize"] = "L"
             payload["fleetOption"] = {"fleet": "DAMAS", "type": "REQUIRED"}
+            payload["pickup"]["loadingMethod"] = "TOGETHER"
+            payload["dropoff"]["loadingMethod"] = "PICKER"
+            payload["paymentType"] = "CASH_ON_PICKUP"
             draft = DeliveryDraft.model_validate(payload)
             await client.price(draft)
             from mobility_service.models import CreateDeliveryRequest
@@ -155,6 +159,13 @@ class FleetAndLogisticsClientTests(unittest.IsolatedAsyncioTestCase):
             {"fleet": "DAMAS", "type": "REQUIRED"},
         )
         self.assertEqual(bodies[1]["fleetOption"]["fleet"], "DAMAS")
+        self.assertEqual(bodies[1]["productInfo"]["trayCount"], 1)
+        self.assertEqual(
+            bodies[1]["paymentInfo"]["paymentType"],
+            "CASH_ON_PICKUP",
+        )
+        self.assertEqual(bodies[1]["pickup"]["loadingMethod"], "TOGETHER")
+        self.assertEqual(bodies[1]["dropoff"]["loadingMethod"], "PICKER")
 
     async def test_step_and_sandbox_status_paths_match_official_docs(self) -> None:
         requests: list[httpx.Request] = []

@@ -49,6 +49,12 @@ class PaymentType(str, Enum):
     CASH_ON_DROPOFF = "CASH_ON_DROPOFF"
 
 
+class LoadingMethod(str, Enum):
+    PICKER = "PICKER"
+    USER = "USER"
+    TOGETHER = "TOGETHER"
+
+
 class Location(CamelModel):
     basic_address: str = Field(alias="basicAddress", min_length=2, max_length=200)
     detail_address: str | None = Field(
@@ -67,6 +73,9 @@ class DeliveryStop(CamelModel):
     location: Location
     contact: Contact | None = None
     note: str | None = Field(default=None, max_length=500)
+    loading_method: LoadingMethod | None = Field(
+        default=None, alias="loadingMethod"
+    )
 
 
 class DeliveryDraft(CamelModel):

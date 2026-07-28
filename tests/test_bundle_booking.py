@@ -124,6 +124,10 @@ class BundleBookingTests(unittest.TestCase):
         self.assertIn('data-fleet="MOTORCYCLE"', response.text)
         self.assertIn('name="pickupHandling"', response.text)
         self.assertIn('id="driverNote"', response.text)
+        self.assertIn('name="paymentType"', response.text)
+        self.assertIn("카드 선결제", response.text)
+        self.assertIn("🚗 자동차 실제 도로", response.text)
+        self.assertNotIn("가격 조회 선택값", response.text)
         self.assertIn("function isSmartDelivery()", response.text)
         self.assertIn("스마트 딜리버리로 자동 전환", response.text)
         section_order = [
@@ -133,6 +137,7 @@ class BundleBookingTests(unittest.TestCase):
             'class="form-section product-section"',
             'class="form-section handling-section"',
             'class="form-section driver-note-section"',
+            'class="form-section payment-section"',
         ]
         section_positions = [response.text.index(label) for label in section_order]
         self.assertEqual(section_positions, sorted(section_positions))
