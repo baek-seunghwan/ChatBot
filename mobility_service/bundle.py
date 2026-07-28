@@ -162,7 +162,7 @@ async def multi_pickup_bundle_quote(
     )
     bundled_price = _total_price(await client.price(bundled_draft))
     if bundled_price is None:
-        raise ValueError("묶음 견적 조회에 실패했어요.")
+        raise ValueError("스마트 딜리버리 견적 조회에 실패했어요.")
 
     route_info = (
         await route_planner.route_summary(
@@ -177,6 +177,7 @@ async def multi_pickup_bundle_quote(
     dropoff_route = [location.basic_address for location in ordered_dropoffs]
 
     return {
+        "pickup": pickup_locations[0].basic_address,
         "pickups": [location.basic_address for location in pickup_locations],
         "individual": individual,
         "individualTotal": individual_total,
@@ -208,7 +209,7 @@ async def bundle_quote(
     product_size: str = "XS",
     route_planner: RoutePlanner | None = None,
 ) -> dict[str, Any]:
-    """AI 채팅의 기존 한 곳 픽업 묶음 견적을 다중 픽업 엔진에 연결한다."""
+    """AI 채팅의 한 곳 픽업 견적을 스마트 딜리버리 엔진에 연결한다."""
     request = BundleQuoteRequest.model_validate(
         {
             "pickups": [{"address": pickup_address}],

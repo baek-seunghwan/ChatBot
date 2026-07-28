@@ -156,7 +156,10 @@ def site_header(active: str = "bundle") -> str:
   </a>
   <nav class="movb-primary-nav" aria-label="주요 메뉴">
     <a class="movb-nav-item{active_class("bundle")}" data-nav="bundle"
-      href="/bundle">묶음퀵 접수하기</a>
+      href="/#smartDelivery"
+      onclick="if (typeof goToSection === 'function') {{
+        event.preventDefault(); goToSection('smartDelivery', 'bundle');
+      }}">스마트 딜리버리</a>
     <a class="movb-nav-item{active_class("history")}" data-nav="history"
       href="/#history"
       onclick="if (typeof goToSection === 'function') {{

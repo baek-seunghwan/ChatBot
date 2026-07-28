@@ -2,9 +2,10 @@
 
 [![CI](https://github.com/baek-seunghwan/ChatBot/actions/workflows/ci.yml/badge.svg)](https://github.com/baek-seunghwan/ChatBot/actions/workflows/ci.yml)
 
-MOVB는 여러 픽업지에서 물품을 모아 여러 목적지로 보내는 **묶음퀵을 처음부터 끝까지 접수하는
+MOVB는 여러 픽업지에서 물품을 모아 여러 목적지로 보내는 **스마트 딜리버리를 처음부터 끝까지 접수하는
 LangGraph 기반 AI 모빌리티 운영 서비스**입니다. 현재 버전은 택시합승과 서로 다른
-사용자 간 퀵 합승을 제품 범위에서 빼고, 묶음퀵 하나의 완성도에 집중합니다.
+사용자 간 자동 매칭을 제품 범위에서 빼고, 여러 사람의 배송 정보를 한 번에 입력해
+묶어 보내는 스마트 딜리버리의 완성도에 집중합니다.
 
 사용자가 자연어로 요청하면 AI가 의도를 분류하고 필요한 배송 정보를 수집한 뒤,
 Kakao Mobility Sandbox API를 이용해 견적 조회, 주문 생성, 상태 조회와 취소를
@@ -23,8 +24,8 @@ Kakao Mobility Sandbox API를 이용해 견적 조회, 주문 생성, 상태 조
 - “판교역에서 정자역으로 서류 보내줘” → 정보 수집, 주소 변환, 견적 조회
 - “이대로 진행해줘” → 최신 견적 검증 후 Sandbox 주문 생성
 - “내 배송 어디쯤이야?” → 주문 상태 조회와 로컬 상태 동기화
-- “판교에서 정자와 서현으로 묶어서 보내줘” → 추천 경로와 개별·묶음 가격 비교
-- 묶음퀵 전용 화면 → 목적지별 연락처 입력, 최신 견적 재검증, 동의 후 주문 접수
+- “대전역에서 대전시청과 유성으로 묶어서 보내줘” → 추천 경로와 개별·묶음 가격 비교
+- 홈페이지의 스마트 딜리버리 영역 → 사람별 연락처 입력, 최신 견적 재검증, 동의 후 주문 접수
 
 ## 아키텍처
 
@@ -35,7 +36,7 @@ flowchart TD
 
     R -->|서비스 질문| K["MOVB Knowledge RAG<br/>BM25 + 문자 n-gram"]
     R -->|일반 배송| D["정보 추출 → 차량 선택 → 주소 변환<br/>완전성 검사 → 견적"]
-    R -->|묶음퀵| B["실도로 경유 순서<br/>개별·묶음 가격 비교"]
+    R -->|스마트 딜리버리| B["실도로 경유 순서<br/>개별·묶음 가격 비교"]
     R -->|상태·취소| S["저장된 주문 조회·변경"]
 
     D --> H["사용자 확인과 최신 견적 검증"]
@@ -68,13 +69,14 @@ LLM 호출이 아니라 검증된 Workflow가 수행하는 하이브리드 구�
 ### 근거 기반 MOVB Knowledge RAG
 
 - `mobility_service/knowledge/*.md`를 섹션 단위로 분리
+- 공개 홈페이지 문구를 제한적으로 수집해 지식 스냅샷으로 갱신
 - 별도 Vector DB 없이 재현 가능한 BM25 + 한국어 문자 n-gram 검색
 - 검색된 문서만 LLM 컨텍스트로 제공
 - LLM이 없으면 가장 관련 있는 근거를 추출해 답변
 - 응답에 근거 문서 제목과 구조화된 `sources` 포함
 - `GET /api/knowledge/search`에서 검색 결과를 직접 확인 가능
 
-현재 지식베이스는 6개 문서, 23개 근거 섹션으로 구성되어 있습니다.
+현재 지식베이스는 홈페이지 안내를 포함한 7개 문서로 구성되어 있습니다.
 
 ### Ollama 없는 내 로컬 채팅
 
@@ -99,7 +101,7 @@ LLM 호출이 아니라 검증된 Workflow가 수행하는 하이브리드 구�
 - 중복 콜백 제거와 역순 상태 변경 방지
 - SQLite 주문·콜백·대화 상태 보존
 
-### 묶음퀵
+### 스마트 딜리버리
 
 - 보내는 사람 1~5명과 받는 사람 2~5명을 `+ / −`로 추가·삭제
 - 받는 사람마다 어떤 보내는 사람의 물품인지 연결
@@ -111,6 +113,8 @@ LLM 호출이 아니라 검증된 Workflow가 수행하는 하이브리드 구�
 - 최종 경로와 견적에 대한 명시적 동의 검증
 - `Idempotency-Key`로 중복 주문 생성 방지
 - 접수 후 상태 조회·동기화·취소
+- 특정 도시로 제한하지 않고 카카오 API가 처리할 수 있는 국내 주소 지원
+- 기존 `/bundle` 주소는 홈페이지 스마트 딜리버리 영역으로 자동 이동
 
 ### 서비스 운영
 
@@ -128,7 +132,7 @@ LLM 호출이 아니라 검증된 Workflow가 수행하는 하이브리드 구�
 | 평가 | 데이터 | 현재 결과 |
 |---|---:|---:|
 | 지식 검색 Source Hit@3 | 26문항 | **26/26 (100%)** |
-| 자동 테스트 | API·인증·묶음퀵·주문·경로·Step·RAG·Agent·로컬 QA | **45개 통과** |
+| 자동 테스트 | API·인증·스마트 딜리버리·주문·경로·Step·RAG·Agent·로컬 QA | **51개 통과** |
 
 평가 실행:
 
@@ -168,7 +172,7 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 ```text
 MOVB는 어떤 서비스야?
 퀵과 도보 배송은 뭐가 달라?
-묶음퀵 요금은 어떻게 계산해?
+대전에서도 스마트 딜리버리를 이용할 수 있어?
 채팅으로 주문하는 방법을 알려줘
 ```
 
@@ -230,8 +234,10 @@ Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결
 | `GET` | `/api/orders/{partnerOrderId}/steps` | 정차지별 Step 상세 상태 |
 | `PATCH` | `/api/orders/{partnerOrderId}/cancel` | 주문 취소 |
 | `PATCH` | `/api/admin/orders/{partnerOrderId}/sandbox-status` | 관리자 Sandbox 상태 시연 |
-| `POST` | `/api/bundle/quote` | 묶음퀵 비교 견적 |
-| `POST` | `/api/bundle/orders` | 견적 재검증 후 묶음퀵 주문 생성 |
+| `POST` | `/api/smart-delivery/quote` | 스마트 딜리버리 비교 견적 |
+| `POST` | `/api/smart-delivery/orders` | 견적 재검증 후 스마트 딜리버리 주문 생성 |
+
+기존 `/api/bundle/*` 경로는 이전 클라이언트 호환을 위해 같은 기능의 별칭으로 유지합니다.
 
 ## 프로젝트 구조
 
@@ -240,20 +246,22 @@ mobility_service/
 ├── agent.py                 # LangGraph Agent와 업무 Workflow
 ├── knowledge.py             # BM25 + 문자 n-gram 검색기
 ├── knowledge/*.md           # MOVB 근거 문서
+├── site_crawler.py          # 홈페이지 공개 문구 수집기
 ├── providers.py             # Anthropic → Gemini 폴백
 ├── client.py                # Kakao Mobility Sandbox API
 ├── directions.py            # 자동차·다중 경유지·미래 운행 길찾기
 ├── geo_math.py              # 공통 거리 계산
-├── bundle.py                # 묶음퀵 경로·비교 견적·주문 변환
+├── bundle.py                # 스마트 딜리버리 경로·비교 견적·주문 변환
 ├── store.py                 # 주문·콜백 저장
 ├── conversation_store.py    # Agent 세션과 대화 상태
 ├── index.html               # 사용자 웹 화면
-├── bundle.html              # 묶음퀵 전용 접수 화면
-├── features.html            # 묶음퀵 기능 소개
+├── bundle.html              # 홈페이지에 삽입되는 스마트 딜리버리 폼
+├── features.html            # 스마트 딜리버리 기능 소개
 └── admin.html               # 관리자 화면
 eval/
 └── mobility_knowledge_eval.json
 scripts/
+├── crawl_movb_site.py
 └── evaluate_mobility_knowledge.py
 tests/
 ├── test_bundle_booking.py

@@ -49,7 +49,12 @@ from .orders import (
 )
 from .store import MobilityStore
 from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
-from .web import ADMIN_HTML, BUNDLE_HTML, FEATURES_HTML, INDEX_HTML
+from .web import (
+    ADMIN_HTML,
+    BUNDLE_EMBED_HTML,
+    FEATURES_HTML,
+    INDEX_HTML,
+)
 
 
 SESSION_COOKIE_NAME = "movb_session"
@@ -165,9 +170,22 @@ def create_app(
     async def index() -> str:
         return INDEX_HTML
 
-    @application.get("/bundle", response_class=HTMLResponse, include_in_schema=False)
-    async def bundle_page() -> str:
-        return BUNDLE_HTML
+    @application.get(
+        "/bundle",
+        response_class=HTMLResponse,
+        response_model=None,
+        include_in_schema=False,
+    )
+    async def bundle_page() -> RedirectResponse:
+        return RedirectResponse(url="/#smartDelivery", status_code=307)
+
+    @application.get(
+        "/smart-delivery/form",
+        response_class=HTMLResponse,
+        include_in_schema=False,
+    )
+    async def smart_delivery_form() -> str:
+        return BUNDLE_EMBED_HTML
 
     @application.get("/features", response_class=HTMLResponse, include_in_schema=False)
     async def features_page() -> str:
@@ -520,6 +538,7 @@ def create_app(
         return ApiEnvelope(data=result.to_dict())
 
     @application.post("/api/bundle/quote", response_model=ApiEnvelope)
+    @application.post("/api/smart-delivery/quote", response_model=ApiEnvelope)
     async def bundle_quote_route(request: BundleQuoteRequest) -> ApiEnvelope:
         try:
             result = await multi_pickup_bundle_quote(
@@ -537,6 +556,11 @@ def create_app(
         response_model=ApiEnvelope,
         status_code=201,
     )
+    @application.post(
+        "/api/smart-delivery/orders",
+        response_model=ApiEnvelope,
+        status_code=201,
+    )
     async def create_bundle_order(
         request: BundleOrderRequest,
         idempotency_key: str | None = Header(
@@ -546,7 +570,7 @@ def create_app(
         partner_order_id = (
             request.partner_order_id
             or idempotency_key
-            or f"bundle-{uuid4().hex[:20]}"
+            or f"smart-{uuid4().hex[:20]}"
         )
         try:
             quote, order_request = await prepare_bundle_order(
@@ -567,7 +591,7 @@ def create_app(
         message = result.pop("message", None)
         return ApiEnvelope(
             data={"quote": quote, "orderResult": result},
-            message=message or "묶음퀵 Sandbox 주문이 접수되었습니다.",
+            message=message or "스마트 딜리버리 Sandbox 주문이 접수되었습니다.",
         )
 
     return application

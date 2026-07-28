@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -11,6 +12,11 @@ from mobility_service.app import create_app
 from mobility_service.conversation_store import ConversationStore
 from mobility_service.geocode import KakaoGeocodeClient
 from mobility_service.knowledge import default_knowledge_base
+from mobility_service.site_crawler import (
+    CrawledPage,
+    extract_visible_sections,
+    render_knowledge_snapshot,
+)
 from mobility_service.store import MobilityStore
 from tests.test_mobility_service import FakeKakaoClient, settings
 
@@ -52,6 +58,39 @@ class MobilityKnowledgeTests(unittest.TestCase):
 
         self.assertNotIn("근거 문서", answer)
         self.assertNotIn("[묶음퀵", answer)
+
+    def test_homepage_crawler_extracts_visible_service_copy(self) -> None:
+        sections = extract_visible_sections(
+            """
+            <style>.hidden { display: none; }</style>
+            <h1>스마트 딜리버리</h1>
+            <p>대전에서도 주소를 입력할 수 있습니다.</p>
+            <script>secret = "not knowledge"</script>
+            """
+        )
+        snapshot = render_knowledge_snapshot(
+            [
+                CrawledPage(
+                    url="https://movb.example/",
+                    sections=sections,
+                )
+            ],
+            crawled_at=datetime(2026, 7, 28, tzinfo=timezone.utc),
+        )
+
+        self.assertIn("스마트 딜리버리", snapshot)
+        self.assertIn("대전", snapshot)
+        self.assertNotIn("secret", snapshot)
+
+    def test_smart_delivery_question_uses_homepage_knowledge(self) -> None:
+        results = default_knowledge_base().search(
+            "대전에서도 스마트 딜리버리 이용할 수 있어?"
+        )
+
+        self.assertTrue(results)
+        self.assertTrue(
+            any(result.chunk_id.startswith("06-homepage-crawl") for result in results)
+        )
 
 
 class AgentKnowledgeRouteTests(unittest.TestCase):
@@ -127,6 +166,17 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
         self.assertNotIn("근거 문서", data["reply"])
         self.assertIn("견적", data["reply"])
 
+    def test_smart_delivery_chat_opens_integrated_form(self) -> None:
+        response = self.client.post(
+            "/api/agent/chat",
+            json={"message": "스마트 딜리버리 접수하고 싶어"},
+        )
+        data = response.json()["data"]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("대전", data["reply"])
+        self.assertEqual(data["actions"][0]["target"], "smartDelivery")
+
     def test_greeting_has_useful_offline_response(self) -> None:
         response = self.client.post(
             "/api/agent/chat",
@@ -135,7 +185,7 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
         data = response.json()["data"]
 
         self.assertIn("MOVB", data["reply"])
-        self.assertIn("묶음퀵", data["reply"])
+        self.assertIn("스마트 딜리버리", data["reply"])
         self.assertNotIn("필요한 정보가 더", data["reply"])
 
     def test_vehicle_choice_is_interactive_and_saved_without_llm(self) -> None:
