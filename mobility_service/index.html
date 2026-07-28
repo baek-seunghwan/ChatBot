@@ -1480,6 +1480,7 @@
     }
     input,
     select,
+    textarea,
     .address-input button,
     .party-address button,
     button { border-radius: 7px; }
@@ -1553,10 +1554,330 @@
     .map-label.dropoff { background: var(--yellow); color: var(--navy); }
     .route-dot.pickup { background: var(--navy); }
     .route-dot.dropoff { background: var(--yellow-dark); }
+    .address-section,
+    .vehicle-section,
+    .delivery-option-section,
+    .product-section,
+    .handling-section,
+    .driver-note-section {
+      grid-column: 1 / -1;
+    }
+    .visually-hidden {
+      position: absolute !important;
+      width: 1px !important;
+      height: 1px !important;
+      overflow: hidden !important;
+      clip: rect(0 0 0 0) !important;
+      clip-path: inset(50%) !important;
+      white-space: nowrap !important;
+    }
+    .section-title-row,
+    .section-heading,
+    .section-tabs,
+    .address-actions {
+      display: flex;
+      align-items: center;
+    }
+    .section-title-row {
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .section-heading {
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .section-heading h3,
+    .section-title-row h3 { margin: 0; }
+    .section-heading > small {
+      max-width: 520px;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.45;
+      text-align: right;
+    }
+    .section-tabs {
+      gap: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section-tab {
+      min-height: 38px;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      padding: 6px 0;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 850;
+    }
+    .section-tab:hover { background: transparent; color: var(--navy); }
+    .section-tab.active {
+      border-bottom-color: var(--navy);
+      background: transparent;
+      color: var(--navy);
+    }
+    .address-actions {
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 7px;
+    }
+    .benefit-chip,
+    .round-trip-toggle {
+      display: inline-flex;
+      min-height: 34px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 6px 9px;
+      background: #fff;
+      color: var(--navy);
+      font-size: 10.5px;
+      font-weight: 800;
+    }
+    .benefit-chip {
+      border-color: #e8d570;
+      background: #fff8cf;
+      color: #6a5810;
+    }
+    .round-trip-toggle { gap: 6px; cursor: pointer; }
+    .round-trip-toggle input,
+    .notice-check input,
+    .note-checks input,
+    .handling-grid input {
+      width: 16px;
+      height: 16px;
+      min-height: 0;
+      margin: 0;
+      accent-color: var(--navy);
+    }
+    .address-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .address-party {
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcfd;
+    }
+    .address-party h3 {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin: 0;
+      color: var(--navy);
+      font-size: 13px;
+    }
+    .route-bullet {
+      display: inline-block;
+      width: 9px;
+      height: 9px;
+      border: 2px solid var(--navy);
+      border-radius: 50%;
+    }
+    .route-bullet.dropoff {
+      border: 0;
+      background: var(--yellow-dark);
+    }
+    .address-party .copy-contact { margin: 0; }
+    .person-grid { margin-top: 10px; }
+    .recent-address-panel {
+      min-height: 190px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f7f8fa;
+      text-align: center;
+    }
+    .recent-address-panel strong { color: var(--navy); }
+    .recent-address-panel p {
+      margin: 10px 0 16px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .recent-history-link {
+      display: inline-flex;
+      min-height: 38px;
+      align-items: center;
+      border: 1px solid var(--navy);
+      border-radius: 7px;
+      padding: 8px 12px;
+      color: var(--navy);
+      font-size: 12px;
+      font-weight: 850;
+      text-decoration: none;
+    }
+    .choice-card-grid {
+      display: grid;
+      gap: 8px;
+    }
+    .vehicle-card-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+    .delivery-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .choice-card {
+      position: relative;
+      display: flex;
+      min-width: 0;
+      min-height: 118px;
+      align-items: flex-start;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 4px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+      background: #fff;
+      color: var(--ink);
+      text-align: left;
+    }
+    .choice-card:hover { border-color: #9ba9bf; background: #f7f9fc; }
+    .choice-card.active {
+      border: 2px solid var(--navy);
+      padding: 12px;
+      background: #eef3fa;
+      color: var(--navy);
+    }
+    .choice-icon {
+      min-height: 28px;
+      color: var(--navy);
+      font-size: 20px;
+      font-weight: 900;
+    }
+    .choice-card strong { font-size: 12px; }
+    .choice-card small {
+      color: var(--muted);
+      font-size: 9.5px;
+      line-height: 1.4;
+    }
+    .new-badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      border-radius: 4px;
+      padding: 3px 5px;
+      background: var(--yellow);
+      color: var(--navy);
+      font-size: 8px;
+      font-weight: 950;
+    }
+    .pickup-time-field {
+      display: grid;
+      grid-template-columns: 115px minmax(180px, 280px) minmax(0, 1fr);
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      color: var(--navy);
+      font-weight: 850;
+    }
+    .pickup-time-field .field-hint { margin: 0; }
+    .delivery-option-section .smart-mode-guide { margin-top: 12px; }
+    textarea {
+      width: 100%;
+      min-height: 86px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 11px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .product-options-grid,
+    .handling-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .notice-check {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      background: #fff;
+      cursor: pointer;
+    }
+    .prohibited-notice {
+      margin: 10px 0 0;
+      color: #6d5820;
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+    .policy-details { position: relative; }
+    .policy-details summary {
+      cursor: pointer;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .policy-content {
+      margin-top: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 10.5px;
+      line-height: 1.55;
+    }
+    .policy-content strong { display: block; color: var(--navy); }
+    .policy-content p { margin: 4px 0 10px; }
+    .policy-content a { color: var(--navy); font-weight: 850; }
+    .handling-grid fieldset {
+      display: grid;
+      gap: 9px;
+      margin: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 13px;
+    }
+    .handling-grid legend {
+      padding: 0 4px;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 850;
+    }
+    .handling-grid label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+    }
+    .handling-price {
+      margin-top: 10px;
+      border-left: 3px solid var(--yellow);
+      padding: 8px 10px;
+      background: #fff9da;
+      color: #665513;
+      font-size: 10.5px;
+      line-height: 1.5;
+    }
+    .note-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 10px;
+    }
+    .note-checks label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+    }
     button:focus-visible,
     a:focus-visible,
     input:focus-visible,
-    select:focus-visible {
+    select:focus-visible,
+    textarea:focus-visible {
       outline: 3px solid rgba(16, 37, 77, .2);
       outline-offset: 2px;
     }
@@ -1669,6 +1990,17 @@
       .chat-widget-header h3 { font-size: 11px; }
       .chat-mode-btn { padding-inline: 7px; }
       .chat-suggestions { flex-wrap: nowrap; overflow-x: auto; }
+      .section-title-row,
+      .section-heading { align-items: stretch; flex-direction: column; }
+      .section-heading > small { text-align: left; }
+      .address-actions { justify-content: flex-start; }
+      .address-pair,
+      .product-options-grid,
+      .handling-grid { grid-template-columns: 1fr; }
+      .vehicle-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .delivery-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .choice-card { min-height: 104px; }
+      .pickup-time-field { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -1733,116 +2065,235 @@
 
       <div class="form-flow-note">
         <b>한 화면에서 순서대로 입력해요.</b>
-        배송 설정 → 픽업 정보 → 배송 정보 → 물품 정보 → 요금 확인
-      </div>
-
-      <div class="smart-mode-guide" id="smartModeGuide">
-        <strong id="deliveryModeGuideTitle">한 사람의 퀵 배송을 접수합니다.</strong>
-        <span id="deliveryModeGuideText">
-          사람을 직접 추가하거나, 서버에서 다른 사용자의 비슷한 주문을 찾아 함께 배송할 수 있어요.
-        </span>
-        <label class="auto-match-option" id="autoMatchOption">
-          <input type="checkbox" id="autoMatch" checked>
-          <span>
-            <strong>다른 사용자의 배송과 자동으로 묶기</strong>
-            <small id="autoMatchHint">최대 15분 동안 다른 컴퓨터에서 접수된 주문 중 출발지·도착 방향과 배송 조건이 비슷한 주문을 찾습니다.</small>
-          </span>
-        </label>
+        주소 정보 → 배송 수단 → 배송 옵션 → 물품 정보 → 물품 운반 → 기사님 전달사항 → 요금 확인
       </div>
 
       <div class="form-sections">
-      <div class="form-section service-section">
-        <h3><span class="section-number">1</span>어떤 배송이 필요한가요?</h3>
-        <div class="service-grid">
-          <label>배송 상품 <span class="required-mark">필수</span>
-            <select id="orderType">
-              <option value="QUICK">퀵 · 일반 배송</option>
-              <option value="QUICK_ECONOMY">퀵 이코노미 · 비용 절약</option>
-              <option value="QUICK_EXPRESS">퀵 급송 · 가장 빠르게</option>
-              <option value="DOBO">도보 배송 · 가까운 거리</option>
-            </select>
-            <small class="field-hint">긴급도와 비용에 맞는 상품을 선택하세요.</small>
-          </label>
-          <label>물품 크기 <span class="required-mark">필수</span>
-            <select id="productSize">
-              <option value="XS">XS · 서류/초소형</option>
-              <option value="S">S · 소형 박스</option>
-              <option value="M">M · 중형 박스</option>
-              <option value="L">L · 대형 물품</option>
-            </select>
-            <small class="field-hint">포장 완료 상태의 크기를 기준으로 선택하세요.</small>
-          </label>
-          <label>배송 차량
-            <select id="fleet">
-              <option value="">카카오 추천 차량</option>
-              <option value="MOTORCYCLE">오토바이</option>
-              <option value="DAMAS">다마스</option>
-              <option value="LABO">라보</option>
-              <option value="TON">1톤</option>
-            </select>
-            <small class="field-hint">대형(L) 물품은 차량을 반드시 선택해야 해요.</small>
-          </label>
-          <label id="wishTimeField">픽업 예약 시간
-            <input id="wishTime" type="datetime-local">
-            <small class="field-hint">예약 시 카카오 미래 교통량을 반영해 ETA를 계산해요.</small>
-          </label>
-        </div>
-      </div>
+        <section class="form-section address-section" id="addressSection">
+          <div class="section-title-row">
+            <div class="section-tabs" role="tablist" aria-label="주소 정보 메뉴">
+              <button type="button" class="section-tab active" id="addressInfoTab" role="tab" aria-selected="true">주소 정보</button>
+              <button type="button" class="section-tab" id="recentAddressTab" role="tab" aria-selected="false">최근 이용 내역</button>
+            </div>
+            <div class="address-actions">
+              <button type="button" class="secondary" id="addSmartDropoff">+ 경유지 추가</button>
+              <span class="benefit-chip">혜택 · 공동배송 요금 비교</span>
+              <label class="round-trip-toggle">
+                <input type="checkbox" id="roundTrip">
+                <span>왕복</span>
+              </label>
+            </div>
+          </div>
 
-      <div class="form-section contact-section pickup-section">
-        <div class="party-section-head">
-          <h3><span class="section-number">2</span>어디에서 픽업할까요?</h3>
-          <button type="button" class="secondary" id="addSmartPickup">+ 보내는 사람</button>
-        </div>
-        <div class="grid">
-          <label>출발지 주소 <span class="required-mark">필수</span>
-            <span class="address-input">
-              <input id="pickupAddress" required autocomplete="street-address" placeholder="도로명 또는 지번 주소">
-              <button type="button" onclick="searchAddress('pickup')">주소 검색</button>
-            </span>
-          </label>
-          <label>상세주소<input id="pickupDetailAddress" autocomplete="address-line2" placeholder="건물명, 층, 호수"></label>
-        </div>
-        <div class="grid" style="margin-top:13px">
-          <label>보내는 분 <span class="required-mark">필수</span><input id="pickupName" required autocomplete="name" maxlength="50" placeholder="이름"></label>
-          <label>연락처 <span class="required-mark">필수</span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">Sandbox에서는 010-1000-XXXX 형식만 사용할 수 있어요.</small></label>
-        </div>
-        <div class="party-list" id="smartPickupList"></div>
-      </div>
+          <div id="addressInfoPanel" role="tabpanel" aria-labelledby="addressInfoTab">
+            <div class="address-pair">
+              <div class="address-party pickup-section">
+                <div class="party-section-head">
+                  <h3><span class="route-bullet pickup"></span>출발지</h3>
+                  <button type="button" class="secondary" id="addSmartPickup">+ 보내는 사람</button>
+                </div>
+                <div class="grid">
+                  <label>주소 <span class="required-mark">필수</span>
+                    <span class="address-input">
+                      <input id="pickupAddress" required autocomplete="street-address" placeholder="주소 검색">
+                      <button type="button" onclick="searchAddress('pickup')">주소 검색</button>
+                    </span>
+                  </label>
+                  <label>상세주소<input id="pickupDetailAddress" autocomplete="address-line2" placeholder="예: 층, 동/호수"></label>
+                </div>
+                <div class="grid person-grid">
+                  <label>이름 <span class="required-mark">필수</span><input id="pickupName" required autocomplete="name" maxlength="50" placeholder="보내는 분 이름"></label>
+                  <label>연락처 <span class="required-mark">필수</span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">Sandbox에서는 010-1000-XXXX 형식만 사용할 수 있어요.</small></label>
+                </div>
+                <div class="party-list" id="smartPickupList"></div>
+              </div>
 
-      <div class="form-section contact-section dropoff-section">
-        <div class="party-section-head">
-          <h3><span class="section-number">3</span>어디로 배송할까요?</h3>
-          <button type="button" class="secondary" id="addSmartDropoff">+ 받는 사람</button>
-        </div>
-        <button type="button" class="copy-contact" onclick="copyPickupContact()">보내는 분 연락처와 동일</button>
-        <div class="grid">
-          <label>도착지 주소 <span class="required-mark">필수</span>
-            <span class="address-input">
-              <input id="dropoffAddress" required autocomplete="street-address" placeholder="도로명 또는 지번 주소">
-              <button type="button" onclick="searchAddress('dropoff')">주소 검색</button>
-            </span>
-          </label>
-          <label>상세주소<input id="dropoffDetailAddress" autocomplete="address-line2" placeholder="건물명, 층, 호수"></label>
-        </div>
-        <div class="grid" style="margin-top:13px">
-          <label>받는 사람 이름 <span class="required-mark">필수</span><input id="dropoffName" required maxlength="50" placeholder="이름"></label>
-          <label>연락처 <span class="required-mark">필수</span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
-        </div>
-        <label class="primary-owner" id="primaryOwnerField" hidden>
-          이 물품을 보내는 사람
-          <select id="primaryDropoffPickup"></select>
-        </label>
-        <div class="party-list" id="smartDropoffList"></div>
-      </div>
+              <div class="address-party dropoff-section">
+                <div class="party-section-head">
+                  <h3><span class="route-bullet dropoff"></span>도착지</h3>
+                  <button type="button" class="copy-contact" onclick="copyPickupContact()">보내는 분 연락처와 동일</button>
+                </div>
+                <div class="grid">
+                  <label>주소 <span class="required-mark">필수</span>
+                    <span class="address-input">
+                      <input id="dropoffAddress" required autocomplete="street-address" placeholder="주소 검색">
+                      <button type="button" onclick="searchAddress('dropoff')">주소 검색</button>
+                    </span>
+                  </label>
+                  <label>상세주소<input id="dropoffDetailAddress" autocomplete="address-line2" placeholder="예: 층, 동/호수"></label>
+                </div>
+                <div class="grid person-grid">
+                  <label>이름 <span class="required-mark">필수</span><input id="dropoffName" required maxlength="50" placeholder="받는 사람 이름"></label>
+                  <label>연락처 <span class="required-mark">필수</span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
+                </div>
+                <label class="primary-owner" id="primaryOwnerField" hidden>
+                  이 물품을 보내는 사람
+                  <select id="primaryDropoffPickup"></select>
+                </label>
+                <div class="party-list" id="smartDropoffList"></div>
+              </div>
+            </div>
+          </div>
 
-      <div class="form-section product-section">
-        <h3><span class="section-number">4</span>무엇을 보내시나요?</h3>
-        <div class="grid">
-          <label>물품명 <span class="required-mark">필수</span><input id="productName" required maxlength="100" placeholder="예: 계약서, 의류, 소형 부품"></label>
-          <label>물품 신고가<input id="declaredValue" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 10000"><small class="field-hint">분실·파손 보상 확인에 사용되는 금액입니다.</small></label>
-        </div>
-      </div>
+          <div class="recent-address-panel" id="recentAddressPanel" role="tabpanel" aria-labelledby="recentAddressTab" hidden>
+            <strong>최근 이용 내역 · 주소록</strong>
+            <p id="recentAddressMessage">로그인 후 이용 가능합니다.</p>
+            <button type="button" class="secondary" id="recentAddressLogin" onclick="openAuthModal()">MOVB 로그인</button>
+            <a class="recent-history-link" id="recentHistoryLink" href="/history" hidden>이용 내역에서 주소 확인</a>
+          </div>
+        </section>
+
+        <section class="form-section vehicle-section">
+          <div class="section-heading">
+            <h3><span class="section-number">2</span>배송 수단</h3>
+            <small>원활한 배정을 위해 동일한 가격과 시간 안에서 다른 배송 수단이 올 수도 있어요.</small>
+          </div>
+          <select id="fleet" class="visually-hidden" aria-label="배송 수단">
+            <option value="">자동 추천</option>
+            <option value="MOTORCYCLE">오토바이</option>
+            <option value="PASSENGER_CAR">소형차</option>
+            <option value="DAMAS">다마스</option>
+            <option value="LABO">라보</option>
+            <option value="TON">1톤</option>
+          </select>
+          <div class="choice-card-grid vehicle-card-grid" id="fleetChoices">
+            <button type="button" class="choice-card active" data-fleet="">
+              <span class="choice-icon">✨</span><strong>자동 추천</strong><small>가격과 조건에 맞게</small>
+            </button>
+            <button type="button" class="choice-card" data-fleet="MOTORCYCLE">
+              <span class="choice-icon">🛵</span><strong>오토바이</strong><small>20kg · 세 변 140cm 이하</small>
+            </button>
+            <button type="button" class="choice-card" data-fleet="PASSENGER_CAR">
+              <span class="choice-icon">🚙</span><strong>소형차</strong><small>20kg · 안전한 적재</small>
+            </button>
+            <button type="button" class="choice-card" data-fleet="DAMAS">
+              <span class="choice-icon">🚐</span><strong>다마스</strong><small>최대 450kg</small>
+            </button>
+            <button type="button" class="choice-card" data-fleet="LABO">
+              <span class="choice-icon">🛻</span><strong>라보</strong><small>최대 500kg</small>
+            </button>
+            <button type="button" class="choice-card" data-fleet="TON">
+              <span class="choice-icon">🚚</span><strong>1톤</strong><small>최대 1,000kg</small>
+            </button>
+          </div>
+        </section>
+
+        <section class="form-section delivery-option-section">
+          <div class="section-heading">
+            <h3><span class="section-number">3</span>배송 옵션</h3>
+          </div>
+          <select id="orderType" class="visually-hidden" aria-label="배송 옵션">
+            <option value="QUICK_ECONOMY">이코노미</option>
+            <option value="QUICK" selected>일반</option>
+            <option value="QUICK_EXPRESS">급송</option>
+            <option value="DOBO">도보 배송</option>
+          </select>
+          <div class="choice-card-grid delivery-card-grid" id="deliveryChoices">
+            <button type="button" class="choice-card" data-order-type="QUICK_ECONOMY">
+              <span class="choice-icon">%</span><strong>이코노미</strong><small>저렴한 반나절 배송</small>
+            </button>
+            <button type="button" class="choice-card active" data-order-type="QUICK">
+              <span class="choice-icon">⚡</span><strong>일반</strong><small>합리적인 요금</small>
+            </button>
+            <button type="button" class="choice-card" data-order-type="QUICK_EXPRESS">
+              <span class="choice-icon">⚡⚡</span><strong>급송</strong><small>가장 빠른 배송</small>
+            </button>
+            <button type="button" class="choice-card smart-choice" data-order-type="SMART">
+              <span class="new-badge">NEW</span><span class="choice-icon">↗</span><strong>스마트 딜리버리</strong><small>다른 배송과 자동 매칭</small>
+            </button>
+          </div>
+          <label class="pickup-time-field" id="wishTimeField">픽업 시간
+            <select id="wishTime">
+              <option value="">오늘, 바로 픽업</option>
+            </select>
+            <small class="field-hint">예약 시간 기준으로 요금이 적용되며 배송 상황에 따라 픽업 시간이 변경될 수 있어요.</small>
+          </label>
+          <div class="smart-mode-guide" id="smartModeGuide">
+            <strong id="deliveryModeGuideTitle">일반 퀵으로 바로 접수합니다.</strong>
+            <span id="deliveryModeGuideText">사람을 추가하면 스마트 딜리버리로 자동 전환됩니다.</span>
+            <label class="auto-match-option" id="autoMatchOption" hidden>
+              <input type="checkbox" id="autoMatch">
+              <span>
+                <strong>다른 사용자의 배송과 자동으로 묶기</strong>
+                <small id="autoMatchHint">최대 15분 동안 방향과 조건이 비슷한 다른 컴퓨터의 주문을 찾습니다.</small>
+              </span>
+            </label>
+          </div>
+        </section>
+
+        <section class="form-section product-section">
+          <div class="section-title-row">
+            <h3><span class="section-number">4</span>물품 정보</h3>
+            <details class="policy-details">
+              <summary>유의사항</summary>
+              <div class="policy-content">
+                <strong>기본 기준</strong>
+                <p>오토바이·소형차는 세 변의 합 140cm 이하, 한 변 100cm 미만, 20kg 이하를 기준으로 합니다. 다마스·라보·1톤은 차량별 적재 크기와 무게가 다릅니다.</p>
+                <strong>취급 불가</strong>
+                <p>현금·유가증권, 위험물, 불법 유통물, 살아 있는 동물, 포장이 부적합한 물품은 배송할 수 없습니다. 신선식품·유리제품·예술품·중고 전자제품 등은 사고 시 보상이 제한될 수 있습니다.</p>
+                <strong>포장과 추가 요금</strong>
+                <p>박스와 완충재로 견고하게 포장해야 합니다. 과적은 5,000원, 픽업 대기는 10분당 2,000원 등 추가 요금이 발생할 수 있으며 현금이 아닌 고객센터를 통해 결제해야 합니다.</p>
+                <a href="#" onclick="openChatWithPrompt('퀵 취급 불가 품목과 보험 보상 기준 알려줘'); return false;">AI 고객센터에 자세히 묻기</a>
+              </div>
+            </details>
+          </div>
+          <label>상세한 물품 정보 <span class="required-mark">필수</span>
+            <textarea id="productName" required maxlength="100" placeholder="예: 4인용 소파, 책상, 모니터 등"></textarea>
+          </label>
+          <div class="product-options-grid">
+            <label>전체 물품 크기 <span class="required-mark">필수</span>
+              <select id="productSize">
+                <option value="XS">XS · 서류/초소형</option>
+                <option value="S">S · 소형 박스</option>
+                <option value="M">M · 중형 박스</option>
+                <option value="L">L · 대형 물품</option>
+              </select>
+              <small class="field-hint">접수하는 물품 전체, 포장 완료 상태를 기준으로 선택해 주세요.</small>
+            </label>
+            <label>전체 물품 가격
+              <input id="declaredValue" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 500000">
+              <small class="field-hint">물품가액은 보험·보상 가능 여부 확인에 사용됩니다.</small>
+            </label>
+          </div>
+          <label class="notice-check">
+            <input type="checkbox" id="highValueNotice">
+            <span>전체 물품 가격의 합이 50만 원보다 비싸요</span>
+          </label>
+          <p class="prohibited-notice"><b>취급불가 품목</b>(약품류, 현금류, 생물, 신분증 등)은 배송이 불가하며 적재물 책임 보험이 적용되지 않습니다.</p>
+        </section>
+
+        <section class="form-section handling-section">
+          <div class="section-heading">
+            <h3><span class="section-number">5</span>물품 운반 신청</h3>
+            <small>다마스·라보·1톤 이용 시 기사님이 물품 픽업과 상·하차를 도와드리는 옵션입니다.</small>
+          </div>
+          <div class="handling-grid">
+            <fieldset>
+              <legend>출발지 운반</legend>
+              <label><input type="radio" name="pickupHandling" value="NONE" checked> 신청 안 함</label>
+              <label><input type="radio" name="pickupHandling" value="TOGETHER"> 기사님과 같이</label>
+              <label><input type="radio" name="pickupHandling" value="ALONE"> 기사님이 혼자</label>
+            </fieldset>
+            <fieldset>
+              <legend>도착지 운반</legend>
+              <label><input type="radio" name="dropoffHandling" value="NONE" checked> 신청 안 함</label>
+              <label><input type="radio" name="dropoffHandling" value="TOGETHER"> 기사님과 같이</label>
+              <label><input type="radio" name="dropoffHandling" value="ALONE"> 기사님이 혼자</label>
+            </fieldset>
+          </div>
+          <div class="handling-price" id="handlingPrice">차량을 선택하면 운반 예상 추가요금을 안내해 드려요.</div>
+        </section>
+
+        <section class="form-section driver-note-section">
+          <div class="section-heading">
+            <h3><span class="section-number">6</span>기사님 전달사항 <small>(선택)</small></h3>
+          </div>
+          <div class="note-checks">
+            <label><input type="checkbox" id="noElevator"> 엘리베이터 없어요</label>
+            <label><input type="checkbox" id="needCart"> 카트 필요해요</label>
+          </div>
+          <textarea id="driverNote" maxlength="400" placeholder="기사님께 전달할 내용을 입력하세요. 예: 주차장 정문으로 와주세요"></textarea>
+        </section>
       </div>
 
       <div class="quick-review" id="quickReview">
@@ -2004,18 +2455,146 @@
       return smartPickupNodes().length > 0 || smartDropoffNodes().length > 0;
     }
 
+    function setSectionTab(tab) {
+      const recent = tab === "recent";
+      byId("addressInfoTab").classList.toggle("active", !recent);
+      byId("addressInfoTab").setAttribute("aria-selected", String(!recent));
+      byId("recentAddressTab").classList.toggle("active", recent);
+      byId("recentAddressTab").setAttribute("aria-selected", String(recent));
+      byId("addressInfoPanel").hidden = recent;
+      byId("recentAddressPanel").hidden = !recent;
+    }
+
+    function updateRecentAddressUi() {
+      byId("recentAddressMessage").textContent = currentUser
+        ? `${currentUser.name}님의 최근 배송 주소는 이용 내역에서 확인할 수 있어요.`
+        : "로그인 후 이용 가능합니다.";
+      byId("recentAddressLogin").hidden = Boolean(currentUser);
+      byId("recentHistoryLink").hidden = !currentUser;
+    }
+
+    function localDateTimeValue(date) {
+      const pad = value => String(value).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function populatePickupTimes() {
+      const select = byId("wishTime");
+      const now = new Date();
+      const first = new Date(now);
+      first.setSeconds(0, 0);
+      first.setMinutes(Math.ceil((first.getMinutes() + 1) / 10) * 10);
+      const immediate = select.options[0];
+      select.replaceChildren(immediate);
+      for (
+        let time = first;
+        time.getDate() === now.getDate();
+        time = new Date(time.getTime() + 10 * 60 * 1000)
+      ) {
+        const option = document.createElement("option");
+        option.value = localDateTimeValue(time);
+        option.textContent = new Intl.DateTimeFormat("ko-KR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(time);
+        select.append(option);
+      }
+    }
+
+    function selectFleet(value) {
+      byId("fleet").value = value;
+      document.querySelectorAll("[data-fleet]").forEach(card => {
+        card.classList.toggle("active", card.dataset.fleet === value);
+      });
+      updateHandlingUi();
+      handleQuickFormChange();
+    }
+
+    function selectDeliveryOption(value) {
+      if (value === "SMART") {
+        byId("orderType").value = "QUICK";
+        byId("autoMatch").checked = true;
+      } else {
+        byId("orderType").value = value;
+        byId("autoMatch").checked = false;
+      }
+      syncDeliveryMode();
+      handleQuickFormChange();
+    }
+
+    function handlingChoice(name) {
+      return document.querySelector(`input[name="${name}"]:checked`)?.value || "NONE";
+    }
+
+    function handlingLabel(value) {
+      return {
+        NONE: "신청 안 함",
+        TOGETHER: "기사님과 같이",
+        ALONE: "기사님이 혼자",
+      }[value] || value;
+    }
+
+    function handlingUnitPrice(value) {
+      const fleet = byId("fleet").value;
+      const prices = {
+        DAMAS: {TOGETHER: 3000, ALONE: 6000},
+        LABO: {TOGETHER: 4000, ALONE: 8000},
+        TON: {TOGETHER: 8000, ALONE: 16000},
+      };
+      return prices[fleet]?.[value] || 0;
+    }
+
+    function updateHandlingUi() {
+      const eligible = ["DAMAS", "LABO", "TON"].includes(byId("fleet").value);
+      document.querySelectorAll(
+        'input[name="pickupHandling"], input[name="dropoffHandling"]'
+      ).forEach(input => {
+        if (input.value !== "NONE") input.disabled = !eligible;
+        if (!eligible && input.value === "NONE") input.checked = true;
+      });
+      const pickup = handlingChoice("pickupHandling");
+      const dropoff = handlingChoice("dropoffHandling");
+      const total = handlingUnitPrice(pickup) + handlingUnitPrice(dropoff);
+      byId("handlingPrice").textContent = eligible
+        ? total
+          ? `선택한 운반 신청 예상 추가요금 ${won(total)} · 상차와 하차는 각각 계산됩니다.`
+          : "운반을 신청하면 선택한 차량 기준 예상 추가요금을 안내해 드려요."
+        : "물품 운반 신청은 다마스·라보·1톤을 선택했을 때 이용할 수 있어요.";
+    }
+
+    function composeDriverNote(kind) {
+      const parts = [];
+      const handling = handlingChoice(
+        kind === "pickup" ? "pickupHandling" : "dropoffHandling"
+      );
+      if (handling !== "NONE") {
+        parts.push(`[물품 운반: ${handlingLabel(handling)}]`);
+      }
+      if (byId("noElevator").checked) parts.push("[엘리베이터 없음]");
+      if (byId("needCart").checked) parts.push("[카트 필요]");
+      const note = byId("driverNote").value.trim();
+      if (note) parts.push(note);
+      return parts.join(" ") || null;
+    }
+
     function syncDeliveryMode() {
       const smart = isSmartDelivery();
       const matchEligible = ["QUICK", "QUICK_EXPRESS"].includes(
         byId("orderType").value
       );
       const autoMatch = !smart && matchEligible && byId("autoMatch").checked;
+      const roundTripEligible = !smart && !autoMatch && matchEligible;
       byId("orderType").disabled = smart;
       if (smart) byId("orderType").value = "QUICK";
       byId("wishTimeField").hidden = smart;
       byId("primaryOwnerField").hidden = smartPickupNodes().length === 0;
-      byId("autoMatchOption").hidden = smart;
+      byId("autoMatchOption").hidden = true;
       byId("autoMatch").disabled = !matchEligible;
+      if (!roundTripEligible) {
+        byId("roundTrip").checked = false;
+      }
+      byId("roundTrip").disabled = !roundTripEligible;
       byId("autoMatchHint").textContent = matchEligible
         ? "최대 15분 동안 다른 컴퓨터에서 접수된 주문 중 출발지·도착 방향과 배송 조건이 비슷한 주문을 찾습니다."
         : "일반 퀵과 퀵 급송에서만 다른 사용자 주문과 자동으로 묶을 수 있습니다.";
@@ -2037,6 +2616,12 @@
         ? "추가한 사람을 포함해 개별 배송 합계와 묶음 경로의 요금을 비교합니다."
         : "보내는 사람·받는 사람을 직접 추가하거나, 서버가 다른 사용자의 비슷한 주문을 찾도록 자동 매칭을 사용할 수 있습니다.";
       byId("smartModeGuide").classList.toggle("active", smart);
+      document.querySelectorAll("[data-order-type]").forEach(card => {
+        const active = smart || autoMatch
+          ? card.dataset.orderType === "SMART"
+          : card.dataset.orderType === byId("orderType").value;
+        card.classList.toggle("active", active);
+      });
       byId("quoteButton").textContent = smart
         ? "개별·묶음 견적 비교"
         : "예상 시간·요금 확인";
@@ -2240,7 +2825,9 @@
       byId("reviewRoute").textContent = pickup && dropoff
         ? isSmartDelivery()
           ? `${pickupCount}곳 픽업 → ${dropoffCount}곳 배송`
-          : `${pickup} → ${dropoff}`
+          : byId("roundTrip").checked
+            ? `${pickup} → ${dropoff} → 출발지 복귀`
+            : `${pickup} → ${dropoff}`
         : "출발지와 도착지를 입력해주세요.";
       const fleet = byId("fleet").value;
       byId("reviewService").textContent = [
@@ -2249,7 +2836,14 @@
           : orderTypeLabel(byId("orderType").value),
         fleet ? fleetLabel(fleet) : "차량 자동 추천"
       ].join(" · ");
-      byId("reviewProduct").textContent = byId("productName").value.trim() || "입력 전";
+      const handlingCount = [
+        handlingChoice("pickupHandling"),
+        handlingChoice("dropoffHandling"),
+      ].filter(value => value !== "NONE").length;
+      byId("reviewProduct").textContent = [
+        byId("productName").value.trim() || "입력 전",
+        handlingCount ? `운반 ${handlingCount}곳 신청` : "",
+      ].filter(Boolean).join(" · ");
 
     }
 
@@ -2293,6 +2887,16 @@
         byId(`${kind}Address`).classList.add("field-error");
         byId(`${kind}Address`).focus();
         showResult("주소 확인이 필요해요", "주소를 직접 입력하지 말고 주소 검색 버튼이나 지도를 이용해 위치를 선택해주세요.", true);
+        return false;
+      }
+      const declaredValue = Number(byId("declaredValue").value || 0);
+      if (declaredValue > 500000 && !byId("highValueNotice").checked) {
+        byId("highValueNotice").focus();
+        showResult(
+          "고가 물품 확인이 필요해요",
+          "전체 물품 가격이 50만 원을 넘으면 고가 물품 확인 항목에 체크해주세요.",
+          true
+        );
         return false;
       }
       if (isSmartDelivery()) {
@@ -2387,6 +2991,7 @@
         byId("authTitle").textContent = authMode === "register" ? "MOVB 회원가입" : "MOVB 로그인";
         byId("adminPanelButton").classList.add("hidden");
       }
+      updateRecentAddressUi();
     }
 
     function setAuthMode(mode) {
@@ -2563,9 +3168,14 @@
       byId("routeDistance").textContent = "· 카카오 실도로 경로를 계산하는 중입니다.";
       const payload = {
         origin: {basicAddress: "출발지", ...pickup},
-        destination: {basicAddress: "목적지", ...dropoff},
+        destination: byId("roundTrip").checked
+          ? {basicAddress: "출발지 복귀", ...pickup}
+          : {basicAddress: "목적지", ...dropoff},
         waypoints: []
       };
+      if (byId("roundTrip").checked) {
+        payload.waypoints = [{basicAddress: "목적지", ...dropoff}];
+      }
       const wishTimeValue = byId("wishTime")?.value;
       if (wishTimeValue) payload.departureTime = new Date(wishTimeValue).toISOString();
       try {
@@ -2581,7 +3191,9 @@
           `· ${source} ${route.distanceKm}km · 약 ${route.durationMinutes}분${future}`;
       } catch {
         if (token !== routeLookupToken) return;
-        const distance = distanceKilometers(pickup, dropoff) * 1.3;
+        const distance = distanceKilometers(pickup, dropoff)
+          * 1.3
+          * (byId("roundTrip").checked ? 2 : 1);
         byId("routeDistance").textContent = `· 보정 거리 약 ${distance.toFixed(1)}km`;
       }
     }
@@ -2824,11 +3436,22 @@
       if (pickupContact) payload.pickup.contact = pickupContact;
       const dropoffContact = contactValue("dropoff");
       if (dropoffContact) payload.dropoff.contact = dropoffContact;
+      payload.pickup.note = composeDriverNote("pickup");
+      payload.dropoff.note = composeDriverNote("dropoff");
       const productName = byId("productName").value.trim();
       if (productName) payload.productName = productName;
       const declaredRaw = byId("declaredValue").value.trim();
       if (declaredRaw && Number.isFinite(Number(declaredRaw))) {
         payload.declaredValue = Number(declaredRaw);
+      }
+      if (byId("roundTrip").checked) {
+        const originalDestination = structuredClone(payload.dropoff);
+        payload.waypoints = [originalDestination];
+        payload.dropoff = {
+          location: structuredClone(payload.pickup.location),
+          contact: structuredClone(payload.pickup.contact),
+          note: ["[왕복 복귀]", payload.pickup.note].filter(Boolean).join(" "),
+        };
       }
       return payload;
     }
@@ -2845,7 +3468,7 @@
             name: byId("pickupName").value.trim(),
             phone: byId("pickupPhone").value.trim(),
           },
-          note: null,
+          note: composeDriverNote("pickup"),
         },
         ...smartPickupNodes().map(row => ({
           key: row.dataset.pickupKey,
@@ -2871,7 +3494,7 @@
             name: byId("dropoffName").value.trim(),
             phone: byId("dropoffPhone").value.trim(),
           },
-          note: null,
+          note: composeDriverNote("dropoff"),
           pickupIndex: pickupKeys.indexOf(byId("primaryDropoffPickup").value),
         },
         ...smartDropoffNodes().map(row => ({
@@ -3593,7 +4216,8 @@
     const quickFormFields = [
       "orderType", "productSize", "fleet", "wishTime", "pickupAddress", "pickupDetailAddress",
       "pickupName", "pickupPhone", "dropoffAddress", "dropoffDetailAddress",
-      "dropoffName", "dropoffPhone", "productName", "declaredValue"
+      "dropoffName", "dropoffPhone", "productName", "declaredValue",
+      "driverNote", "highValueNotice", "noElevator", "needCart"
     ];
     quickFormFields.forEach(id => {
       const field = byId(id);
@@ -3619,7 +4243,33 @@
     byId("addSmartPickup").addEventListener("click", addSmartPickup);
     byId("addSmartDropoff").addEventListener("click", addSmartDropoff);
     byId("autoMatch").addEventListener("change", syncDeliveryMode);
+    byId("addressInfoTab").addEventListener("click", () => setSectionTab("address"));
+    byId("recentAddressTab").addEventListener("click", () => setSectionTab("recent"));
+    byId("roundTrip").addEventListener("change", () => {
+      if (byId("roundTrip").checked) byId("autoMatch").checked = false;
+      syncDeliveryMode();
+      handleQuickFormChange();
+      renderRoute(true);
+    });
+    document.querySelectorAll("[data-fleet]").forEach(card => {
+      card.addEventListener("click", () => selectFleet(card.dataset.fleet));
+    });
+    document.querySelectorAll("[data-order-type]").forEach(card => {
+      card.addEventListener("click", () => selectDeliveryOption(card.dataset.orderType));
+    });
+    document.querySelectorAll(
+      'input[name="pickupHandling"], input[name="dropoffHandling"]'
+    ).forEach(input => {
+      input.addEventListener("change", () => {
+        updateHandlingUi();
+        handleQuickFormChange();
+      });
+    });
     byId("primaryDropoffPickup").addEventListener("change", handleQuickFormChange);
+    populatePickupTimes();
+    setSectionTab("address");
+    selectFleet("");
+    updateHandlingUi();
     syncDeliveryMode();
     syncQuickReview();
     updateDistance();

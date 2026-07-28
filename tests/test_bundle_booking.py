@@ -113,14 +113,29 @@ class BundleBookingTests(unittest.TestCase):
         self.client.close()
         self.temporary.cleanup()
 
-    def test_home_form_has_automatic_smart_delivery_flow(self) -> None:
+    def test_home_form_has_quick_and_automatic_smart_delivery_flow(self) -> None:
         response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("+ 보내는 사람", response.text)
-        self.assertIn("+ 받는 사람", response.text)
+        self.assertIn("+ 경유지 추가", response.text)
+        self.assertIn('id="roundTrip"', response.text)
+        self.assertIn('data-order-type="SMART"', response.text)
+        self.assertIn('data-fleet="MOTORCYCLE"', response.text)
+        self.assertIn('name="pickupHandling"', response.text)
+        self.assertIn('id="driverNote"', response.text)
         self.assertIn("function isSmartDelivery()", response.text)
         self.assertIn("스마트 딜리버리로 자동 전환", response.text)
+        section_order = [
+            'class="form-section address-section"',
+            'class="form-section vehicle-section"',
+            'class="form-section delivery-option-section"',
+            'class="form-section product-section"',
+            'class="form-section handling-section"',
+            'class="form-section driver-note-section"',
+        ]
+        section_positions = [response.text.index(label) for label in section_order]
+        self.assertEqual(section_positions, sorted(section_positions))
         self.assertIn('id="quoteButton"', response.text)
         self.assertIn('id="orderButton"', response.text)
         self.assertIn("/api/smart-delivery/quote", response.text)
