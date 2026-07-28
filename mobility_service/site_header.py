@@ -168,14 +168,14 @@ def site_header(active: str = "bundle") -> str:
     <a class="movb-nav-item{active_class("about")}" data-nav="about"
       href="/about">브랜드 소개</a>
     <a class="movb-nav-item{active_class("bundle")}" data-nav="bundle"
-      href="/#smartDelivery"
+      href="/order#smartDelivery"
       onclick="if (typeof openSmartDelivery === 'function') {{
         event.preventDefault(); openSmartDelivery();
       }}">스마트 딜리버리</a>
     <a class="movb-nav-item{active_class("history")}" data-nav="history"
       href="/history">이용 내역</a>
   </nav>
-  <a class="movb-login-button" id="loginButton" href="/?login=1"
+  <a class="movb-login-button" id="loginButton" href="/order?login=1"
     onclick="if (typeof openAuthModal === 'function') {{
       event.preventDefault(); openAuthModal();
     }}">로그인</a>

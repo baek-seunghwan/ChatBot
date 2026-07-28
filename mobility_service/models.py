@@ -164,6 +164,8 @@ class AgentChatRequest(CamelModel):
     local_engine: str = Field(
         default="ollama", alias="localEngine", pattern=r"^(ollama|own)$"
     )
+    # 퀵 배송 접수 폼에 이미 입력된 값들. 챗봇이 같은 정보를 다시 묻지 않도록 슬롯의 기본값으로 사용된다.
+    form_snapshot: dict[str, Any] | None = Field(default=None, alias="formSnapshot")
 
 
 class BundlePickupQuoteRequest(CamelModel):

@@ -167,6 +167,10 @@ def create_app(
 
     @application.get("/", response_class=HTMLResponse, include_in_schema=False)
     async def index() -> str:
+        return ABOUT_HTML
+
+    @application.get("/order", response_class=HTMLResponse, include_in_schema=False)
+    async def order_page() -> str:
         return INDEX_HTML
 
     @application.get(
@@ -176,7 +180,7 @@ def create_app(
         include_in_schema=False,
     )
     async def bundle_page() -> RedirectResponse:
-        return RedirectResponse(url="/#smartDelivery", status_code=307)
+        return RedirectResponse(url="/order#smartDelivery", status_code=307)
 
     @application.get(
         "/smart-delivery/form",
@@ -185,7 +189,7 @@ def create_app(
         include_in_schema=False,
     )
     async def smart_delivery_form() -> RedirectResponse:
-        return RedirectResponse(url="/#smartDelivery", status_code=307)
+        return RedirectResponse(url="/order#smartDelivery", status_code=307)
 
     @application.get("/features", response_class=HTMLResponse, include_in_schema=False)
     async def features_page() -> str:
@@ -226,7 +230,7 @@ def create_app(
             else None
         )
         if user is None or user.get("role") != "ADMIN":
-            return RedirectResponse(url="/?admin=1", status_code=303)
+            return RedirectResponse(url="/order?admin=1", status_code=303)
         return HTMLResponse(ADMIN_HTML)
 
     @application.get("/health")
@@ -810,7 +814,11 @@ def create_app(
                     "trace": [f"local_model:{request.local_engine}"],
                 }
             )
-        result = await resolved_agent.achat(session_id=session_id, message=request.message)
+        result = await resolved_agent.achat(
+            session_id=session_id,
+            message=request.message,
+            form_snapshot=request.form_snapshot,
+        )
         return ApiEnvelope(data=result.to_dict())
 
     @application.post("/api/bundle/quote", response_model=ApiEnvelope)
