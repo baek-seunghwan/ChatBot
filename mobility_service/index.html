@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MOVB 스마트 딜리버리</title>
+  <title>Move Better, TOGETHER</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23fff'/%3E%3Cpath%20d='M16%2046V18l16%2018%2016-18v28'%20fill='none'%20stroke='%2310254d'%20stroke-width='10'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Crect%20x='22'%20y='53'%20width='20'%20height='6'%20rx='3'%20fill='%23ffcc00'/%3E%3C/svg%3E">
   <style>
     :root {
-      --yellow: #fee500;
-      --yellow-dark: #e5cf00;
+      --yellow: #ffcc00;
+      --yellow-dark: #e0b400;
       --ink: #191919;
       --muted: #686868;
       --line: #e7e7e7;
@@ -186,8 +186,8 @@
     .account-profile {
       padding: 18px;
       border-radius: 16px;
-      background: linear-gradient(135deg, #fff9cf, #fffef2);
-      border: 1px solid #f0df78;
+      background: linear-gradient(135deg, #fff3c4, #fffdf2);
+      border: 1px solid #f0d878;
     }
     .account-profile strong { display: block; font-size: 19px; }
     .account-profile span { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; }
@@ -349,7 +349,12 @@
       color: white;
       font-size: 12px;
     }
-    .required-mark { color: var(--danger); }
+    .field-label { display: inline-flex; align-items: center; gap: 5px; }
+    .required-mark {
+      color: var(--danger);
+      font-size: 10px;
+      font-weight: 800;
+    }
     .field-hint {
       display: block;
       margin-top: 5px;
@@ -396,7 +401,7 @@
       font-size: 12px;
       font-weight: 800;
     }
-    .quote-status.ready { background: rgba(254, 229, 0, .18); color: var(--yellow); }
+    .quote-status.ready { background: rgba(255, 204, 0, .2); color: var(--yellow); }
     .review-route { margin: 0 0 14px; color: rgba(255, 255, 255, .82); font-size: 12px; line-height: 1.5; }
     .review-route strong { color: white; }
     .review-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -1088,9 +1093,9 @@
       align-items: center;
       gap: 6px;
       padding: 7px 10px;
-      border: 1px solid #ece29a;
-      background: #fffbed;
-      color: #655b17;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--navy);
       font-size: 11px;
     }
     .quick-badge > span {
@@ -1484,6 +1489,15 @@
     .address-input button,
     .party-address button,
     button { border-radius: 7px; }
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 34px;
+      background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2020%2020'%3E%3Cpath%20d='M5.5%207.5l4.5%205%204.5-5'%20fill='none'%20stroke='%23667085'%20stroke-width='1.6'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 18px;
+    }
     button {
       background: var(--navy);
       box-shadow: none;
@@ -1623,6 +1637,10 @@
       justify-content: flex-end;
       gap: 7px;
     }
+    .address-actions .benefit-chip,
+    .address-actions .round-trip-toggle {
+      display: none;
+    }
     .benefit-chip,
     .round-trip-toggle {
       display: inline-flex;
@@ -1637,9 +1655,9 @@
       font-weight: 800;
     }
     .benefit-chip {
-      border-color: #e8d570;
-      background: #fff8cf;
-      color: #6a5810;
+      border-color: var(--line);
+      background: #fff;
+      color: var(--navy);
     }
     .round-trip-toggle { gap: 6px; cursor: pointer; }
     .round-trip-toggle input,
@@ -1741,11 +1759,12 @@
       color: var(--navy);
     }
     .choice-icon {
+      display: flex;
+      align-items: center;
       min-height: 28px;
       color: var(--navy);
-      font-size: 20px;
-      font-weight: 900;
     }
+    .choice-icon svg { width: 22px; height: 22px; }
     .choice-card strong { font-size: 12px; }
     .choice-card small {
       color: var(--muted);
@@ -2151,16 +2170,10 @@
     <section class="panel" id="quickRequest">
       <div class="quick-heading">
         <div>
-          <span class="eyebrow">QUICK DELIVERY</span>
           <h1 id="quickTitle">퀵 배송 접수</h1>
           <p class="description" id="quickDescription">필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
         </div>
         <span class="quick-badge"><span></span><b id="quickBadgeText">안전한 테스트 접수</b></span>
-      </div>
-
-      <div class="form-flow-note">
-        <b>한 화면에서 순서대로 입력해요.</b>
-        주소 정보 → 배송 수단 → 배송 옵션 → 물품 정보 → 물품 운반 → 기사님 전달사항 → 결제 방법 → 요금 확인
       </div>
 
       <div class="form-sections">
@@ -2188,7 +2201,7 @@
                   <button type="button" class="secondary" id="addSmartPickup">+ 보내는 사람</button>
                 </div>
                 <div class="grid">
-                  <label>주소 <span class="required-mark">필수</span>
+                  <label><span class="field-label">주소 <span class="required-mark">필수</span></span>
                     <span class="address-input">
                       <input id="pickupAddress" required autocomplete="street-address" placeholder="주소 검색">
                       <button type="button" onclick="searchAddress('pickup')">주소 검색</button>
@@ -2197,8 +2210,8 @@
                   <label>상세주소<input id="pickupDetailAddress" autocomplete="address-line2" placeholder="예: 층, 동/호수"></label>
                 </div>
                 <div class="grid person-grid">
-                  <label>이름 <span class="required-mark">필수</span><input id="pickupName" required autocomplete="name" maxlength="50" placeholder="보내는 분 이름"></label>
-                  <label>연락처 <span class="required-mark">필수</span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">Sandbox에서는 010-1000-XXXX 형식만 사용할 수 있어요.</small></label>
+                  <label><span class="field-label">이름 <span class="required-mark">필수</span></span><input id="pickupName" required autocomplete="name" maxlength="50" placeholder="보내는 분 이름"></label>
+                  <label><span class="field-label">연락처 <span class="required-mark">필수</span></span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">Sandbox에서는 010-1000-XXXX 형식만 사용할 수 있어요.</small></label>
                 </div>
                 <div class="party-list" id="smartPickupList"></div>
               </div>
@@ -2209,7 +2222,7 @@
                   <button type="button" class="copy-contact" onclick="copyPickupContact()">보내는 분 연락처와 동일</button>
                 </div>
                 <div class="grid">
-                  <label>주소 <span class="required-mark">필수</span>
+                  <label><span class="field-label">주소 <span class="required-mark">필수</span></span>
                     <span class="address-input">
                       <input id="dropoffAddress" required autocomplete="street-address" placeholder="주소 검색">
                       <button type="button" onclick="searchAddress('dropoff')">주소 검색</button>
@@ -2218,8 +2231,8 @@
                   <label>상세주소<input id="dropoffDetailAddress" autocomplete="address-line2" placeholder="예: 층, 동/호수"></label>
                 </div>
                 <div class="grid person-grid">
-                  <label>이름 <span class="required-mark">필수</span><input id="dropoffName" required maxlength="50" placeholder="받는 사람 이름"></label>
-                  <label>연락처 <span class="required-mark">필수</span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
+                  <label><span class="field-label">이름 <span class="required-mark">필수</span></span><input id="dropoffName" required maxlength="50" placeholder="받는 사람 이름"></label>
+                  <label><span class="field-label">연락처 <span class="required-mark">필수</span></span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
                 </div>
                 <label class="primary-owner" id="primaryOwnerField" hidden>
                   이 물품을 보내는 사람
@@ -2253,22 +2266,22 @@
           </select>
           <div class="choice-card-grid vehicle-card-grid" id="fleetChoices">
             <button type="button" class="choice-card active" data-fleet="">
-              <span class="choice-icon">✨</span><strong>자동 추천</strong><small>가격과 조건에 맞게</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg></span><strong>자동 추천</strong><small>가격과 조건에 맞게</small>
             </button>
             <button type="button" class="choice-card" data-fleet="MOTORCYCLE">
-              <span class="choice-icon">🛵</span><strong>오토바이</strong><small>20kg · 세 변 140cm 이하</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17h4l3-7h4M13 10l2-3h3M9 17h6"/></svg></span><strong>오토바이</strong><small>20kg · 세 변 140cm 이하</small>
             </button>
             <button type="button" class="choice-card" data-fleet="PASSENGER_CAR">
-              <span class="choice-icon">🚙</span><strong>소형차</strong><small>20kg · 안전한 적재</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2.5-4h9L18 12v4"/><path d="M4 16h16"/><circle cx="8" cy="17.5" r="1.6"/><circle cx="16" cy="17.5" r="1.6"/></svg></span><strong>소형차</strong><small>20kg · 안전한 적재</small>
             </button>
             <button type="button" class="choice-card" data-fleet="DAMAS">
-              <span class="choice-icon">🚐</span><strong>다마스</strong><small>최대 450kg</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16V9a1 1 0 0 1 1-1h11l4 3.5V16"/><path d="M3 16h16"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/><path d="M14 8v4.5h5"/></svg></span><strong>다마스</strong><small>최대 450kg</small>
             </button>
             <button type="button" class="choice-card" data-fleet="LABO">
-              <span class="choice-icon">🛻</span><strong>라보</strong><small>최대 500kg</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16v-4h6V9h3l3 3h3v4"/><path d="M3 16h16"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="16.5" cy="17.5" r="1.6"/></svg></span><strong>라보</strong><small>최대 500kg</small>
             </button>
             <button type="button" class="choice-card" data-fleet="TON">
-              <span class="choice-icon">🚚</span><strong>1톤</strong><small>최대 1,000kg</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15V8h10v7"/><path d="M12 11h4l3 2.5V15"/><path d="M2 15h1M20 15h1.5"/><circle cx="6" cy="17" r="1.6"/><circle cx="17" cy="17" r="1.6"/></svg></span><strong>1톤</strong><small>최대 1,000kg</small>
             </button>
           </div>
         </section>
@@ -2285,16 +2298,16 @@
           </select>
           <div class="choice-card-grid delivery-card-grid" id="deliveryChoices">
             <button type="button" class="choice-card" data-order-type="QUICK_ECONOMY">
-              <span class="choice-icon">%</span><strong>이코노미</strong><small>저렴한 반나절 배송</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="7.5" r="2.3"/><circle cx="16.5" cy="16.5" r="2.3"/><path d="M6 18L18 6"/></svg></span><strong>이코노미</strong><small>저렴한 반나절 배송</small>
             </button>
             <button type="button" class="choice-card active" data-order-type="QUICK">
-              <span class="choice-icon">⚡</span><strong>일반</strong><small>합리적인 요금</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8h13M3 12.5h10M3 17h6"/></svg></span><strong>일반</strong><small>합리적인 요금</small>
             </button>
             <button type="button" class="choice-card" data-order-type="QUICK_EXPRESS">
-              <span class="choice-icon">⚡⚡</span><strong>급송</strong><small>가장 빠른 배송</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 6 13h5l-1 8 8-11h-5l1-7z"/></svg></span><strong>급송</strong><small>가장 빠른 배송</small>
             </button>
             <button type="button" class="choice-card smart-choice" data-order-type="SMART">
-              <span class="new-badge">NEW</span><span class="choice-icon">↗</span><strong>스마트 딜리버리</strong><small>다른 배송과 자동 매칭</small>
+              <span class="new-badge">NEW</span><span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span><strong>스마트 딜리버리</strong><small>다른 배송과 자동 매칭</small>
             </button>
           </div>
           <label class="pickup-time-field" id="wishTimeField">픽업 시간
@@ -2332,11 +2345,11 @@
               </div>
             </details>
           </div>
-          <label>상세한 물품 정보 <span class="required-mark">필수</span>
+          <label><span class="field-label">상세한 물품 정보 <span class="required-mark">필수</span></span>
             <textarea id="productName" required maxlength="100" placeholder="예: 4인용 소파, 책상, 모니터 등"></textarea>
           </label>
           <div class="product-options-grid">
-            <label>전체 물품 크기 <span class="required-mark">필수</span>
+            <label><span class="field-label">전체 물품 크기 <span class="required-mark">필수</span></span>
               <select id="productSize">
                 <option value="XS">XS · 서류/초소형</option>
                 <option value="S">S · 소형 박스</option>
@@ -2393,7 +2406,6 @@
         <section class="form-section payment-section">
           <div class="section-heading">
             <h3><span class="section-number">7</span>결제 방법</h3>
-            <small>Sandbox에서는 실제 금액이 결제되지 않습니다.</small>
           </div>
           <div class="payment-methods">
             <label class="payment-card active">
@@ -2434,7 +2446,6 @@
         <button type="button" class="primary" id="orderButton" onclick="createOrder(this)" disabled>확인하고 Sandbox 접수</button>
       </div>
       <div class="safety-note">
-        실제 주문이 생성되지 않는 포트폴리오용 Sandbox입니다. 접수 전 테스트 전화번호 확인과 <b>SANDBOX</b> 확인 절차를 거칩니다.
       </div>
       <div class="result" id="result">
         <h3 id="resultTitle">결과</h3>
@@ -2603,13 +2614,13 @@
       const now = new Date();
       const first = new Date(now);
       first.setSeconds(0, 0);
-      first.setMinutes(Math.ceil((first.getMinutes() + 1) / 10) * 10);
+      first.setMinutes(Math.ceil((first.getMinutes() + 1) / 30) * 30);
       const immediate = select.options[0];
       select.replaceChildren(immediate);
       for (
         let time = first;
         time.getDate() === now.getDate();
-        time = new Date(time.getTime() + 10 * 60 * 1000)
+        time = new Date(time.getTime() + 30 * 60 * 1000)
       ) {
         const option = document.createElement("option");
         option.value = localDateTimeValue(time);
@@ -2837,16 +2848,16 @@
           <button type="button" data-action="remove">− 삭제</button>
         </div>
         <div class="party-fields">
-          <label>픽업 주소 <span class="required-mark">필수</span>
+          <label><span class="field-label">픽업 주소 <span class="required-mark">필수</span></span>
             <span class="party-address">
               <input data-field="address" placeholder="도로명 또는 지번 주소">
               <button type="button" data-action="address">주소 검색</button>
             </span>
           </label>
-          <label>이름 <span class="required-mark">필수</span>
+          <label><span class="field-label">이름 <span class="required-mark">필수</span></span>
             <input data-field="name" maxlength="50" placeholder="이름">
           </label>
-          <label>연락처 <span class="required-mark">필수</span>
+          <label><span class="field-label">연락처 <span class="required-mark">필수</span></span>
             <input data-field="phone" maxlength="13" inputmode="tel" placeholder="010-1000-0003">
           </label>
           <label class="wide">픽업 요청사항
@@ -2875,16 +2886,16 @@
           <button type="button" data-action="remove">− 삭제</button>
         </div>
         <div class="party-fields">
-          <label>배송 주소 <span class="required-mark">필수</span>
+          <label><span class="field-label">배송 주소 <span class="required-mark">필수</span></span>
             <span class="party-address">
               <input data-field="address" placeholder="도로명 또는 지번 주소">
               <button type="button" data-action="address">주소 검색</button>
             </span>
           </label>
-          <label>이름 <span class="required-mark">필수</span>
+          <label><span class="field-label">이름 <span class="required-mark">필수</span></span>
             <input data-field="name" maxlength="50" placeholder="이름">
           </label>
-          <label>연락처 <span class="required-mark">필수</span>
+          <label><span class="field-label">연락처 <span class="required-mark">필수</span></span>
             <input data-field="phone" maxlength="13" inputmode="tel" placeholder="010-1000-0004">
           </label>
           <label>이 물품을 보내는 사람

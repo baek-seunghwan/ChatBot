@@ -268,7 +268,7 @@ class MobilityApiTests(unittest.TestCase):
             headers.append(match.group(0))
 
         self.assertEqual(headers[0], headers[1])
-        self.assertIn("Mobility AI", headers[0])
+        self.assertIn("Move Better", headers[0])
         self.assertNotIn("일반 퀵 접수", headers[0])
         self.assertIn("이용 내역", headers[0])
         self.assertIn("로그인", headers[0])
