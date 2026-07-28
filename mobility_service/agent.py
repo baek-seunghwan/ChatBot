@@ -34,9 +34,6 @@ from .models import (
     ProductSize,
 )
 from .orders import cancel_order_by_id, get_order_steps, place_order
-from .pool_store import PoolStore
-from .pooling import build_pool_order, is_compatible, pool_quote
-from .rideshare import carpool_plan
 from .store import MobilityStore
 
 MAX_HISTORY_TURNS = 6
@@ -56,8 +53,8 @@ KOREAN_FIELD_LABELS = {
 }
 
 CHITCHAT_SYSTEM = (
-    "당신은 택시·퀵 합승 서비스 'MOVB(모브)'의 도우미입니다. "
-    "친절하고 간결한 한국어로 답하세요. 아래 서비스 정보를 근거로 퀵/택시/합승 관련 "
+    "당신은 묶음퀵 서비스 'MOVB(모브)'의 도우미입니다. "
+    "친절하고 간결한 한국어로 답하세요. 아래 서비스 정보를 근거로 묶음퀵과 배송 관련 "
     "질문에 구체적으로 답하고, 정보에 없는 내용은 지어내지 마세요. "
     "배송 주문을 원하면 출발지/도착지/물품 정보를 알려달라고 안내하세요.\n\n"
     + SERVICE_FACTS
@@ -88,23 +85,11 @@ INTENT_PROMPT = """다음은 배송 주문 챗봇과 사용자의 대화입니�
 - cancel: 주문 작성을 그만두거나, 이미 접수된 주문을 취소하려는 경우
 - status_query: 주문 상태/배송 현황을 물어보는 경우
 - bundle: 여러 도착지에 한꺼번에 보내는 묶음 배송 견적/할인을 물어보는 경우
-- carpool: 동승/카풀 시 경유 순서나 요금을 어떻게 나눌지 물어보는 경우
-- pool: 합승 배송 — 다른 사람 물건과 같은 차에 묶어서 싸게 보내려는 경우 ("합승으로", "같이 보내서 싸게" 등)
-- question: 서비스 자체에 대한 궁금증 — 요금 체계, 배송 상품 차이, 합승/택시 동승 방식 등을 물어보는 경우 (지금 주문하려는 게 아님)
+- question: 서비스 자체에 대한 궁금증 — 요금 체계, 배송 상품 차이, 묶음퀵 방식 등을 물어보는 경우 (지금 주문하려는 게 아님)
 - vehicle_select: 주문에 사용할 차량 종류를 선택하거나 선택지를 보고 싶은 경우
 - chitchat: 배송과 무관한 인사/잡담
 
 단어 하나만 출력하세요."""
-
-POOL_EXTRACT_PROMPT = """사용자 메시지에서 합승 배송 요청 정보를 JSON으로 추출하세요.
-
-사용자 메시지: {message}
-
-형식: {{"pickupAddress": "출발지 주소", "dropoffAddress": "도착지 주소",
-"productName": "물품명", "productSize": "XS/S/M/L 중 하나(모르면 null)",
-"senderName": "보내는 사람(모르면 null)", "senderPhone": "보내는 사람 연락처(모르면 null)",
-"receiverName": "받는 사람(모르면 null)", "receiverPhone": "받는 사람 연락처(모르면 null)"}}
-모르는 값은 null. JSON 객체 하나만 출력하세요."""
 
 BUNDLE_EXTRACT_PROMPT = """사용자 메시지에서 묶음 배송 정보를 JSON으로 추출하세요.
 
@@ -112,13 +97,6 @@ BUNDLE_EXTRACT_PROMPT = """사용자 메시지에서 묶음 배송 정보를 JSO
 
 형식: {{"pickup": "출발지 주소", "dropoffs": ["도착지 주소1", "도착지 주소2"]}}
 모르는 값은 null로 두세요. JSON 객체 하나만 출력하세요."""
-
-CARPOOL_EXTRACT_PROMPT = """사용자 메시지에서 동승(카풀) 정보를 JSON으로 추출하세요.
-
-사용자 메시지: {message}
-
-형식: {{"origin": "공통 출발지 주소", "passengers": [{{"name": "이름(모르면 null)", "destination": "목적지 주소"}}]}}
-JSON 객체 하나만 출력하세요."""
 
 SLOT_EXTRACT_PROMPT = """사용자의 배송 요청 메시지에서 알 수 있는 정보만 JSON으로 추출하세요.
 
@@ -242,7 +220,6 @@ class DeliveryAgent:
         store: MobilityStore,
         conversations: ConversationStore,
         router: LLMRouter | None = None,
-        pools: PoolStore | None = None,
         knowledge_base: MobilityKnowledgeBase | None = None,
         route_planner: RoutePlanner | None = None,
     ) -> None:
@@ -251,7 +228,6 @@ class DeliveryAgent:
         self._store = store
         self._conversations = conversations
         self._router = router or LLMRouter()
-        self._pools = pools
         self._knowledge = knowledge_base or default_knowledge_base()
         self._routes = route_planner
         self._graph = self._build_graph()
@@ -281,8 +257,6 @@ class DeliveryAgent:
         graph.add_node("cancel_flow", self._cancel_flow)
         graph.add_node("status_query", self._status_query)
         graph.add_node("bundle_flow", self._bundle_flow)
-        graph.add_node("carpool_flow", self._carpool_flow)
-        graph.add_node("pool_flow", self._pool_flow)
         graph.add_node("knowledge_qa", self._knowledge_qa)
         graph.add_node("vehicle_select", self._vehicle_select)
         graph.add_node("chitchat", self._chitchat)
@@ -300,8 +274,6 @@ class DeliveryAgent:
                 "cancel": "cancel_flow",
                 "status_query": "status_query",
                 "bundle": "bundle_flow",
-                "carpool": "carpool_flow",
-                "pool": "pool_flow",
                 "question": "knowledge_qa",
                 "vehicle_select": "vehicle_select",
                 "chitchat": "chitchat",
@@ -320,8 +292,6 @@ class DeliveryAgent:
         graph.add_edge("cancel_flow", "finalize")
         graph.add_edge("status_query", "finalize")
         graph.add_edge("bundle_flow", "finalize")
-        graph.add_edge("carpool_flow", "finalize")
-        graph.add_edge("pool_flow", "finalize")
         graph.add_edge("knowledge_qa", "finalize")
         graph.add_edge("vehicle_select", "finalize")
         graph.add_edge("chitchat", "finalize")
@@ -354,7 +324,7 @@ class DeliveryAgent:
         text = message.lower().strip()
         compact = re.sub(r"\s+", "", text)
 
-        if stage in {"confirming", "pool_confirming", "pool_consent"} and compact in {
+        if stage == "confirming" and compact in {
             "네", "예", "응", "ㅇㅇ", "그래", "진행", "진행해줘", "주문해줘", "좋아",
         }:
             return "confirm"
@@ -380,26 +350,14 @@ class DeliveryAgent:
         action_request = bool(
             re.search(r"(보내|접수|등록|주문|견적|계산|나눠|매칭|싸게|진행)", text)
         )
-        trip_details = bool(
-            re.search(r"(에서|출발).*(으로|까지|목적지|도착)", text)
-            or re.search(r"010[- ]?\d{4}", text)
-        )
-
-        if re.search(r"(택시\s*합승|카풀|동승)", text):
-            return (
-                "carpool"
-                if trip_details or re.search(r"(계산해|경유\s*순서)", text)
-                else "question"
-            )
         if "묶음" in text:
+            if re.search(
+                r"(요금|가격).*(어떻게|기준|방식|계산)|"
+                r"(어떻게|기준|방식).*(요금|가격|계산)",
+                text,
+            ):
+                return "question"
             return "question" if definition_question and not action_request else "bundle"
-        if re.search(r"(퀵\s*합승|배송\s*합승|합승)", text):
-            return (
-                "pool"
-                if trip_details or re.search(r"(보내|접수|등록|매칭|싸게\s*보내)", text)
-                else "question"
-            )
-
         service_topic = bool(
             re.search(
                 r"(movb|모브|퀵|도보\s*배송|배송\s*상품|물품\s*크기|sandbox|샌드박스|"
@@ -459,8 +417,6 @@ class DeliveryAgent:
             "confirm",
             "status_query",
             "bundle",
-            "carpool",
-            "pool",
             "cancel",
             "vehicle_select",
             "chitchat",
@@ -471,7 +427,7 @@ class DeliveryAgent:
         if intent is None:
             intent = (
                 "provide_info"
-                if state.get("stage") not in {"confirming", "pool_confirming", "pool_consent"}
+                if state.get("stage") != "confirming"
                 else "chitchat"
             )
 
@@ -799,23 +755,6 @@ class DeliveryAgent:
 
     async def _confirm_and_create_order(self, state: AgentState) -> AgentState:
         slots = state.get("slots", {})
-        stage = state.get("stage")
-
-        # 합승 분기: 매칭 제안에 대한 확정 / 자동진행 사전 동의
-        if stage == "pool_confirming":
-            return await self._execute_pool_order(state)
-        if stage == "pool_consent":
-            slots = dict(slots)
-            request_id = slots.get("_poolMyRequestId")
-            if self._pools is not None and request_id:
-                self._pools.set_auto_consent(int(request_id), True)
-            self._conversations.save_slots(state["session_id"], slots, "collecting")
-            return {
-                "slots": slots,
-                "stage": "collecting",
-                "reply": "네! 같은 방향 합승이 들어오면 자동으로 묶어서 접수하고, 다음 대화에서 결과를 알려드릴게요.",
-                "trace": state.get("trace", []) + ["pool_consent:granted"],
-            }
 
         if state.get("stage") != "confirming":
             return {
@@ -885,51 +824,27 @@ class DeliveryAgent:
             }
 
         self._conversations.reset_draft(session_id)
-        canceled_pools = (
-            self._pools.cancel_open_by_session(session_id) if self._pools else 0
-        )
-        pool_text = f" 대기 중이던 합승 요청 {canceled_pools}건도 취소했어요." if canceled_pools else ""
         return {
-            "reply": f"주문 작성을 취소했어요.{pool_text} 처음부터 다시 시작할 수 있어요.",
+            "reply": "주문 작성을 취소했어요. 처음부터 다시 시작할 수 있어요.",
             "stage": "collecting",
             "slots": {},
             "trace": state.get("trace", []) + ["cancel:draft_reset"],
         }
 
-    def _pool_status_lines(self, session_id: str) -> list[str]:
-        """이 세션의 합승 요청 현황을 요약한다 (status_query 브리핑용)."""
-        if self._pools is None:
-            return []
-        lines = []
-        for request in self._pools.get_by_session(session_id):
-            route = f"{request['pickup']['address']} → {request['dropoff']['address']}"
-            if request["status"] == "open":
-                lines.append(f"- [합승 대기중] {route}")
-            elif request["status"] == "ordered":
-                share = f", 분담금 {request['sharePrice']:,}원" if request["sharePrice"] else ""
-                lines.append(f"- [합승 매칭 완료!] {route} (주문번호 {request['poolId']}{share})")
-        return lines
-
     async def _status_query(self, state: AgentState) -> AgentState:
-        pool_lines = self._pool_status_lines(state["session_id"])
         partner_order_id = state.get("partner_order_id")
         explicit_id = re.search(
-            r"\b(?:agent|moveops|pool)-[A-Za-z0-9._-]+\b",
+            r"\b(?:agent|moveops|bundle)-[A-Za-z0-9._-]+\b",
             state["message"],
         )
         if explicit_id:
             partner_order_id = explicit_id.group(0)
         if not partner_order_id:
-            if pool_lines:
-                return {
-                    "reply": "현재 합승 요청 현황이에요.\n" + "\n".join(pool_lines),
-                    "trace": state.get("trace", []) + ["status_query:pool_only"],
-                }
             return {
                 "reply": "아직 이 대화에서 접수된 주문이 없어요. 주문번호가 있다면 알려주세요.",
                 "actions": [
                     {"label": "배송 주문 시작", "message": "퀵 배송 주문하고 싶어"},
-                    {"label": "합승 현황", "message": "합승 배송 현황 알려줘"},
+                    {"label": "묶음퀵 안내", "message": "묶음퀵 이용 방법 알려줘"},
                 ],
                 "trace": state.get("trace", []) + ["status_query:no_order"],
             }
@@ -979,8 +894,6 @@ class DeliveryAgent:
                 eta_text = f" · 예상 {eta}" if eta else ""
                 step_lines.append(f"- {label}: {friendly}{eta_text}")
             reply += "\n\n정차지별 상세 상태\n" + "\n".join(step_lines)
-        if pool_lines:
-            reply += "\n" + "\n".join(pool_lines)
         return {
             "reply": reply,
             "actions": [
@@ -1008,7 +921,7 @@ class DeliveryAgent:
         return parsed if isinstance(parsed, dict) else {}
 
     async def _bundle_flow(self, state: AgentState) -> AgentState:
-        """묶음 배송: 따로 보낼 때 vs 한 번에 묶어 보낼 때 요금 비교 + 묶음 할인."""
+        """묶음퀵: 각각 보낼 때와 한 주문으로 보낼 때의 가격과 경로를 비교한다."""
         parsed = await self._llm_json(BUNDLE_EXTRACT_PROMPT.format(message=state["message"]))
         pickup = parsed.get("pickup")
         dropoffs = [d for d in (parsed.get("dropoffs") or []) if isinstance(d, str) and d.strip()]
@@ -1055,256 +968,23 @@ class DeliveryAgent:
             f"묶음 견적: {result['bundledPrice']:,}원\n\n"
         )
         if result["recommendBundle"]:
-            reply += f"→ 묶어서 보내면 {result['saving']:,}원 절약돼요! 이대로 접수할까요?"
+            reply += (
+                f"→ 묶어서 보내면 {result['saving']:,}원 절약돼요!\n"
+                "실제 접수는 /bundle 화면에서 보내는 분과 받는 분 연락처를 "
+                "확인한 뒤 진행할 수 있어요."
+            )
         else:
             reply += "→ 이번 건은 따로 보내는 게 더 유리해요."
         return {
             "quote": result,
             "reply": reply,
-            "trace": state.get("trace", []) + [f"bundle:ok({len(dropoffs)}곳)"],
-        }
-
-    async def _carpool_flow(self, state: AgentState) -> AgentState:
-        """동승(카풀): 누구를 먼저 내려줄지 경유 순서 + 요금 분배안 계산."""
-        parsed = await self._llm_json(CARPOOL_EXTRACT_PROMPT.format(message=state["message"]))
-        origin_address = parsed.get("origin")
-        raw_passengers = parsed.get("passengers") or []
-        passengers_in = [
-            p for p in raw_passengers
-            if isinstance(p, dict) and isinstance(p.get("destination"), str) and p["destination"].strip()
-        ]
-        if not origin_address or len(passengers_in) < 2:
-            return {
-                "reply": (
-                    "동승 요금을 나누려면 공통 출발지와 각자의 목적지(2곳 이상)가 필요해요.\n"
-                    "예: \"강남역에서 A는 잠실역, B는 건대입구역 가는데 요금 어떻게 나눠?\""
-                ),
-                "trace": state.get("trace", []) + ["carpool:need_info"],
-            }
-
-        origin = await self._geocoder.search_address(origin_address)
-        if origin is None:
-            return {
-                "reply": f"출발지 주소를 찾지 못했어요: {origin_address}",
-                "trace": state.get("trace", []) + ["carpool:geocode_fail"],
-            }
-        passengers = []
-        for p in passengers_in:
-            location = await self._geocoder.search_address(p["destination"])
-            if location is None:
-                return {
-                    "reply": f"목적지 주소를 찾지 못했어요: {p['destination']}",
-                    "trace": state.get("trace", []) + ["carpool:geocode_fail"],
+            "actions": [
+                {
+                    "label": "묶음퀵 준비물",
+                    "message": "묶음퀵 접수에 필요한 정보를 알려줘",
                 }
-            passengers.append({"name": p.get("name"), "location": location})
-
-        try:
-            plan = await carpool_plan(
-                origin,
-                passengers,
-                route_planner=self._routes,
-            )
-        except ValueError as exc:
-            return {
-                "reply": str(exc),
-                "trace": state.get("trace", []) + ["carpool:error"],
-            }
-
-        stop_lines = "\n".join(
-            f"{s['dropOrder']}번째 하차 — {s['name']} ({s['address']})\n"
-            f"   분담금 {s['share']:,}원 (혼자 타면 {s['soloFare']:,}원 → {s['saving']:,}원 절약)"
-            for s in plan["stops"]
-        )
-        reply = (
-            f"동승 플랜을 짜봤어요! (출발: {origin.basic_address}, 총 이동 약 {plan['totalKm']}km)\n\n"
-            f"{stop_lines}\n\n"
-            f"예상 총 요금: {plan['sharedFare']:,}원 → 다 같이 {plan['groupSaving']:,}원 절약!\n"
-            f"※ {plan['note']}"
-        )
-        return {
-            "reply": reply,
-            "trace": state.get("trace", []) + [f"carpool:ok({len(passengers)}명)"],
-        }
-
-    # ── 퀵 합승 (패키지 카풀) ──────────────────────────────────
-    POOL_REQUIRED = {
-        "pickupAddress": "출발지 주소",
-        "dropoffAddress": "도착지 주소",
-        "productName": "물품명",
-        "senderName": "보내는 분 성함",
-        "senderPhone": "보내는 분 연락처",
-        "receiverName": "받는 분 성함",
-        "receiverPhone": "받는 분 연락처",
-    }
-
-    async def _pool_flow(self, state: AgentState) -> AgentState:
-        """합승 요청 등록 → 같은 방향 대기 건과 매칭 → 분담금 제안."""
-        if self._pools is None:
-            return {
-                "reply": "합승 기능이 아직 준비되지 않았어요.",
-                "trace": state.get("trace", []) + ["pool:unavailable"],
-            }
-        slots = dict(state.get("slots", {}))
-        draft = dict(slots.get("_poolDraft", {}))
-        parsed = await self._llm_json(POOL_EXTRACT_PROMPT.format(message=state["message"]))
-        for key in self.POOL_REQUIRED:
-            value = parsed.get(key)
-            if isinstance(value, str) and value.strip():
-                draft[key] = value.strip()
-        if isinstance(parsed.get("productSize"), str):
-            try:
-                draft["productSize"] = ProductSize(parsed["productSize"].strip().upper()).value
-            except ValueError:
-                pass
-
-        missing = [label for key, label in self.POOL_REQUIRED.items() if not draft.get(key)]
-        slots["_poolDraft"] = draft
-        if missing:
-            self._conversations.save_slots(state["session_id"], slots, state.get("stage", "collecting"))
-            return {
-                "slots": slots,
-                "reply": "합승 등록에 아래 정보가 더 필요해요.\n" + "\n".join(f"- {m}" for m in missing),
-                "trace": state.get("trace", []) + [f"pool:need_info({len(missing)})"],
-            }
-
-        pickup_loc = await self._geocoder.search_address(draft["pickupAddress"])
-        dropoff_loc = await self._geocoder.search_address(draft["dropoffAddress"])
-        if pickup_loc is None or dropoff_loc is None:
-            bad = draft["pickupAddress"] if pickup_loc is None else draft["dropoffAddress"]
-            return {
-                "reply": f"주소를 찾지 못했어요: {bad}. 조금 더 구체적으로 알려주시겠어요?",
-                "trace": state.get("trace", []) + ["pool:geocode_fail"],
-            }
-
-        pickup = {
-            "address": pickup_loc.basic_address, "lat": pickup_loc.latitude,
-            "lng": pickup_loc.longitude, "name": draft["senderName"], "phone": draft["senderPhone"],
-        }
-        dropoff = {
-            "address": dropoff_loc.basic_address, "lat": dropoff_loc.latitude,
-            "lng": dropoff_loc.longitude, "name": draft["receiverName"], "phone": draft["receiverPhone"],
-        }
-        product = {
-            "productName": draft["productName"],
-            "productSize": draft.get("productSize", "XS"),
-        }
-
-        try:
-            solo_data = await self._client.price(DeliveryDraft(
-                orderType=OrderType.QUICK,
-                productSize=ProductSize(product["productSize"]),
-                pickup={"location": {"basicAddress": pickup["address"], "latitude": pickup["lat"], "longitude": pickup["lng"]}},
-                dropoff={"location": {"basicAddress": dropoff["address"], "latitude": dropoff["lat"], "longitude": dropoff["lng"]}},
-            ))
-            solo_price = solo_data.get("totalPrice") if isinstance(solo_data, dict) else None
-        except KakaoApiError:
-            solo_price = None
-
-        my_request = self._pools.create_request(
-            state["session_id"], pickup, dropoff, product,
-            int(solo_price) if solo_price else None,
-        )
-
-        candidates = []
-        for request in self._pools.list_open(exclude_session=state["session_id"]):
-            if await is_compatible(request, my_request, self._routes):
-                candidates.append(request)
-        if not candidates:
-            slots["_poolMyRequestId"] = my_request["id"]
-            slots.pop("_poolPending", None)
-            self._conversations.save_slots(state["session_id"], slots, "pool_consent")
-            solo_text = f"(단독 견적 {int(solo_price):,}원) " if solo_price else ""
-            return {
-                "slots": slots,
-                "stage": "pool_consent",
-                "reply": (
-                    f"지금은 같은 방향으로 가는 합승 대기 건이 없어요. {solo_text}합승 대기로 등록해뒀어요!\n"
-                    "같은 방향 요청이 들어와서 매칭되면 확인 없이 바로 진행해도 될까요? ('네'라고 하시면 자동 진행돼요)"
-                ),
-                "trace": state.get("trace", []) + ["pool:registered_waiting"],
-            }
-
-        other = candidates[0]
-        try:
-            quote = await pool_quote(
-                self._client,
-                [other, my_request],
-                route_planner=self._routes,
-            )
-        except (ValueError, KakaoApiError) as exc:
-            return {
-                "reply": f"합승 견적 계산 중 문제가 있었어요: {exc}",
-                "trace": state.get("trace", []) + ["pool:quote_error"],
-            }
-
-        slots["_poolPending"] = {
-            "requestIds": [other["id"], my_request["id"]],
-            "pooledPrice": quote["pooledPrice"],
-            "shares": {str(other["id"]): quote["shares"][0], str(my_request["id"]): quote["shares"][1]},
-        }
-        slots["_poolMyRequestId"] = my_request["id"]
-        self._conversations.save_slots(state["session_id"], slots, "pool_confirming")
-        reply = (
-            f"🚚 같은 방향 합승 상대를 찾았어요!\n"
-            f"- 대기 중: {other['pickup']['address']} → {other['dropoff']['address']} ({other['product'].get('productName', '물품')})\n"
-            f"- 내 요청: {pickup['address']} → {dropoff['address']} ({product['productName']})\n\n"
-            f"[요금 비교]\n"
-            f"- 각자 따로: {quote['soloTotal']:,}원 (상대 {quote['soloPrices'][0]:,}원 + 나 {quote['soloPrices'][1]:,}원)\n"
-            f"- 합승 1건: {quote['pooledPrice']:,}원\n"
-            f"- 내 분담금: {quote['shares'][1]:,}원 (단독 대비 {quote['savings'][1]:,}원 절약)\n"
-            f"- 상대 분담금: {quote['shares'][0]:,}원 ({quote['savings'][0]:,}원 절약)\n\n"
-            f"합승으로 진행할까요? '네'라고 하면 접수돼요."
-        )
-        return {
-            "slots": slots,
-            "stage": "pool_confirming",
-            "reply": reply,
-            "trace": state.get("trace", []) + [f"pool:matched(req={my_request['id']}↔{other['id']})"],
-        }
-
-    async def _execute_pool_order(self, state: AgentState) -> AgentState:
-        """합승 확정: 두 요청을 경유지로 묶은 Sandbox 주문 1건을 생성하고 분담금을 기록한다."""
-        slots = dict(state.get("slots", {}))
-        pending = slots.get("_poolPending") or {}
-        request_ids = pending.get("requestIds") or []
-        requests = [self._pools.get_request(rid) for rid in request_ids]
-        if len(requests) != 2 or any(r is None for r in requests):
-            return {"reply": "합승 정보를 찾지 못했어요. 다시 시도해주세요.", "stage": "collecting",
-                    "trace": state.get("trace", []) + ["pool_confirm:missing"]}
-        other, mine = requests
-        if other["status"] != "open":
-            slots.pop("_poolPending", None)
-            self._conversations.save_slots(state["session_id"], slots, "collecting")
-            return {"slots": slots, "stage": "collecting",
-                    "reply": "아쉽지만 상대 합승 건이 방금 취소되거나 이미 접수됐어요. 대기 목록을 다시 확인해볼게요 — 합승 요청을 다시 말씀해주세요.",
-                    "trace": state.get("trace", []) + ["pool_confirm:other_gone"]}
-
-        id_seed = "-".join(str(rid) for rid in sorted(request_ids))
-        pool_id = f"pool-{hashlib.sha256(id_seed.encode()).hexdigest()[:12]}"
-        try:
-            order_request = build_pool_order(requests, pool_id)
-        except ValidationError:
-            return {"reply": "합승 주문 정보가 유효하지 않아요 (연락처 누락 등). 다시 확인해주세요.",
-                    "trace": state.get("trace", []) + ["pool_confirm:invalid"]}
-        try:
-            result = await place_order(self._client, self._store, order_request, pool_id)
-        except KakaoApiError as exc:
-            return {"reply": f"합승 주문 접수 중 문제가 발생했어요: {exc}",
-                    "trace": state.get("trace", []) + ["pool_confirm:api_error"]}
-
-        shares = {int(k): v for k, v in (pending.get("shares") or {}).items()}
-        self._pools.mark_ordered(request_ids, pool_id, shares)
-        self._conversations.set_partner_order_id(state["session_id"], pool_id)
-        self._conversations.set_partner_order_id(other["sessionId"], pool_id)
-        slots.pop("_poolPending", None)
-        slots.pop("_poolDraft", None)
-        self._conversations.save_slots(state["session_id"], slots, "placed")
-        my_share = shares.get(mine["id"])
-        share_text = f"내 분담금은 {my_share:,}원이에요. " if my_share else ""
-        return {
-            "slots": slots, "order": result, "partner_order_id": pool_id, "stage": "placed",
-            "reply": f"합승 주문이 접수됐어요! 주문번호: {pool_id}\n{share_text}상대방도 다음 대화에서 매칭 결과를 확인하게 돼요.",
-            "trace": state.get("trace", []) + ["pool_confirm:order_created"],
+            ],
+            "trace": state.get("trace", []) + [f"bundle:ok({len(dropoffs)}곳)"],
         }
 
     async def _knowledge_qa(self, state: AgentState) -> AgentState:
@@ -1374,8 +1054,8 @@ class DeliveryAgent:
             reply = await self._llm(state["message"], system=CHITCHAT_SYSTEM, max_tokens=200)
         except RuntimeError:
             reply = (
-                "안녕하세요! MOVB에서는 퀵 견적과 주문, 묶음배송, 퀵 합승, "
-                "택시 동승 요금 계산을 도와드려요. "
+                "안녕하세요! MOVB에서는 일반 퀵과 묶음퀵의 견적·주문·상태 확인을 "
+                "도와드려요. "
                 "예를 들어 “퀵과 도보 배송은 뭐가 달라?” 또는 "
                 "“판교역에서 정자역으로 서류 보내줘”라고 말씀해보세요."
             )

@@ -11,7 +11,6 @@ from mobility_service.app import create_app
 from mobility_service.conversation_store import ConversationStore
 from mobility_service.geocode import KakaoGeocodeClient
 from mobility_service.knowledge import default_knowledge_base
-from mobility_service.pool_store import PoolStore
 from mobility_service.store import MobilityStore
 from tests.test_mobility_service import FakeKakaoClient, settings
 
@@ -28,7 +27,7 @@ class MobilityKnowledgeTests(unittest.TestCase):
             "MOVB는 어떤 서비스야?": "01-service-overview",
             "퀵과 도보 배송의 차이는 뭐야?": "02-delivery-options",
             "주문 상태는 어떻게 확인해?": "03-order-lifecycle",
-            "합승 요금은 어떻게 나눠?": "04-bundle-pool-carpool",
+            "묶음퀵 요금은 어떻게 계산해?": "04-bundle-quick",
             "Sandbox에서 실제 결제가 돼?": "05-sandbox-and-safety",
         }
 
@@ -48,11 +47,11 @@ class MobilityKnowledgeTests(unittest.TestCase):
 
     def test_extractive_fallback_hides_internal_evidence_title(self) -> None:
         knowledge = default_knowledge_base()
-        results = knowledge.search("합승 요금은 어떻게 나눠?")
+        results = knowledge.search("묶음퀵 요금은 어떻게 계산해?")
         answer = knowledge.fallback_answer(results)
 
         self.assertNotIn("근거 문서", answer)
-        self.assertNotIn("[퀵 합승", answer)
+        self.assertNotIn("[묶음퀵", answer)
 
 
 class AgentKnowledgeRouteTests(unittest.TestCase):
@@ -70,7 +69,6 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
             store,
             conversations,
             router=OfflineRouter(),  # type: ignore[arg-type]
-            pools=PoolStore(root / "mobility.db"),
         )
         self.client = TestClient(
             create_app(
@@ -118,16 +116,16 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
             data["results"][0]["id"].startswith("05-sandbox-and-safety")
         )
 
-    def test_pool_fee_question_is_not_misread_as_registration(self) -> None:
+    def test_bundle_fee_question_is_answered_from_knowledge(self) -> None:
         response = self.client.post(
             "/api/agent/chat",
-            json={"message": "합승 요금은 어떻게 나눠?"},
+            json={"message": "묶음퀵 요금은 어떻게 계산해?"},
         )
         data = response.json()["data"]
 
         self.assertTrue(data["sources"])
         self.assertNotIn("근거 문서", data["reply"])
-        self.assertNotIn("합승 등록에 아래 정보", data["reply"])
+        self.assertIn("견적", data["reply"])
 
     def test_greeting_has_useful_offline_response(self) -> None:
         response = self.client.post(
@@ -137,7 +135,7 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
         data = response.json()["data"]
 
         self.assertIn("MOVB", data["reply"])
-        self.assertIn("묶음배송", data["reply"])
+        self.assertIn("묶음퀵", data["reply"])
         self.assertNotIn("필요한 정보가 더", data["reply"])
 
     def test_vehicle_choice_is_interactive_and_saved_without_llm(self) -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
@@ -165,38 +165,56 @@ class BundleQuoteRequest(CamelModel):
     product_size: ProductSize = Field(default=ProductSize.XS, alias="productSize")
 
 
-class CarpoolPassenger(CamelModel):
-    name: str | None = Field(default=None, max_length=50)
+class BundleDropoffRequest(CamelModel):
     address: str = Field(min_length=2, max_length=200)
+    contact: Contact
+    note: str | None = Field(default=None, max_length=500)
 
 
-class CarpoolPlanRequest(CamelModel):
-    origin_address: str = Field(alias="originAddress", min_length=2, max_length=200)
-    passengers: list[CarpoolPassenger] = Field(min_length=2, max_length=4)
-    departure_at: str | None = Field(default=None, alias="departureAt", max_length=40)
-
-
-class CarpoolBookingRequest(CarpoolPlanRequest):
-    requester_name: str = Field(alias="requesterName", min_length=1, max_length=50)
-    requester_phone: str = Field(
-        alias="requesterPhone", pattern=r"^[0-9+\-\s]{8,20}$"
+class BundleOrderRequest(CamelModel):
+    pickup_address: str = Field(
+        alias="pickupAddress", min_length=2, max_length=200
     )
-    departure_mode: Literal["now", "scheduled"] = Field(alias="departureMode")
-    taxi_type: Literal["standard", "large"] = Field(
-        default="standard", alias="taxiType"
+    pickup_contact: Contact = Field(alias="pickupContact")
+    pickup_note: str | None = Field(
+        default=None, alias="pickupNote", max_length=500
     )
-    has_luggage: bool = Field(default=False, alias="hasLuggage")
-    note: str | None = Field(default=None, max_length=300)
-    consent: bool
+    dropoffs: list[BundleDropoffRequest] = Field(min_length=2, max_length=5)
+    product_size: ProductSize = Field(default=ProductSize.XS, alias="productSize")
+    product_name: str = Field(
+        default="묶음 배송 물품",
+        alias="productName",
+        min_length=1,
+        max_length=100,
+    )
+    quantity: str = Field(default="1", min_length=1, max_length=20)
+    declared_value: int | None = Field(
+        default=None, alias="declaredValue", ge=0
+    )
+    fleet_option: FleetOption | None = Field(default=None, alias="fleetOption")
+    partner_order_id: str | None = Field(
+        default=None,
+        alias="partnerOrderId",
+        min_length=4,
+        max_length=100,
+        pattern=r"^[A-Za-z0-9._-]+$",
+    )
+    consent: bool = Field(description="최종 견적과 묶음 배송 경로 확인 여부")
 
     @model_validator(mode="after")
-    def validate_booking(self) -> "CarpoolBookingRequest":
-        if self.departure_mode == "scheduled" and not self.departure_at:
-            raise ValueError("예약 출발 시간을 입력해주세요.")
-        if self.departure_mode == "now":
-            self.departure_at = None
+    def validate_bundle_order(self) -> "BundleOrderRequest":
         if not self.consent:
-            raise ValueError("접수 안내 확인이 필요합니다.")
+            raise ValueError("최종 견적과 묶음 배송 경로에 동의해야 접수할 수 있습니다.")
+        normalized_addresses = {
+            item.address.strip().lower() for item in self.dropoffs
+        }
+        if len(normalized_addresses) != len(self.dropoffs):
+            raise ValueError("묶음퀵 도착지는 서로 다른 주소여야 합니다.")
+        if (
+            self.product_size == ProductSize.L
+            and self.fleet_option is None
+        ):
+            raise ValueError("대형(L) 묶음퀵은 차량을 선택해야 합니다.")
         return self
 
 

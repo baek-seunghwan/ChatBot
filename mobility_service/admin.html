@@ -160,7 +160,6 @@
       <article class="stat"><span>전체 회원</span><strong id="totalUsers">-</strong></article>
       <article class="stat"><span>일반 회원</span><strong id="regularUsers">-</strong></article>
       <article class="stat"><span>전체 주문</span><strong id="totalOrders">-</strong></article>
-      <article class="stat"><span>합승 대기</span><strong id="openPools">-</strong></article>
     </section>
 
     <div class="content">
@@ -370,7 +369,6 @@
         byId("totalUsers").textContent = summary.data.users.total.toLocaleString("ko-KR");
         byId("regularUsers").textContent = summary.data.users.users.toLocaleString("ko-KR");
         byId("totalOrders").textContent = summary.data.orders.total.toLocaleString("ko-KR");
-        byId("openPools").textContent = summary.data.openPoolRequests.toLocaleString("ko-KR");
         renderUsers(users.data);
         renderOrders(orders.data);
       } catch (error) {

@@ -2,8 +2,9 @@
 
 [![CI](https://github.com/baek-seunghwan/ChatBot/actions/workflows/ci.yml/badge.svg)](https://github.com/baek-seunghwan/ChatBot/actions/workflows/ci.yml)
 
-MOVB는 퀵·도보 배송, 묶음배송, 택시 동승과 퀵 합승을 하나의 화면과 자연어
-인터페이스에서 처리하는 **LangGraph 기반 AI 모빌리티 운영 서비스**입니다.
+MOVB는 한 출발지에서 여러 목적지로 보내는 **묶음퀵을 처음부터 끝까지 접수하는
+LangGraph 기반 AI 모빌리티 운영 서비스**입니다. 현재 버전은 택시합승과 서로 다른
+사용자 간 퀵 합승을 제품 범위에서 빼고, 묶음퀵 하나의 완성도에 집중합니다.
 
 사용자가 자연어로 요청하면 AI가 의도를 분류하고 필요한 배송 정보를 수집한 뒤,
 Kakao Mobility Sandbox API를 이용해 견적 조회, 주문 생성, 상태 조회와 취소를
@@ -22,8 +23,8 @@ Kakao Mobility Sandbox API를 이용해 견적 조회, 주문 생성, 상태 조
 - “판교역에서 정자역으로 서류 보내줘” → 정보 수집, 주소 변환, 견적 조회
 - “이대로 진행해줘” → 최신 견적 검증 후 Sandbox 주문 생성
 - “내 배송 어디쯤이야?” → 주문 상태 조회와 로컬 상태 동기화
-- “판교에서 정자와 서현으로 묶어서 보내줘” → 개별·묶음 가격 비교
-- “합승으로 싸게 보내고 싶어” → 같은 방향의 다른 배송 요청 탐색과 요금 분배
+- “판교에서 정자와 서현으로 묶어서 보내줘” → 추천 경로와 개별·묶음 가격 비교
+- 묶음퀵 전용 화면 → 목적지별 연락처 입력, 최신 견적 재검증, 동의 후 주문 접수
 
 ## 아키텍처
 
@@ -34,27 +35,23 @@ flowchart TD
 
     R -->|서비스 질문| K["MOVB Knowledge RAG<br/>BM25 + 문자 n-gram"]
     R -->|일반 배송| D["정보 추출 → 차량 선택 → 주소 변환<br/>완전성 검사 → 견적"]
-    R -->|묶음배송| B["실도로 경유 순서<br/>개별·묶음 가격 비교"]
-    R -->|택시 동승| C["실도로 하차 순서·요금 분배"]
-    R -->|퀵 합승| P["요청 등록 → 호환성 검사<br/>매칭 → 분담금 계산"]
+    R -->|묶음퀵| B["실도로 경유 순서<br/>개별·묶음 가격 비교"]
     R -->|상태·취소| S["저장된 주문 조회·변경"]
 
     D --> H["사용자 확인과 최신 견적 검증"]
-    P --> H
+    B --> H
     H --> T["Kakao Mobility Sandbox API"]
     D --> N["Kakao 길찾기 API<br/>자동차·다중 경유지·미래 운행"]
     S --> V["Step 단건 조회<br/>출발지·경유지·목적지"]
 
     K --> O["근거 제목과 함께 응답"]
     B --> O
-    C --> O
     S --> O
     T --> O
 ```
 
-현재 배송 Agent는 17개의 LangGraph 노드로 구성되어 있습니다. Agent가 요청 유형을
-선택하되, 주문 생성처럼 되돌리기 어려운 동작은 자유로운 LLM 호출이 아니라 검증된
-Workflow가 수행하는 하이브리드 구조입니다.
+배송 Agent가 요청 유형을 선택하되, 주문 생성처럼 되돌리기 어려운 동작은 자유로운
+LLM 호출이 아니라 검증된 Workflow가 수행하는 하이브리드 구조입니다.
 
 ## 주요 기능
 
@@ -102,20 +99,23 @@ Workflow가 수행하는 하이브리드 구조입니다.
 - 중복 콜백 제거와 역순 상태 변경 방지
 - SQLite 주문·콜백·대화 상태 보존
 
-### 묶음배송·동승·합승
+### 묶음퀵
 
-- 한 출발지에서 여러 목적지로 보내는 묶음배송 가격 비교
-- 택시 동승의 추천 하차 순서와 단독 요금 비례 분배
-- 서로 다른 사용자의 같은 방향 퀵 요청 매칭
-- 합승 전 각자 단독 가격, 합승 가격, 분담금과 절약액 비교
-- 상대 요청이 없을 때 대기 등록과 자동 진행 동의
+- 한 출발지에서 서로 다른 목적지 2~5곳까지 접수
+- 카카오 실도로 또는 보정 거리 기반 추천 배송 순서
+- 목적지별 개별 견적 합계와 하나의 묶음 견적 비교
+- 목적지별 수령인·연락처·메모를 실제 주문 경유지에 보존
+- 주문 직전 서버에서 주소·경로·가격을 다시 계산
+- 최종 경로와 견적에 대한 명시적 동의 검증
+- `Idempotency-Key`로 중복 주문 생성 방지
+- 접수 후 상태 조회·동기화·취소
 
 ### 서비스 운영
 
 - 이메일 회원가입·로그인·로그아웃
 - PBKDF2 비밀번호 해시와 HttpOnly 세션 쿠키
 - 환경변수 기반 관리자 계정과 역할별 접근 제어
-- 관리자용 회원·주문·합승 현황
+- 관리자용 회원·주문 현황
 - 배포 환경에서 Ollama 연결 불가 시 자체 지식 모드로 자동 전환
 
 ## AI 품질 평가
@@ -126,7 +126,7 @@ Workflow가 수행하는 하이브리드 구조입니다.
 | 평가 | 데이터 | 현재 결과 |
 |---|---:|---:|
 | 지식 검색 Source Hit@3 | 26문항 | **26/26 (100%)** |
-| 자동 테스트 | API·인증·주문·경로·Step·RAG·Agent·로컬 QA | **36개 통과** |
+| 자동 테스트 | API·인증·묶음퀵·주문·경로·Step·RAG·Agent·로컬 QA | **42개 통과** |
 
 평가 실행:
 
@@ -166,7 +166,7 @@ uv run uvicorn mobility_service.app:app --reload --port 8002
 ```text
 MOVB는 어떤 서비스야?
 퀵과 도보 배송은 뭐가 달라?
-합승 요금은 어떻게 나눠?
+묶음퀵 요금은 어떻게 계산해?
 채팅으로 주문하는 방법을 알려줘
 ```
 
@@ -228,11 +228,8 @@ Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결
 | `GET` | `/api/orders/{partnerOrderId}/steps` | 정차지별 Step 상세 상태 |
 | `PATCH` | `/api/orders/{partnerOrderId}/cancel` | 주문 취소 |
 | `PATCH` | `/api/admin/orders/{partnerOrderId}/sandbox-status` | 관리자 Sandbox 상태 시연 |
-| `POST` | `/api/bundle/quote` | 묶음배송 비교 견적 |
-| `POST` | `/api/carpool/plan` | 택시 동승 경로·요금 분배 |
-| `POST` | `/api/carpool/requests` | 택시 합승 접수 저장·접수번호 발급 |
-| `GET` | `/api/carpool/requests/{requestId}` | 택시 합승 접수 조회 |
-| `GET` | `/api/pool/requests` | 퀵 합승 대기 요청 |
+| `POST` | `/api/bundle/quote` | 묶음퀵 비교 견적 |
+| `POST` | `/api/bundle/orders` | 견적 재검증 후 묶음퀵 주문 생성 |
 
 ## 프로젝트 구조
 
@@ -244,18 +241,20 @@ mobility_service/
 ├── providers.py             # Anthropic → Gemini 폴백
 ├── client.py                # Kakao Mobility Sandbox API
 ├── directions.py            # 자동차·다중 경유지·미래 운행 길찾기
-├── bundle.py                # 묶음배송 비교 견적
-├── pooling.py               # 퀵 합승 호환성·요금·주문
-├── rideshare.py             # 택시 동승 경로·요금 분배
+├── geo_math.py              # 공통 거리 계산
+├── bundle.py                # 묶음퀵 경로·비교 견적·주문 변환
 ├── store.py                 # 주문·콜백 저장
 ├── conversation_store.py    # Agent 세션과 대화 상태
 ├── index.html               # 사용자 웹 화면
+├── bundle.html              # 묶음퀵 전용 접수 화면
+├── features.html            # 묶음퀵 기능 소개
 └── admin.html               # 관리자 화면
 eval/
 └── mobility_knowledge_eval.json
 scripts/
 └── evaluate_mobility_knowledge.py
 tests/
+├── test_bundle_booking.py
 ├── test_kakao_mobility_extensions.py
 ├── test_mobility_service.py
 └── test_mobility_knowledge.py
@@ -277,16 +276,16 @@ LangChain, LangGraph와 Agent가 각각 왜 필요한지를 비교·검증하는
 ## 현재 한계
 
 - Kakao Mobility Sandbox이므로 실제 기사 배정과 결제가 발생하지 않습니다.
-- 택시 동승은 공개 배차 API가 아닌 카카오 실도로·예상 택시요금 기반 계산 예시입니다.
 - 현재 지식 검색 평가는 26문항 규모이므로 질문 표현과 문서가 늘어나면 평가셋도
   함께 확장해야 합니다.
 - 지식베이스가 작아 로컬 검색을 사용합니다. 문서가 크게 늘어나면 동일한 검색
   인터페이스 뒤에 임베딩·Vector DB를 비교 도입할 예정입니다.
 
-화면별 수정 위치와 배포 과정은 [EDITING_GUIDE.md](EDITING_GUIDE.md), Kakao API
-세부 실행 방법은 [mobility_service/README.md](mobility_service/README.md)를 참고하세요.
+Kakao API 세부 실행 방법은 [mobility_service/README.md](mobility_service/README.md)를
+참고하세요. 개인 학습 문서는 Git에 올라가지 않는 `private/` 폴더에 보관합니다.
 
 ## 브랜치
 
 - `main`: 현재 MOVB AI 모빌리티 운영 서비스
+- `archive/taxi-and-pool-prototype`: 범위를 줄이기 전 택시합승·퀵 합승 프로토타입
 - `legacy-chatbot-full`: 초기 한국어 모델·RAG·학습 실험 전체 스냅샷

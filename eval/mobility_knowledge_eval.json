@@ -53,23 +53,23 @@
   },
   {
     "question": "묶음배송은 어떤 기능이야?",
-    "expectedSource": "04-bundle-pool-carpool"
+    "expectedSource": "04-bundle-quick"
   },
   {
-    "question": "퀵 합승 매칭 조건을 설명해줘",
-    "expectedSource": "04-bundle-pool-carpool"
+    "question": "묶음퀵은 목적지를 몇 곳까지 입력할 수 있어?",
+    "expectedSource": "04-bundle-quick"
   },
   {
-    "question": "합승 요금은 어떻게 나눠?",
-    "expectedSource": "04-bundle-pool-carpool"
+    "question": "묶음퀵 요금은 어떻게 계산해?",
+    "expectedSource": "04-bundle-quick"
   },
   {
-    "question": "택시 동승 요금 계산은 실제 배차도 해줘?",
-    "expectedSource": "04-bundle-pool-carpool"
+    "question": "묶음퀵 주문에 수령인 연락처가 꼭 필요해?",
+    "expectedSource": "04-bundle-quick"
   },
   {
-    "question": "묶음배송과 퀵 합승의 차이는 뭐야?",
-    "expectedSource": "04-bundle-pool-carpool"
+    "question": "묶음퀵 주문이 중복 접수되지 않게 막고 있어?",
+    "expectedSource": "04-bundle-quick"
   },
   {
     "question": "Sandbox 주문은 실제 결제가 되는 거야?",
