@@ -52,6 +52,22 @@ KOREAN_FIELD_LABELS = {
     "productName": "물품명",
 }
 
+FLEET_LABELS = {
+    "MOTORCYCLE": "오토바이",
+    "JIMBAJI_MOTORCYCLE": "짐받이 오토바이",
+    "PASSENGER_CAR": "소형차",
+    "DAMAS": "다마스",
+    "LABO": "라보",
+    "TON": "1톤",
+}
+
+ORDER_TYPE_LABELS = {
+    "QUICK_ECONOMY": "이코노미",
+    "QUICK": "일반",
+    "QUICK_EXPRESS": "급송",
+    "DOBO": "도보 배송",
+}
+
 CHITCHAT_SYSTEM = (
     "당신은 스마트 딜리버리 서비스 'MOVB(모브)'의 도우미입니다. "
     "친절하고 간결한 한국어로 답하세요. 아래 서비스 정보를 근거로 스마트 딜리버리와 배송 관련 "
@@ -119,6 +135,7 @@ JSON 객체 하나만 출력하세요. 설명 문장은 쓰지 마세요."""
 class AgentState(TypedDict, total=False):
     session_id: str
     message: str
+    form_snapshot: dict[str, Any]
     turns: list[dict[str, str]]
     slots: dict[str, Any]
     stage: str
@@ -301,8 +318,12 @@ class DeliveryAgent:
     # ── 노드 ────────────────────────────────────────────────────
     async def _load_session(self, state: AgentState) -> AgentState:
         session = self._conversations.get_or_create(state["session_id"])
+        slots = dict(session["slots"])
+        for key, value in (state.get("form_snapshot") or {}).items():
+            if value not in (None, "") and not slots.get(key):
+                slots[key] = value
         return {
-            "slots": session["slots"],
+            "slots": slots,
             "turns": session["turns"],
             "stage": session["stage"],
             "quote": session["quote"],
@@ -654,7 +675,7 @@ class DeliveryAgent:
                         f"- 배송 예상 시간: 약 {max(1, round(seconds / 60))}분"
                     )
                 if fleet:
-                    lines.append(f"- 카카오 추천 차량: {fleet}")
+                    lines.append(f"- 카카오 추천 차량: {FLEET_LABELS.get(fleet, fleet)}")
             if isinstance(route, dict):
                 source = (
                     "자동차 실제 도로"
@@ -688,16 +709,18 @@ class DeliveryAgent:
         ):
             fare = row.get("totalFareAmount")
             order_type = row.get("orderType", "")
+            order_label = ORDER_TYPE_LABELS.get(order_type, order_type)
             fleet_option = row.get("fleetOption")
             fleet = (
                 fleet_option.get("fleet")
                 if isinstance(fleet_option, dict)
                 else row.get("fleet", "")
             )
+            fleet_label = FLEET_LABELS.get(fleet, fleet)
             if isinstance(fare, (int, float)):
-                lines.append(f"- {order_type} ({fleet}): {int(fare):,}원")
+                lines.append(f"- {order_label} ({fleet_label}): {int(fare):,}원")
             else:
-                lines.append(f"- {order_type} ({fleet}): 가격 정보 없음")
+                lines.append(f"- {order_label} ({fleet_label}): 가격 정보 없음")
         return "\n".join(lines) if lines else "가격 옵션을 찾지 못했어요."
 
     async def _quote_price(self, state: AgentState) -> AgentState:
@@ -1047,7 +1070,7 @@ class DeliveryAgent:
     async def _vehicle_select(self, state: AgentState) -> AgentState:
         slots = state.get("slots", {})
         selected = slots.get("fleet")
-        selected_text = f"\n현재 선택: **{selected}**" if selected else ""
+        selected_text = f"\n현재 선택: **{FLEET_LABELS.get(selected, selected)}**" if selected else ""
         return {
             "reply": (
                 "카카오 T 퀵에서 사용할 차량을 골라주세요.\n"
@@ -1101,9 +1124,18 @@ class DeliveryAgent:
         return {}
 
     # ── 실행 ────────────────────────────────────────────────────
-    async def achat(self, session_id: str, message: str) -> AgentChatResult:
+    async def achat(
+        self,
+        session_id: str,
+        message: str,
+        form_snapshot: dict[str, Any] | None = None,
+    ) -> AgentChatResult:
         state = await self._graph.ainvoke(
-            {"session_id": session_id, "message": message},
+            {
+                "session_id": session_id,
+                "message": message,
+                "form_snapshot": form_snapshot or {},
+            },
             config={
                 "run_name": "delivery-agent",
                 "tags": ["mobility", "agent", "delivery-chat"],

@@ -453,7 +453,8 @@
       line-height: 1.45;
     }
     .party-list { display: grid; gap: 12px; }
-    .contact-section .party-list:not(:empty) {
+    .contact-section .party-list:not(:empty),
+    .address-party .party-list:not(:empty) {
       margin-top: 15px;
       padding-top: 15px;
       border-top: 1px dashed #d8dbe2;
@@ -1173,7 +1174,7 @@
       background: white;
       font-size: 12px;
     }
-    .field-hint { margin-top: 3px; font-size: 10.5px; line-height: 1.35; }
+    .field-hint { margin-top: 3px; min-height: 14px; font-size: 10.5px; line-height: 1.35; }
     .quick-review {
       margin-top: 12px;
       padding: 16px;
@@ -1535,6 +1536,15 @@
       font-size: 11px;
       text-decoration: none;
     }
+    .party-section-head .secondary,
+    .party-section-head .copy-contact {
+      min-height: 44px;
+      margin: 0;
+      padding: 10px 16px;
+      border-radius: 14px;
+      font-size: 13px;
+      font-weight: 800;
+    }
     .copy-contact:hover { background: #f4f6f8; text-decoration: none; }
     .party-row,
     .result,
@@ -1673,6 +1683,7 @@
     .address-pair {
       display: grid;
       grid-template-columns: 1fr 1fr;
+      align-items: start;
       gap: 12px;
     }
     .address-party {
@@ -1794,6 +1805,64 @@
       font-weight: 850;
     }
     .pickup-time-field .field-hint { margin: 0; }
+    .time-select { position: relative; display: block; min-width: 0; }
+    .time-select-button {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #d8d8d8;
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+    }
+    .time-select-button:hover { border-color: #b9bec8; background: #fff; color: var(--ink); transform: none; box-shadow: none; }
+    .time-select-button svg { flex: none; width: 16px; height: 16px; color: #667085; transition: transform .12s ease; }
+    .time-select.open .time-select-button { border-color: var(--navy); box-shadow: 0 0 0 3px rgba(16, 37, 77, .08); }
+    .time-select.open .time-select-button svg { transform: rotate(180deg); }
+    .time-select-panel {
+      position: absolute;
+      z-index: 20;
+      top: calc(100% + 6px);
+      left: 0;
+      width: max(100%, 180px);
+      max-height: 260px;
+      overflow-y: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 6px;
+      background: #fff;
+      box-shadow: 0 12px 30px rgba(23, 25, 31, .12);
+    }
+    .time-select-option {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      width: 100%;
+      border: 0;
+      border-radius: 7px;
+      padding: 9px 10px;
+      background: transparent;
+      color: var(--ink);
+      font: inherit;
+      font-size: 13.5px;
+      font-weight: 650;
+      text-align: left;
+      cursor: pointer;
+    }
+    .time-select-option:hover { background: #f3f4f7; }
+    .time-select-option.active { background: #eef3fa; color: var(--navy); font-weight: 800; }
+    .time-select-option svg { width: 15px; height: 15px; color: var(--navy); visibility: hidden; }
+    .time-select-option.active svg { visibility: visible; }
     .delivery-option-section .smart-mode-guide { margin-top: 12px; }
     textarea {
       width: 100%;
@@ -2211,7 +2280,7 @@
                 </div>
                 <div class="grid person-grid">
                   <label><span class="field-label">이름 <span class="required-mark">필수</span></span><input id="pickupName" required autocomplete="name" maxlength="50" placeholder="보내는 분 이름"></label>
-                  <label><span class="field-label">연락처 <span class="required-mark">필수</span></span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">Sandbox에서는 010-1000-XXXX 형식만 사용할 수 있어요.</small></label>
+                  <label><span class="field-label">연락처 <span class="required-mark">필수</span></span><input id="pickupPhone" required inputmode="tel" autocomplete="tel" maxlength="13" placeholder="010-1000-0001"><small class="field-hint">테스트 번호 010-1000-XXXX만 가능</small></label>
                 </div>
                 <div class="party-list" id="smartPickupList"></div>
               </div>
@@ -2269,7 +2338,7 @@
               <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/></svg></span><strong>자동 추천</strong><small>가격과 조건에 맞게</small>
             </button>
             <button type="button" class="choice-card" data-fleet="MOTORCYCLE">
-              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3"/><circle cx="18" cy="17" r="3"/><path d="M6 17h4l3-7h4M13 10l2-3h3M9 17h6"/></svg></span><strong>오토바이</strong><small>20kg · 세 변 140cm 이하</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="17" r="2.6"/><circle cx="17.5" cy="17" r="2.6"/><path d="M9 17h4.5l2-4h2.8l1.2 2.3"/><path d="M11 13h-2l1.7-2.8h2.8"/><path d="M14.5 9h2.5"/></svg></span><strong>오토바이</strong><small>20kg · 세 변 140cm 이하</small>
             </button>
             <button type="button" class="choice-card" data-fleet="PASSENGER_CAR">
               <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16V12l2.5-4h9L18 12v4"/><path d="M4 16h16"/><circle cx="8" cy="17.5" r="1.6"/><circle cx="16" cy="17.5" r="1.6"/></svg></span><strong>소형차</strong><small>20kg · 안전한 적재</small>
@@ -2311,9 +2380,16 @@
             </button>
           </div>
           <label class="pickup-time-field" id="wishTimeField">픽업 시간
-            <select id="wishTime">
-              <option value="">오늘, 바로 픽업</option>
-            </select>
+            <span class="time-select" id="wishTimeSelect">
+              <select id="wishTime" class="visually-hidden" tabindex="-1" aria-hidden="true">
+                <option value="">오늘, 바로 픽업</option>
+              </select>
+              <button type="button" class="time-select-button" id="wishTimeButton" aria-haspopup="listbox" aria-expanded="false">
+                <span id="wishTimeButtonLabel">오늘, 바로 픽업</span>
+                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 7.5l4.5 5 4.5-5"/></svg>
+              </button>
+              <div class="time-select-panel" id="wishTimePanel" role="listbox" hidden></div>
+            </span>
             <small class="field-hint">예약 시간 기준으로 요금이 적용되며 배송 상황에 따라 픽업 시간이 변경될 수 있어요.</small>
           </label>
           <div class="smart-mode-guide" id="smartModeGuide">
@@ -2324,6 +2400,13 @@
               <span>
                 <strong>다른 사용자의 배송과 자동으로 묶기</strong>
                 <small id="autoMatchHint">최대 15분 동안 방향과 조건이 비슷한 다른 컴퓨터의 주문을 찾습니다.</small>
+              </span>
+            </label>
+            <label class="auto-match-option" id="contactlessOption" hidden>
+              <input type="checkbox" id="contactlessDropoff">
+              <span>
+                <strong>문 앞에 놓아주세요 (비대면 수령)</strong>
+                <small>함께 배송할 주문을 기다리느라 시간이 걸릴 수 있어요. 지정한 곳에 두시면 기사님이 알아서 가져가요.</small>
               </span>
             </label>
           </div>
@@ -2631,7 +2714,61 @@
         }).format(time);
         select.append(option);
       }
+      renderPickupTimeOptions();
     }
+
+    function renderPickupTimeOptions() {
+      const select = byId("wishTime");
+      const panel = byId("wishTimePanel");
+      panel.replaceChildren();
+      Array.from(select.options).forEach(option => {
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "time-select-option";
+        row.dataset.value = option.value;
+        row.setAttribute("role", "option");
+        row.innerHTML = `<span>${option.textContent}</span><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 10.5l3.5 3.5L15 6.5"/></svg>`;
+        row.addEventListener("click", () => selectPickupTime(option.value));
+        panel.append(row);
+      });
+      syncPickupTimeUi();
+    }
+
+    function syncPickupTimeUi() {
+      const select = byId("wishTime");
+      const selectedOption = select.options[select.selectedIndex];
+      byId("wishTimeButtonLabel").textContent = selectedOption ? selectedOption.textContent : "오늘, 바로 픽업";
+      byId("wishTimePanel").querySelectorAll(".time-select-option").forEach(row => {
+        row.classList.toggle("active", row.dataset.value === select.value);
+      });
+    }
+
+    function togglePickupTimePanel(open) {
+      const wrapper = byId("wishTimeSelect");
+      const shouldOpen = open ?? !wrapper.classList.contains("open");
+      wrapper.classList.toggle("open", shouldOpen);
+      byId("wishTimeButton").setAttribute("aria-expanded", String(shouldOpen));
+      byId("wishTimePanel").hidden = !shouldOpen;
+    }
+
+    function selectPickupTime(value) {
+      const select = byId("wishTime");
+      select.value = value;
+      select.classList.remove("field-error");
+      syncPickupTimeUi();
+      togglePickupTimePanel(false);
+      handleQuickFormChange();
+      updateDistance();
+    }
+
+    byId("wishTimeButton").addEventListener("click", () => togglePickupTimePanel());
+    document.addEventListener("click", event => {
+      const wrapper = byId("wishTimeSelect");
+      if (!wrapper.contains(event.target)) togglePickupTimePanel(false);
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape") togglePickupTimePanel(false);
+    });
 
     function selectFleet(value) {
       byId("fleet").value = value;
@@ -2740,6 +2877,9 @@
       }
       if (byId("noElevator").checked) parts.push("[엘리베이터 없음]");
       if (byId("needCart").checked) parts.push("[카트 필요]");
+      if (!byId("contactlessOption").hidden && byId("contactlessDropoff").checked) {
+        parts.push("[문 앞에 놓아주세요 (비대면 수령)]");
+      }
       const note = byId("driverNote").value.trim();
       if (note) parts.push(note);
       return parts.join(" ") || null;
@@ -2756,8 +2896,10 @@
       if (smart) byId("orderType").value = "QUICK";
       byId("wishTimeField").hidden = smart;
       byId("primaryOwnerField").hidden = smartPickupNodes().length === 0;
-      byId("autoMatchOption").hidden = true;
+      byId("autoMatchOption").hidden = smart || !matchEligible;
       byId("autoMatch").disabled = !matchEligible;
+      byId("contactlessOption").hidden = !(smart || autoMatch);
+      if (!(smart || autoMatch)) byId("contactlessDropoff").checked = false;
       if (!roundTripEligible) {
         byId("roundTrip").checked = false;
       }
@@ -4403,6 +4545,22 @@
       return bubble;
     }
 
+    function collectFormSnapshot() {
+      const fieldIds = [
+        "pickupAddress", "pickupName", "pickupPhone",
+        "dropoffAddress", "dropoffName", "dropoffPhone",
+        "orderType", "productSize", "productName",
+        "declaredValue", "wishTime", "fleet",
+      ];
+      const snapshot = {};
+      fieldIds.forEach(id => {
+        const field = byId(id);
+        const value = field ? field.value.trim() : "";
+        if (value) snapshot[id] = value;
+      });
+      return snapshot;
+    }
+
     async function sendChatMessage() {
       const input = byId("chatInput");
       const message = input.value.trim();
@@ -4419,7 +4577,8 @@
           body: JSON.stringify({
             message,
             mode: chatMode,
-            localEngine: ollamaAvailable && ollamaEnabled ? "ollama" : "own"
+            localEngine: ollamaAvailable && ollamaEnabled ? "ollama" : "own",
+            formSnapshot: collectFormSnapshot()
           })
         });
         loading.remove();

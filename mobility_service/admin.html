@@ -190,7 +190,7 @@
       });
       const body = await response.json().catch(() => ({}));
       if (response.status === 401 || response.status === 403) {
-        location.href = "/?admin=1";
+        location.href = "/order?admin=1";
         throw new Error("관리자 로그인이 필요합니다.");
       }
       if (!response.ok) throw new Error(body.detail || `HTTP ${response.status}`);
