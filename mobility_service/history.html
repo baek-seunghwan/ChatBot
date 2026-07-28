@@ -374,6 +374,75 @@
     }
   </style>
   {{SITE_HEADER_CSS}}
+  <style id="movb-history-consistency">
+    .movb-brand-mark { border-radius: 8px; background: #fff4b8; }
+    .movb-nav-item,
+    .movb-login-button { border-radius: 6px; }
+    .movb-nav-item.active { background: var(--navy); }
+    .history-hero {
+      border-radius: 12px;
+      box-shadow: none;
+    }
+    .new-order,
+    .summary-card,
+    .history-panel,
+    .order-card,
+    .detail-summary,
+    .detail-item,
+    .step-card,
+    .detail-actions button,
+    .filter-group,
+    .filter-button { border-radius: 8px; }
+    .history-panel,
+    .summary-card { box-shadow: none; }
+    .match-list {
+      display: grid;
+      gap: 8px;
+      padding: 14px 14px 0;
+    }
+    .match-list:empty { display: none; }
+    .match-card {
+      border: 1px solid #c7d2e3;
+      border-left: 3px solid var(--yellow);
+      border-radius: 8px;
+      padding: 14px;
+      background: #f7f9fc;
+    }
+    .match-card-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .match-card strong { color: var(--navy); font-size: 13px; }
+    .match-card p {
+      margin: 8px 0 0;
+      overflow: hidden;
+      color: #445066;
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .match-card footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .match-card button {
+      min-height: 32px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 5px 8px;
+      background: #fff;
+      color: var(--navy);
+      font-size: 11px;
+      font-weight: 800;
+    }
+  </style>
 </head>
 <body>
   {{SITE_HEADER}}
@@ -390,7 +459,7 @@
     <section class="summary-grid" aria-label="이용 내역 요약">
       <article class="summary-card"><span>전체 주문</span><strong id="totalCount">-</strong></article>
       <article class="summary-card"><span>스마트 딜리버리</span><strong id="smartCount">-</strong></article>
-      <article class="summary-card"><span>진행 중</span><strong id="activeCount">-</strong></article>
+      <article class="summary-card"><span>공동배송 매칭 대기</span><strong id="waitingCount">-</strong></article>
     </section>
 
     <div class="history-layout">
@@ -406,6 +475,7 @@
             <button class="filter-button" type="button" data-filter="QUICK">일반</button>
           </div>
         </div>
+        <div class="match-list" id="matchList" aria-live="polite"></div>
         <div class="order-list" id="orderList" aria-live="polite">
           <div class="empty-state">이용 내역을 불러오는 중입니다.</div>
         </div>
@@ -448,7 +518,16 @@
       ABORTED: "중단",
       REQUEST_FAILED: "접수 실패"
     };
+    const matchClientId = (() => {
+      let id = localStorage.getItem("movb_match_client_id");
+      if (!id) {
+        id = `browser-${crypto.randomUUID()}`;
+        localStorage.setItem("movb_match_client_id", id);
+      }
+      return id;
+    })();
     let orders = [];
+    let matchRequests = [];
     let selectedId = "";
     let activeFilter = "ALL";
 
@@ -477,7 +556,8 @@
     }
 
     function statusName(status) {
-      return statusLabels[status] || status || "상태 확인 중";
+      const normalized = String(status || "").toUpperCase();
+      return statusLabels[normalized] || status || "상태 확인 중";
     }
 
     function makeText(tag, className, text) {
@@ -491,8 +571,74 @@
       byId("totalCount").textContent = `${orders.length}건`;
       byId("smartCount").textContent =
         `${orders.filter(order => order.serviceType === "SMART_DELIVERY").length}건`;
-      byId("activeCount").textContent =
-        `${orders.filter(order => !terminalStatuses.has(order.status)).length}건`;
+      byId("waitingCount").textContent =
+        `${matchRequests.filter(request => request.status === "WAITING").length}건`;
+    }
+
+    function matchStatusName(status) {
+      return {
+        WAITING: "다른 주문 찾는 중",
+        MATCHING: "공동배송 구성 중",
+        MATCHED: "공동배송 매칭 완료",
+        CANCELED: "매칭 취소",
+        EXPIRED: "매칭 시간 종료",
+        FAILED: "매칭 접수 실패"
+      }[status] || status;
+    }
+
+    function renderMatches() {
+      const list = byId("matchList");
+      list.replaceChildren();
+      matchRequests
+        .filter(request => ["WAITING", "MATCHING", "MATCHED"].includes(request.status))
+        .forEach(request => {
+          const card = makeText("article", "match-card", "");
+          const head = makeText("div", "match-card-head", "");
+          head.append(
+            makeText("strong", "", "다른 사용자와 공동배송"),
+            makeText("span", "status-badge", matchStatusName(request.status))
+          );
+          const route = makeText(
+            "p", "", request.routeSummary || "배송 경로 확인 중"
+          );
+          const footer = document.createElement("footer");
+          footer.append(makeText("time", "", formatDate(request.updatedAt)));
+          const action = makeText(
+            "button", "",
+            request.status === "MATCHED" ? "공동 주문 보기" : "매칭 취소"
+          );
+          action.type = "button";
+          if (request.status === "MATCHED" && request.partnerOrderId) {
+            action.addEventListener(
+              "click",
+              () => selectOrder(request.partnerOrderId)
+            );
+          } else {
+            action.addEventListener(
+              "click",
+              () => cancelMatchRequest(request.requestId)
+            );
+          }
+          footer.append(action);
+          card.append(head, route, footer);
+          list.append(card);
+        });
+    }
+
+    async function cancelMatchRequest(requestId) {
+      if (!confirm("공동배송 매칭 대기를 취소할까요?")) return;
+      try {
+        await api(
+          `/api/delivery-matches/${encodeURIComponent(requestId)}/cancel`,
+          {
+            method: "PATCH",
+            headers: {"X-Client-Id": matchClientId}
+          }
+        );
+        await loadOrders(false);
+      } catch (error) {
+        byId("matchList").prepend(makeText("div", "error-box", error.message));
+      }
     }
 
     function filteredOrders() {
@@ -672,9 +818,16 @@
     async function loadOrders(selectInitial = true) {
       const list = byId("orderList");
       try {
-        const result = await api("/api/orders?limit=50");
+        const [result, matchResult] = await Promise.all([
+          api("/api/orders?limit=50"),
+          api("/api/delivery-matches?limit=30", {
+            headers: {"X-Client-Id": matchClientId}
+          })
+        ]);
         orders = Array.isArray(result.data) ? result.data : [];
+        matchRequests = Array.isArray(matchResult.data) ? matchResult.data : [];
         updateSummary();
+        renderMatches();
         renderOrders();
         if (!selectInitial || !orders.length) return;
         const queryId = new URLSearchParams(location.search).get("order");
@@ -684,7 +837,7 @@
         list.replaceChildren(makeText("div", "error-box", error.message));
         byId("totalCount").textContent = "-";
         byId("smartCount").textContent = "-";
-        byId("activeCount").textContent = "-";
+        byId("waitingCount").textContent = "-";
       }
     }
 
@@ -699,6 +852,9 @@
     });
 
     loadOrders();
+    window.setInterval(() => {
+      if (document.visibilityState === "visible") loadOrders(false);
+    }, 15000);
   </script>
 </body>
 </html>

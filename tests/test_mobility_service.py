@@ -215,7 +215,8 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn('id="addSmartPickup"', home.text)
         self.assertIn('id="addSmartDropoff"', home.text)
         self.assertIn("function isSmartDelivery()", home.text)
-        self.assertIn("추가하는 즉시 스마트 딜리버리로 자동 전환", home.text)
+        self.assertIn("다른 사용자의 배송과 자동으로 묶기", home.text)
+        self.assertIn("/api/delivery-matches", home.text)
         self.assertIn("스마트 딜리버리", home.text)
         self.assertEqual(legacy.status_code, 307)
         self.assertEqual(legacy.headers["location"], "/#smartDelivery")
@@ -312,12 +313,16 @@ class MobilityApiTests(unittest.TestCase):
         home = self.client.get("/")
 
         self.assertEqual(home.status_code, 200)
-        self.assertIn("1. 배송 경로", home.text)
-        self.assertIn("받는 분이 보내는 분과 같아요", home.text)
+        self.assertIn("한 화면에서 순서대로 입력해요", home.text)
+        self.assertNotIn('class="booking-steps"', home.text)
+        self.assertIn("보내는 분 연락처와 동일", home.text)
+        self.assertIn("받는 사람 이름", home.text)
         self.assertIn('id="quickReview"', home.text)
         self.assertIn('id="quoteButton"', home.text)
         self.assertIn('id="orderButton"', home.text)
         self.assertIn("주소 확인이 필요해요", home.text)
+        self.assertIn("출발지 미설정", home.text)
+        self.assertIn("도착지 미설정", home.text)
 
     def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
         home = self.client.get("/")

@@ -1388,6 +1388,289 @@
     }
   </style>
   {{SITE_HEADER_CSS}}
+  <style id="movb-ui-consistency">
+    :root {
+      --navy: #10254d;
+      --yellow: #ffcc00;
+      --yellow-dark: #e0b400;
+      --ink: #17191f;
+      --muted: #667085;
+      --line: #dfe3e8;
+      --surface: #f4f6f8;
+      --panel: #ffffff;
+      --blue: var(--navy);
+      --violet: var(--navy);
+      --mint: var(--navy);
+      --success: #25734f;
+      --danger: #b93832;
+    }
+    body { background: var(--surface); }
+    .movb-brand-mark { border-radius: 8px; background: #fff4b8; }
+    .movb-nav-item,
+    .movb-login-button { border-radius: 6px; }
+    .movb-nav-item.active { background: var(--navy); color: #fff; }
+    .panel,
+    .map-panel {
+      border-radius: 12px;
+      box-shadow: none;
+    }
+    .form-section {
+      border-radius: 9px;
+      background: #fff;
+    }
+    .section-number {
+      border-radius: 5px;
+      background: var(--navy);
+    }
+    .form-flow-note {
+      margin: 0 0 12px;
+      border-left: 3px solid var(--navy);
+      padding: 8px 11px;
+      background: #f7f8fa;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .form-flow-note b { color: var(--navy); }
+    .smart-mode-guide {
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--navy);
+      border-radius: 8px;
+      background: #fff;
+      color: #4d586b;
+      box-shadow: none;
+    }
+    .smart-mode-guide.active {
+      border-color: #c6d0df;
+      border-left-color: var(--yellow);
+      background: #f7f9fc;
+      box-shadow: none;
+    }
+    .auto-match-option {
+      display: grid;
+      grid-template-columns: 18px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      margin-top: 12px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      cursor: pointer;
+    }
+    .auto-match-option[hidden] { display: none; }
+    .auto-match-option input {
+      width: 18px;
+      height: 18px;
+      min-height: 0;
+      margin: 2px 0 0;
+      accent-color: var(--navy);
+    }
+    .auto-match-option strong {
+      display: block;
+      margin: 0;
+      color: var(--navy);
+      font-size: 13px;
+    }
+    .auto-match-option small {
+      display: block;
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 550;
+      line-height: 1.45;
+    }
+    input,
+    select,
+    .address-input button,
+    .party-address button,
+    button { border-radius: 7px; }
+    button {
+      background: var(--navy);
+      box-shadow: none;
+      transition: background .15s ease, border-color .15s ease;
+    }
+    button:hover {
+      background: #183766;
+      box-shadow: none;
+      transform: none;
+    }
+    button.primary {
+      background: var(--yellow);
+      color: var(--navy);
+    }
+    button.primary:hover { background: #f0c000; }
+    button.secondary,
+    .address-input button,
+    .party-address button {
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--navy);
+    }
+    button.secondary:hover,
+    .address-input button:hover,
+    .party-address button:hover { background: #f4f6f8; }
+    .copy-contact {
+      float: none;
+      display: inline-flex;
+      min-height: 32px;
+      margin: 0 0 12px;
+      padding: 5px 8px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--navy);
+      font-size: 11px;
+      text-decoration: none;
+    }
+    .copy-contact:hover { background: #f4f6f8; text-decoration: none; }
+    .party-row,
+    .result,
+    .fare-card,
+    .quick-review,
+    .review-item,
+    .safety-note { border-radius: 8px; box-shadow: none; }
+    .quick-review { background: var(--navy); }
+    .quick-badge {
+      border-radius: 6px;
+      border-color: #ead77b;
+      background: #fff8cf;
+      color: #665513;
+    }
+    .quick-badge > span { background: var(--navy); box-shadow: none; }
+    .map-mode.active,
+    .map-mode.active[data-mode="pickup"] {
+      border-color: var(--navy);
+      background: var(--navy);
+    }
+    .map-mode.active[data-mode="dropoff"] {
+      border-color: var(--yellow-dark);
+      background: var(--yellow);
+      color: var(--navy);
+    }
+    .map-label {
+      border-radius: 6px;
+      box-shadow: 0 2px 6px rgba(16, 37, 77, .18);
+    }
+    .map-label.pickup { background: var(--navy); }
+    .map-label.dropoff { background: var(--yellow); color: var(--navy); }
+    .route-dot.pickup { background: var(--navy); }
+    .route-dot.dropoff { background: var(--yellow-dark); }
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 3px solid rgba(16, 37, 77, .2);
+      outline-offset: 2px;
+    }
+    .chat-widget {
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(16, 37, 77, .16);
+    }
+    .chat-widget-header {
+      min-height: 50px;
+      gap: 8px;
+      padding: 8px 10px 8px 13px;
+      background: var(--navy);
+    }
+    .chat-widget-header h3 {
+      flex: 0 0 auto;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .chat-widget-header h3::before { background: var(--yellow); }
+    .chat-widget-header > button {
+      min-width: 32px;
+      min-height: 32px;
+      padding: 4px;
+    }
+    .chat-mode-toggle {
+      flex: 1;
+      justify-content: flex-end;
+      gap: 3px;
+      padding: 0;
+      background: transparent;
+    }
+    .chat-mode-btn {
+      flex: 0 0 auto;
+      min-height: 30px;
+      border: 1px solid rgba(255, 255, 255, .28);
+      border-radius: 5px;
+      padding: 4px 8px;
+      background: transparent;
+      color: rgba(255, 255, 255, .75);
+      font-size: 10.5px;
+    }
+    .chat-mode-btn.active {
+      border-color: var(--yellow);
+      background: var(--yellow);
+      color: var(--navy);
+    }
+    .chat-engine-row {
+      min-height: 38px;
+      padding: 6px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .chat-engine-row .engine-copy {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .chat-engine-row small { font-size: 10px; }
+    .switch.on { background: var(--yellow); }
+    .chat-log {
+      min-height: 0;
+      padding: 12px;
+      background: #f7f8fa;
+    }
+    .chat-bubble {
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    .chat-bubble.user { background: var(--navy); }
+    .chat-bubble.bot { border-radius: 8px; }
+    .chat-suggestions {
+      flex-wrap: nowrap;
+      gap: 5px;
+      overflow-x: auto;
+      padding: 7px 10px;
+      background: #fff;
+      scrollbar-width: none;
+    }
+    .chat-suggestions::-webkit-scrollbar { display: none; }
+    .chat-suggestions button,
+    .chat-actions button {
+      min-height: 30px;
+      border-radius: 6px;
+      border-color: var(--line);
+      padding: 5px 8px;
+      background: #fff;
+      color: var(--navy);
+      font-size: 10.5px;
+      white-space: nowrap;
+    }
+    .chat-actions button:hover,
+    .chat-suggestions button:hover {
+      border-color: #aebbd0;
+      background: #f2f5f9;
+      color: var(--navy);
+    }
+    .chat-widget-form { padding: 9px 10px; }
+    .chat-widget-form input { min-height: 40px; }
+    .chat-widget-form button { min-height: 40px; }
+    .chat-fab {
+      border-radius: 8px;
+      background: var(--navy);
+      box-shadow: 0 5px 16px rgba(16, 37, 77, .22);
+    }
+    @media (max-width: 560px) {
+      .panel,
+      .map-panel { border-radius: 9px; }
+      .party-section-head { align-items: flex-start; }
+      .party-section-head button { padding: 8px 10px; }
+      .chat-widget-header h3 { font-size: 11px; }
+      .chat-mode-btn { padding-inline: 7px; }
+      .chat-suggestions { flex-wrap: nowrap; overflow-x: auto; }
+    }
+  </style>
 </head>
 <body id="top">
   {{SITE_HEADER}}
@@ -1448,19 +1731,23 @@
         <span class="quick-badge"><span></span><b id="quickBadgeText">안전한 테스트 접수</b></span>
       </div>
 
-      <div class="booking-steps" aria-label="퀵 접수 단계">
-        <span class="booking-step active" data-step="route">1. 배송 경로</span>
-        <span class="booking-step" data-step="contact">2. 연락처</span>
-        <span class="booking-step" data-step="product">3. 물품 정보</span>
-        <span class="booking-step" data-step="quote">4. 요금 확인</span>
+      <div class="form-flow-note">
+        <b>한 화면에서 순서대로 입력해요.</b>
+        배송 설정 → 픽업 정보 → 배송 정보 → 물품 정보 → 요금 확인
       </div>
 
       <div class="smart-mode-guide" id="smartModeGuide">
         <strong id="deliveryModeGuideTitle">한 사람의 퀵 배송을 접수합니다.</strong>
         <span id="deliveryModeGuideText">
-          다른 사람의 배송도 함께 보내려면 아래에서 보내는 사람이나 받는 사람을 추가하세요.
-          추가하는 즉시 스마트 딜리버리로 자동 전환됩니다.
+          사람을 직접 추가하거나, 서버에서 다른 사용자의 비슷한 주문을 찾아 함께 배송할 수 있어요.
         </span>
+        <label class="auto-match-option" id="autoMatchOption">
+          <input type="checkbox" id="autoMatch" checked>
+          <span>
+            <strong>다른 사용자의 배송과 자동으로 묶기</strong>
+            <small id="autoMatchHint">최대 15분 동안 다른 컴퓨터에서 접수된 주문 중 출발지·도착 방향과 배송 조건이 비슷한 주문을 찾습니다.</small>
+          </span>
+        </label>
       </div>
 
       <div class="form-sections">
@@ -1528,7 +1815,7 @@
           <h3><span class="section-number">3</span>어디로 배송할까요?</h3>
           <button type="button" class="secondary" id="addSmartDropoff">+ 받는 사람</button>
         </div>
-        <button type="button" class="copy-contact" onclick="copyPickupContact()">받는 분이 보내는 분과 같아요</button>
+        <button type="button" class="copy-contact" onclick="copyPickupContact()">보내는 분 연락처와 동일</button>
         <div class="grid">
           <label>도착지 주소 <span class="required-mark">필수</span>
             <span class="address-input">
@@ -1539,7 +1826,7 @@
           <label>상세주소<input id="dropoffDetailAddress" autocomplete="address-line2" placeholder="건물명, 층, 호수"></label>
         </div>
         <div class="grid" style="margin-top:13px">
-          <label>받는 분 <span class="required-mark">필수</span><input id="dropoffName" required maxlength="50" placeholder="이름"></label>
+          <label>받는 사람 이름 <span class="required-mark">필수</span><input id="dropoffName" required maxlength="50" placeholder="이름"></label>
           <label>연락처 <span class="required-mark">필수</span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
         </div>
         <label class="primary-owner" id="primaryOwnerField" hidden>
@@ -1594,8 +1881,8 @@
           <p class="description">지도에서 출발지와 도착지를 바로 지정할 수 있어요.</p>
         </div>
         <div class="map-tools" aria-label="지도 좌표 선택">
-          <button class="map-mode active" data-mode="pickup" onclick="setMapMode('pickup')">출발지</button>
-          <button class="map-mode" data-mode="dropoff" onclick="setMapMode('dropoff')">도착지</button>
+          <button class="map-mode active" data-mode="pickup" onclick="setMapMode('pickup')">출발지 지정</button>
+          <button class="map-mode" data-mode="dropoff" onclick="setMapMode('dropoff')">도착지 지정</button>
           <button class="map-mode" onclick="fitRoute()">전체 보기</button>
         </div>
       </div>
@@ -1604,10 +1891,10 @@
         <div class="map-message" id="mapMessage">카카오 지도를 불러오는 중입니다.</div>
       </div>
       <div class="route-summary">
-        <span class="route-dot pickup"></span><b>출발지</b>
+        <span class="route-dot pickup"></span><b id="pickupRouteState">출발지 미설정</b>
         <span>→</span>
-        <span class="route-dot dropoff"></span><b>도착지</b>
-        <span id="routeDistance">실제 도로 거리를 계산하는 중입니다.</span>
+        <span class="route-dot dropoff"></span><b id="dropoffRouteState">도착지 미설정</b>
+        <span id="routeDistance">두 주소를 설정하면 실제 도로 거리를 계산합니다.</span>
       </div>
     </section>
 
@@ -1628,12 +1915,12 @@
   </button>
   <div class="chat-widget hidden" id="chatWidget">
     <div class="chat-widget-header">
-      <h3>모브 (MOVB) 도우미</h3>
+      <h3>MOVB 도우미</h3>
+      <div class="chat-mode-toggle" id="chatModeToggle">
+        <button type="button" class="chat-mode-btn active" data-mode="ai" onclick="setChatMode('ai')">AI</button>
+        <button type="button" class="chat-mode-btn" data-mode="local" onclick="setChatMode('local')">로컬</button>
+      </div>
       <button onclick="toggleChat()" aria-label="채팅 닫기">✕</button>
-    </div>
-    <div class="chat-mode-toggle" id="chatModeToggle">
-      <button type="button" class="chat-mode-btn active" data-mode="ai" onclick="setChatMode('ai')">AI 채팅</button>
-      <button type="button" class="chat-mode-btn" data-mode="local" onclick="setChatMode('local')">내 로컬 채팅</button>
     </div>
     <div class="chat-engine-row hidden" id="ollamaControl">
       <button
@@ -1652,8 +1939,7 @@
     </div>
     <div class="chat-log" id="chatLog">
       <div class="chat-bubble bot">
-        <p>안녕하세요! 카카오모빌리티 API를 사용하는 MOVB AI예요.</p>
-        <p>배송 주문·차량 선택·실도로 ETA·정차지별 상태를 대화로 도와드릴게요 🙂</p>
+        <p>안녕하세요! 배송 접수, 차량 선택, ETA와 배송 상태를 도와드릴게요.</p>
       </div>
     </div>
     <div class="chat-suggestions" aria-label="추천 질문">
@@ -1705,6 +1991,14 @@
     let smartPickupCounter = 0;
     let smartDropoffCounter = 0;
     let smartOrderKey = null;
+    const matchClientId = (() => {
+      let id = localStorage.getItem("movb_match_client_id");
+      if (!id) {
+        id = `browser-${crypto.randomUUID()}`;
+        localStorage.setItem("movb_match_client_id", id);
+      }
+      return id;
+    })();
 
     function isSmartDelivery() {
       return smartPickupNodes().length > 0 || smartDropoffNodes().length > 0;
@@ -1712,32 +2006,43 @@
 
     function syncDeliveryMode() {
       const smart = isSmartDelivery();
+      const matchEligible = ["QUICK", "QUICK_EXPRESS"].includes(
+        byId("orderType").value
+      );
+      const autoMatch = !smart && matchEligible && byId("autoMatch").checked;
       byId("orderType").disabled = smart;
       if (smart) byId("orderType").value = "QUICK";
       byId("wishTimeField").hidden = smart;
       byId("primaryOwnerField").hidden = smartPickupNodes().length === 0;
+      byId("autoMatchOption").hidden = smart;
+      byId("autoMatch").disabled = !matchEligible;
+      byId("autoMatchHint").textContent = matchEligible
+        ? "최대 15분 동안 다른 컴퓨터에서 접수된 주문 중 출발지·도착 방향과 배송 조건이 비슷한 주문을 찾습니다."
+        : "일반 퀵과 퀵 급송에서만 다른 사용자 주문과 자동으로 묶을 수 있습니다.";
       byId("quickTitle").textContent = smart
         ? "스마트 딜리버리 접수"
         : "퀵 배송 접수";
       byId("quickDescription").textContent = smart
         ? "추가된 보내는 사람과 받는 사람의 배송을 한 경로로 묶어 견적을 비교합니다."
-        : "필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.";
+        : autoMatch
+          ? "내 주문과 방향이 비슷한 다른 사용자의 주문을 서버에서 찾아 한 번에 배송합니다."
+          : "필요한 정보만 입력하면 실도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.";
       byId("quickBadgeText").textContent = smart
         ? `스마트 딜리버리 · ${1 + smartPickupNodes().length}명 → ${1 + smartDropoffNodes().length}명`
-        : "안전한 테스트 접수";
+        : autoMatch ? "공동배송 자동 매칭" : "일반 퀵 바로 접수";
       byId("deliveryModeGuideTitle").textContent = smart
         ? "스마트 딜리버리로 자동 전환되었습니다."
-        : "한 사람의 퀵 배송을 접수합니다.";
+        : "스마트 딜리버리를 구성하는 두 가지 방법";
       byId("deliveryModeGuideText").textContent = smart
         ? "추가한 사람을 포함해 개별 배송 합계와 묶음 경로의 요금을 비교합니다."
-        : "다른 사람의 배송도 함께 보내려면 보내는 사람이나 받는 사람을 추가하세요. 추가하는 즉시 스마트 딜리버리로 자동 전환됩니다.";
+        : "보내는 사람·받는 사람을 직접 추가하거나, 서버가 다른 사용자의 비슷한 주문을 찾도록 자동 매칭을 사용할 수 있습니다.";
       byId("smartModeGuide").classList.toggle("active", smart);
       byId("quoteButton").textContent = smart
         ? "개별·묶음 견적 비교"
         : "예상 시간·요금 확인";
       byId("orderButton").textContent = smart
         ? "스마트 딜리버리 접수"
-        : "확인하고 Sandbox 접수";
+        : autoMatch ? "공동배송 매칭 접수" : "일반 퀵 바로 접수";
       updatePickupOwnerOptions();
       if (smart) setActiveNav("bundle");
     }
@@ -1946,14 +2251,6 @@
       ].join(" · ");
       byId("reviewProduct").textContent = byId("productName").value.trim() || "입력 전";
 
-      const routeDone = Boolean(pickup && dropoff && pickupResolved && dropoffResolved);
-      const contactDone = ["pickupName", "pickupPhone", "dropoffName", "dropoffPhone"]
-        .every(id => byId(id).value.trim());
-      const productDone = Boolean(byId("productName").value.trim());
-      document.querySelector('[data-step="route"]').classList.toggle("active", routeDone || !pickup);
-      document.querySelector('[data-step="contact"]').classList.toggle("active", routeDone && contactDone);
-      document.querySelector('[data-step="product"]').classList.toggle("active", routeDone && contactDone && productDone);
-      document.querySelector('[data-step="quote"]').classList.toggle("active", quoteReady);
     }
 
     function resetQuoteState() {
@@ -2245,6 +2542,17 @@
     let routeLookupToken = 0;
 
     async function updateDistance() {
+      byId("pickupRouteState").textContent = pickupResolved
+        ? "출발지 설정됨"
+        : "출발지 미설정";
+      byId("dropoffRouteState").textContent = dropoffResolved
+        ? "도착지 설정됨"
+        : "도착지 미설정";
+      if (!pickupResolved || !dropoffResolved) {
+        byId("routeDistance").textContent =
+          "두 주소를 설정하면 실제 도로 거리와 시간을 계산합니다.";
+        return;
+      }
       const pickup = locationValue("pickup");
       const dropoff = locationValue("dropoff");
       if (![pickup.latitude, pickup.longitude, dropoff.latitude, dropoff.longitude].every(Number.isFinite)) {
@@ -2284,21 +2592,62 @@
 
       const pickup = locationValue("pickup");
       const dropoff = locationValue("dropoff");
-      if (![pickup.latitude, pickup.longitude, dropoff.latitude, dropoff.longitude].every(Number.isFinite)) return;
+      const pickupPosition = pickupResolved
+        ? new kakao.maps.LatLng(pickup.latitude, pickup.longitude)
+        : null;
+      const dropoffPosition = dropoffResolved
+        ? new kakao.maps.LatLng(dropoff.latitude, dropoff.longitude)
+        : null;
 
-      const pickupPosition = new kakao.maps.LatLng(pickup.latitude, pickup.longitude);
-      const dropoffPosition = new kakao.maps.LatLng(dropoff.latitude, dropoff.longitude);
-      pickupMarker.setPosition(pickupPosition);
-      dropoffMarker.setPosition(dropoffPosition);
-      pickupOverlay.setPosition(pickupPosition);
-      dropoffOverlay.setPosition(dropoffPosition);
-      routeLine.setPath([pickupPosition, dropoffPosition]);
+      if (pickupPosition && !pickupMarker) {
+        pickupMarker = new kakao.maps.Marker({map: deliveryMap, position: pickupPosition});
+        pickupOverlay = new kakao.maps.CustomOverlay({
+          map: deliveryMap,
+          content: mapLabel("출발지", "pickup"),
+          position: pickupPosition,
+          yAnchor: 2.15
+        });
+      } else if (pickupPosition) {
+        pickupMarker.setMap(deliveryMap);
+        pickupMarker.setPosition(pickupPosition);
+        pickupOverlay.setMap(deliveryMap);
+        pickupOverlay.setPosition(pickupPosition);
+      } else {
+        pickupMarker?.setMap(null);
+        pickupOverlay?.setMap(null);
+      }
+
+      if (dropoffPosition && !dropoffMarker) {
+        dropoffMarker = new kakao.maps.Marker({map: deliveryMap, position: dropoffPosition});
+        dropoffOverlay = new kakao.maps.CustomOverlay({
+          map: deliveryMap,
+          content: mapLabel("도착지", "dropoff"),
+          position: dropoffPosition,
+          yAnchor: 2.15
+        });
+      } else if (dropoffPosition) {
+        dropoffMarker.setMap(deliveryMap);
+        dropoffMarker.setPosition(dropoffPosition);
+        dropoffOverlay.setMap(deliveryMap);
+        dropoffOverlay.setPosition(dropoffPosition);
+      } else {
+        dropoffMarker?.setMap(null);
+        dropoffOverlay?.setMap(null);
+      }
+
+      routeLine.setPath(
+        pickupPosition && dropoffPosition
+          ? [pickupPosition, dropoffPosition]
+          : []
+      );
 
       if (shouldFit) {
         const bounds = new kakao.maps.LatLngBounds();
-        bounds.extend(pickupPosition);
-        bounds.extend(dropoffPosition);
-        deliveryMap.setBounds(bounds, 70, 70, 70, 70);
+        if (pickupPosition) bounds.extend(pickupPosition);
+        if (dropoffPosition) bounds.extend(dropoffPosition);
+        if (pickupPosition || dropoffPosition) {
+          deliveryMap.setBounds(bounds, 70, 70, 70, 70);
+        }
       }
     }
 
@@ -2405,31 +2754,15 @@
         await loadKakaoMapSdk(key);
         await loadKakaoPostcodeSdk();
         const pickup = locationValue("pickup");
-        const dropoff = locationValue("dropoff");
         const pickupPosition = new kakao.maps.LatLng(pickup.latitude, pickup.longitude);
-        const dropoffPosition = new kakao.maps.LatLng(dropoff.latitude, dropoff.longitude);
         deliveryMap = new kakao.maps.Map(byId("map"), {
           center: pickupPosition,
           level: 6
         });
-        pickupMarker = new kakao.maps.Marker({map: deliveryMap, position: pickupPosition});
-        dropoffMarker = new kakao.maps.Marker({map: deliveryMap, position: dropoffPosition});
-        pickupOverlay = new kakao.maps.CustomOverlay({
-          map: deliveryMap,
-          content: mapLabel("출발", "pickup"),
-          position: pickupPosition,
-          yAnchor: 2.15
-        });
-        dropoffOverlay = new kakao.maps.CustomOverlay({
-          map: deliveryMap,
-          content: mapLabel("도착", "dropoff"),
-          position: dropoffPosition,
-          yAnchor: 2.15
-        });
         routeLine = new kakao.maps.Polyline({
           map: deliveryMap,
           strokeWeight: 5,
-          strokeColor: "#315efb",
+          strokeColor: "#10254d",
           strokeOpacity: 0.82,
           strokeStyle: "shortdash"
         });
@@ -2441,7 +2774,7 @@
           reverseGeocode(mapMode, latitude, longitude);
         });
         message.classList.add("hidden");
-        renderRoute(true);
+        renderRoute(false);
       } catch (error) {
         message.innerHTML = `${error.message}<br>카카오 디벨로퍼스에 <b>${location.origin}</b> 도메인이 등록됐는지 확인해주세요.`;
         updateDistance();
@@ -2872,6 +3205,20 @@
           });
           const orderResult = result.data.orderResult || {};
           id = orderResult.partnerOrderId || orderResult.order?.partnerOrderId;
+        } else if (
+          byId("autoMatch").checked
+          && ["QUICK", "QUICK_EXPRESS"].includes(byId("orderType").value)
+        ) {
+          smartOrderKey ||= `match-web-${crypto.randomUUID().replaceAll("-", "")}`;
+          result = await api("/api/delivery-matches", {
+            method: "POST",
+            headers: {
+              "X-Client-Id": matchClientId,
+              "Idempotency-Key": smartOrderKey,
+            },
+            body: JSON.stringify(draft()),
+          });
+          id = result.data.matching?.partnerOrderId || result.data.matching?.requestId;
         } else {
           result = await api("/api/orders", {
             method: "POST",
@@ -2882,7 +3229,12 @@
         showResult(
           isSmartDelivery()
             ? "스마트 딜리버리 접수 결과"
-            : "주문 접수 결과",
+            : byId("autoMatch").checked
+              && ["QUICK", "QUICK_EXPRESS"].includes(byId("orderType").value)
+              ? result.data.matching?.status === "MATCHED"
+                ? "공동배송 매칭 완료"
+                : "공동배송 매칭 대기"
+              : "주문 접수 결과",
           result.data
         );
         await loadOrders();
@@ -3249,17 +3601,24 @@
       field.addEventListener(eventName, () => {
         if (id === "pickupAddress") pickupResolved = false;
         if (id === "dropoffAddress") dropoffResolved = false;
-        if (id === "orderType" && field.value === "DOBO") byId("fleet").value = "";
+        if (id === "orderType") {
+          if (field.value === "DOBO") byId("fleet").value = "";
+          syncDeliveryMode();
+        }
         if (id === "pickupPhone" || id === "dropoffPhone") {
           field.value = formatPhone(field.value);
         }
         field.classList.remove("field-error");
         handleQuickFormChange();
+        if (id === "pickupAddress" || id === "dropoffAddress") {
+          renderRoute(false);
+        }
         if (id === "wishTime") updateDistance();
       });
     });
     byId("addSmartPickup").addEventListener("click", addSmartPickup);
     byId("addSmartDropoff").addEventListener("click", addSmartDropoff);
+    byId("autoMatch").addEventListener("change", syncDeliveryMode);
     byId("primaryDropoffPickup").addEventListener("change", handleQuickFormChange);
     syncDeliveryMode();
     syncQuickReview();

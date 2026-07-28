@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -28,6 +29,7 @@ from .directions import KakaoDirectionsClient, RoutePlanner
 from .geocode import KakaoGeocodeClient
 from .knowledge import default_knowledge_base
 from .local_responder import local_model_reply, ollama_status
+from .matching import build_pooled_order, compatible_for_pooling
 from .models import (
     AgentChatRequest,
     ApiEnvelope,
@@ -395,6 +397,189 @@ def create_app(
         result = await place_order(resolved_client, resolved_store, request, partner_order_id)
         message = result.pop("message", None)
         return ApiEnvelope(data=result, message=message)
+
+    def public_match_request(match_request: dict[str, Any]) -> dict[str, Any]:
+        return {
+            key: value
+            for key, value in match_request.items()
+            if key not in {"request", "clientId"}
+        }
+
+    def match_owner_id(
+        x_client_id: str,
+        session_token: str | None,
+    ) -> str:
+        user = (
+            resolved_users.get_user_by_session(session_token)
+            if session_token
+            else None
+        )
+        return (
+            f"user:{user['id']}"
+            if user is not None
+            else f"browser:{x_client_id}"
+        )
+
+    @application.post(
+        "/api/delivery-matches",
+        response_model=ApiEnvelope,
+        status_code=202,
+    )
+    async def create_delivery_match(
+        request: CreateDeliveryRequest,
+        x_client_id: str = Header(
+            alias="X-Client-Id",
+            min_length=8,
+            max_length=100,
+        ),
+        session_token: str | None = Cookie(
+            default=None,
+            alias=SESSION_COOKIE_NAME,
+        ),
+        idempotency_key: str | None = Header(
+            default=None,
+            alias="Idempotency-Key",
+            max_length=100,
+        ),
+    ) -> ApiEnvelope:
+        if request.order_type.value not in {"QUICK", "QUICK_EXPRESS"}:
+            raise HTTPException(
+                status_code=422,
+                detail="공동배송 자동 매칭은 일반 퀵과 퀵 급송만 지원합니다.",
+            )
+        request_id = idempotency_key or f"match-request-{uuid4().hex[:20]}"
+        expires_at = (
+            datetime.now(timezone.utc) + timedelta(minutes=15)
+        ).isoformat()
+        request_payload = request.model_dump(
+            mode="json",
+            by_alias=True,
+            exclude_none=True,
+        )
+        owner_id = match_owner_id(x_client_id, session_token)
+        saved, created = resolved_store.reserve_match_request(
+            request_id,
+            owner_id,
+            request_payload,
+            expires_at,
+        )
+        if not created and saved["clientId"] != owner_id:
+            raise HTTPException(
+                status_code=409,
+                detail="이미 다른 브라우저가 사용한 공동배송 요청 키입니다.",
+            )
+        if not created or saved["status"] != "WAITING":
+            return ApiEnvelope(
+                data={"matching": public_match_request(saved)},
+                message="기존 공동배송 매칭 요청을 반환했습니다.",
+            )
+
+        candidates = resolved_store.list_pending_match_requests(
+            exclude_request_id=request_id,
+            exclude_client_id=owner_id,
+        )
+        for candidate in candidates:
+            if not compatible_for_pooling(candidate["request"], request_payload):
+                continue
+            match_id = f"match-{uuid4().hex[:20]}"
+            if not resolved_store.claim_match_requests(
+                candidate["requestId"],
+                request_id,
+                match_id,
+            ):
+                continue
+
+            partner_order_id = f"smart-pool-{uuid4().hex[:18]}"
+            request_ids = (candidate["requestId"], request_id)
+            try:
+                pooled_order = build_pooled_order(
+                    candidate["request"],
+                    request_payload,
+                    partner_order_id,
+                )
+                order_result = await place_order(
+                    resolved_client,
+                    resolved_store,
+                    pooled_order,
+                    partner_order_id,
+                )
+            except Exception as exc:
+                resolved_store.fail_match_requests(request_ids, str(exc))
+                raise
+            resolved_store.complete_match_requests(
+                request_ids,
+                partner_order_id,
+            )
+            matched = resolved_store.get_match_request(request_id)
+            return ApiEnvelope(
+                data={
+                    "matching": public_match_request(matched or saved),
+                    "orderResult": order_result,
+                },
+                message=(
+                    "다른 사용자의 배송과 매칭되어 스마트 딜리버리 한 건으로 "
+                    "접수되었습니다."
+                ),
+            )
+
+        waiting = resolved_store.get_match_request(request_id)
+        return ApiEnvelope(
+            data={"matching": public_match_request(waiting or saved)},
+            message=(
+                "공동배송 대기열에 접수했습니다. 15분 안에 출발지·도착 방향과 "
+                "배송 조건이 비슷한 다른 사용자 주문을 찾습니다."
+            ),
+        )
+
+    @application.get("/api/delivery-matches", response_model=ApiEnvelope)
+    async def list_delivery_matches(
+        x_client_id: str = Header(
+            alias="X-Client-Id",
+            min_length=8,
+            max_length=100,
+        ),
+        session_token: str | None = Cookie(
+            default=None,
+            alias=SESSION_COOKIE_NAME,
+        ),
+        limit: int = Query(default=30, ge=1, le=100),
+    ) -> ApiEnvelope:
+        return ApiEnvelope(
+            data=resolved_store.list_match_requests(
+                client_id=match_owner_id(x_client_id, session_token),
+                limit=limit,
+            )
+        )
+
+    @application.patch(
+        "/api/delivery-matches/{request_id}/cancel",
+        response_model=ApiEnvelope,
+    )
+    async def cancel_delivery_match(
+        request_id: str,
+        x_client_id: str = Header(
+            alias="X-Client-Id",
+            min_length=8,
+            max_length=100,
+        ),
+        session_token: str | None = Cookie(
+            default=None,
+            alias=SESSION_COOKIE_NAME,
+        ),
+    ) -> ApiEnvelope:
+        canceled = resolved_store.cancel_match_request(
+            request_id,
+            client_id=match_owner_id(x_client_id, session_token),
+        )
+        if canceled is None:
+            raise HTTPException(
+                status_code=409,
+                detail="대기 중인 본인의 공동배송 요청만 취소할 수 있습니다.",
+            )
+        return ApiEnvelope(
+            data={"matching": public_match_request(canceled)},
+            message="공동배송 매칭 대기를 취소했습니다.",
+        )
 
     @application.get("/api/orders", response_model=ApiEnvelope)
     async def list_orders(
