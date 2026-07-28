@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MOVB 브랜드 소개</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%23fff'/%3E%3Cpath%20d='M16%2046V18l16%2018%2016-18v28'%20fill='none'%20stroke='%2310254d'%20stroke-width='10'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3Crect%20x='22'%20y='53'%20width='20'%20height='6'%20rx='3'%20fill='%23ffcc00'/%3E%3C/svg%3E">
+  <style>
+    :root { --navy: #10254d; --yellow: #ffcc00; --ink: #171b24; --muted: #667085; --line: #e7e7e7; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #fff;
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+
+    /* ---------- hero ---------- */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(64px, 11vw, 128px) 24px clamp(96px, 12vw, 148px);
+      background: linear-gradient(160deg, #0d1c38 0%, #0a1730 45%, #060d1e 100%);
+      color: #fff;
+    }
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(100deg, transparent 40%, rgba(255, 204, 0, .12) 50%, transparent 60%),
+        repeating-linear-gradient(100deg, rgba(255, 255, 255, .05) 0 1px, transparent 1px 90px);
+      opacity: .8;
+      pointer-events: none;
+    }
+    .hero-mark {
+      position: absolute;
+      top: 50%;
+      right: clamp(-140px, -4vw, -20px);
+      width: clamp(320px, 42vw, 620px);
+      transform: translateY(-50%);
+      opacity: .1;
+      pointer-events: none;
+    }
+    .hero-inner {
+      position: relative;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+    }
+    .hero .eyebrow {
+      display: inline-block;
+      color: var(--yellow);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+    }
+    .hero h1 {
+      margin: 18px 0 0;
+      font-size: clamp(38px, 6.4vw, 68px);
+      font-weight: 800;
+      line-height: 1.12;
+      letter-spacing: -.02em;
+    }
+    .hero h1 em {
+      color: var(--yellow);
+      font-style: normal;
+    }
+    .hero p {
+      max-width: 520px;
+      margin: 22px 0 0;
+      color: #aab8d4;
+      font-size: 16px;
+      line-height: 1.75;
+    }
+    .hero-cta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 34px;
+    }
+    .hero-cta a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 22px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      text-decoration: none;
+    }
+    .hero-cta .primary { background: var(--yellow); color: #17191f; }
+    .hero-cta .secondary {
+      border: 1px solid rgba(255, 255, 255, .28);
+      color: #fff;
+      background: rgba(255, 255, 255, .04);
+    }
+
+    /* ---------- pillars ---------- */
+    .pillars {
+      width: min(1120px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 40px 0;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+    .pillar { display: flex; align-items: flex-start; gap: 14px; }
+    .pillar .badge {
+      display: grid;
+      place-items: center;
+      flex: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--navy);
+      color: #fff;
+    }
+    .pillar .badge svg { width: 21px; height: 21px; }
+    .pillar strong { display: block; font-size: 14px; }
+    .pillar span { display: block; margin-top: 3px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+
+    /* ---------- section shell ---------- */
+    section.block {
+      width: min(1120px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 48px 0;
+      border-top: 1px solid var(--line);
+    }
+    .block-head { max-width: 620px; }
+    .block-head .eyebrow {
+      color: #a37a00;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .22em;
+      text-transform: uppercase;
+    }
+    .block-head h2 {
+      margin: 10px 0 0;
+      color: var(--navy);
+      font-size: clamp(22px, 3.4vw, 30px);
+      letter-spacing: -.02em;
+    }
+    .block-head p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+
+    /* ---------- service cards ---------- */
+    .service-grid {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .service-card {
+      display: block;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      color: inherit;
+      text-decoration: none;
+      background: #fafbfd;
+      transition: border-color .15s ease, background .15s ease;
+    }
+    .service-card:hover { border-color: #c7cedb; background: #f4f6f9; }
+    .service-card .icon {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #fff;
+      border: 1px solid var(--line);
+      color: var(--navy);
+    }
+    .service-card .icon svg { width: 20px; height: 20px; }
+    .service-card strong { display: block; margin: 16px 0 6px; color: var(--navy); font-size: 15.5px; }
+    .service-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .service-card .go {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 14px;
+      color: var(--navy);
+      font-size: 12.5px;
+      font-weight: 800;
+    }
+
+    /* ---------- tech list ---------- */
+    .tech-grid {
+      margin-top: 28px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .tech-item svg { width: 22px; height: 22px; color: var(--navy); }
+    .tech-item strong { display: block; margin: 12px 0 6px; color: var(--navy); font-size: 14.5px; }
+    .tech-item p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+
+    .closing {
+      width: min(1120px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 56px 0 88px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      border-top: 1px solid var(--line);
+    }
+    .closing strong { display: block; color: var(--navy); font-size: 19px; }
+    .closing span { display: block; margin-top: 6px; color: var(--muted); font-size: 13.5px; }
+    .closing a {
+      flex: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 22px;
+      border-radius: 12px;
+      background: var(--navy);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    @media (max-width: 860px) {
+      .pillars { grid-template-columns: repeat(2, 1fr); }
+      .service-grid, .tech-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 560px) {
+      .pillars { grid-template-columns: 1fr; }
+      .closing { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+{{SITE_HEADER_CSS}}
+</head>
+<body>
+{{SITE_HEADER}}
+
+<section class="hero">
+  <svg class="hero-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
+    <path d="M16 46V18l16 18 16-18v28" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <div class="hero-inner">
+    <h1>흩어진 이동을,<br>하나의 경로로 <em>연결합니다.</em></h1>
+    <p>MOVB는 실제 도로 데이터를 기준으로 배송 시간과 요금을 먼저 보여드리고, 방향이 비슷한 주문끼리는 자동으로 묶어 한 번에 옮겨드리는 퀵·스마트 딜리버리 서비스입니다.</p>
+    <div class="hero-cta">
+      <a class="primary" href="/#smartDelivery">퀵 배송 접수하기 →</a>
+      <a class="secondary" href="#services">서비스 살펴보기</a>
+    </div>
+  </div>
+</section>
+
+<div class="pillars">
+  <div class="pillar">
+    <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8h13M3 12.5h10M3 17h6"/></svg></span>
+    <div><strong>빠르게</strong><span>실제 도로 기준으로 계산한 예상 시간</span></div>
+  </div>
+  <div class="pillar">
+    <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.2"/></svg></span>
+    <div><strong>정확하게</strong><span>출발지부터 도착지까지 경로 그대로</span></div>
+  </div>
+  <div class="pillar">
+    <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span>
+    <div><strong>함께</strong><span>방향이 비슷한 주문은 자동으로 묶어서</span></div>
+  </div>
+  <div class="pillar">
+    <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
+    <div><strong>안전하게</strong><span>물품 정보와 보험 기준을 접수 전에 확인</span></div>
+  </div>
+</div>
+
+<section class="block" id="services">
+  <div class="block-head">
+    <span class="eyebrow">Our Services</span>
+    <h2>상황에 맞는 배송 방식을 골라보세요</h2>
+    <p>급한 물건은 지금 바로, 여유 있는 물건은 원하는 시간에, 여러 건은 스마트 딜리버리로 한 번에 묶어서 보낼 수 있어요.</p>
+  </div>
+  <div class="service-grid">
+    <a class="service-card" href="/#smartDelivery">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></span>
+      <strong>일반 퀵배송</strong>
+      <p>필요한 정보만 입력하면 실제 도로 기준 예상 시간과 요금을 바로 확인하고 접수할 수 있어요.</p>
+      <span class="go">바로 접수하기 →</span>
+    </a>
+    <a class="service-card" href="/#smartDelivery">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
+      <strong>예약 배송</strong>
+      <p>지금 당장이 아니어도 괜찮다면 원하는 픽업 시간을 골라 미리 접수해둘 수 있어요.</p>
+      <span class="go">시간 선택하기 →</span>
+    </a>
+    <a class="service-card" href="/#smartDelivery">
+      <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span>
+      <strong>스마트 딜리버리</strong>
+      <p>보내는 사람·받는 사람을 여러 명 추가하거나, 방향이 비슷한 다른 주문과 자동으로 묶어 함께 보내요.</p>
+      <span class="go">자동 매칭 알아보기 →</span>
+    </a>
+  </div>
+</section>
+
+<section class="block">
+  <div class="block-head">
+    <span class="eyebrow">About MOVB</span>
+    <h2>경로 데이터로 연결하고, AI로 더 똑똑하게</h2>
+    <p>사람이 일일이 배차하지 않아도, 실제 도로 데이터와 매칭 로직이 먼저 계산해서 보여드려요.</p>
+  </div>
+  <div class="tech-grid">
+    <div class="tech-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M6.6 7.4 10.5 16M17.4 7.4 13.5 16M7 6h10"/></svg>
+      <strong>실시간 자동 매칭</strong>
+      <p>최대 15분 동안 방향과 조건이 비슷한 다른 주문을 찾아 하나의 경로로 묶어드려요.</p>
+    </div>
+    <div class="tech-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 11 4M15 20 13 4"/><path d="M12 7.5v2M12 12v2M12 16.5v2"/></svg>
+      <strong>실도로 기준 경로 계산</strong>
+      <p>지도상 직선거리가 아니라 실제 주행 가능한 경로로 시간과 요금을 계산해요.</p>
+    </div>
+    <div class="tech-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12.5h5"/></svg>
+      <strong>AI 상담 에이전트</strong>
+      <p>말로 설명하기만 해도 필요한 정보를 정리해 접수까지 이어주는 채팅 상담을 제공해요.</p>
+    </div>
+  </div>
+</section>
+
+<div class="closing">
+  <div>
+    <strong>지금 바로 첫 배송을 접수해보세요</strong>
+    <span>가입 없이도 견적 확인까지 먼저 해볼 수 있어요.</span>
+  </div>
+  <a href="/#smartDelivery">퀵 배송 접수하기 →</a>
+</div>
+
+</body>
+</html>

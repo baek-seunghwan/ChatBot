@@ -52,7 +52,7 @@ from .orders import (
 )
 from .store import MobilityStore
 from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
-from .web import ADMIN_HTML, FEATURES_HTML, HISTORY_HTML, INDEX_HTML
+from .web import ABOUT_HTML, ADMIN_HTML, FEATURES_HTML, HISTORY_HTML, INDEX_HTML
 
 
 SESSION_COOKIE_NAME = "movb_session"
@@ -193,6 +193,10 @@ def create_app(
     @application.get("/history", response_class=HTMLResponse, include_in_schema=False)
     async def history_page() -> str:
         return HISTORY_HTML
+
+    @application.get("/about", response_class=HTMLResponse, include_in_schema=False)
+    async def about_page() -> str:
+        return ABOUT_HTML
 
     @application.get(
         "/admin",
