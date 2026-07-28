@@ -49,12 +49,7 @@ from .orders import (
 )
 from .store import MobilityStore
 from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
-from .web import (
-    ADMIN_HTML,
-    BUNDLE_EMBED_HTML,
-    FEATURES_HTML,
-    INDEX_HTML,
-)
+from .web import ADMIN_HTML, FEATURES_HTML, INDEX_HTML
 
 
 SESSION_COOKIE_NAME = "movb_session"
@@ -182,10 +177,11 @@ def create_app(
     @application.get(
         "/smart-delivery/form",
         response_class=HTMLResponse,
+        response_model=None,
         include_in_schema=False,
     )
-    async def smart_delivery_form() -> str:
-        return BUNDLE_EMBED_HTML
+    async def smart_delivery_form() -> RedirectResponse:
+        return RedirectResponse(url="/#smartDelivery", status_code=307)
 
     @application.get("/features", response_class=HTMLResponse, include_in_schema=False)
     async def features_page() -> str:

@@ -113,17 +113,18 @@ class BundleBookingTests(unittest.TestCase):
         self.client.close()
         self.temporary.cleanup()
 
-    def test_bundle_page_has_quote_consent_and_order_flow(self) -> None:
-        response = self.client.get("/smart-delivery/form")
+    def test_home_form_has_automatic_smart_delivery_flow(self) -> None:
+        response = self.client.get("/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertIn("+ 보내는 사람 추가", response.text)
-        self.assertIn("+ 받는 사람 추가", response.text)
-        self.assertIn('class="remove-button"', response.text)
+        self.assertIn("+ 보내는 사람", response.text)
+        self.assertIn("+ 받는 사람", response.text)
+        self.assertIn("function isSmartDelivery()", response.text)
+        self.assertIn("스마트 딜리버리로 자동 전환", response.text)
         self.assertIn('id="quoteButton"', response.text)
-        self.assertIn('id="confirmOrder"', response.text)
         self.assertIn('id="orderButton"', response.text)
-        self.assertIn('id="receipt"', response.text)
+        self.assertIn("/api/smart-delivery/quote", response.text)
+        self.assertIn("/api/smart-delivery/orders", response.text)
         self.assertNotIn("택시합승", response.text)
 
     def test_quote_compares_individual_and_bundled_prices(self) -> None:
