@@ -410,7 +410,7 @@
     .review-item strong { display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; font-size: 14px; white-space: nowrap; }
     .quick-actions { display: grid; grid-template-columns: 1fr 1.15fr; gap: 9px; margin-top: 14px; }
     .quick-actions button { width: 100%; }
-    #quickRequest, #history { scroll-margin-top: 80px; }
+    #quickRequest { scroll-margin-top: 80px; }
     .smart-mode-guide {
       margin: 0 0 14px;
       padding: 14px 16px;
@@ -1065,12 +1065,6 @@
       padding: 0;
       border-radius: 18px;
     }
-    #history {
-      grid-column: 1 / -1;
-      grid-row: 2;
-      align-self: start;
-      scroll-margin-top: 80px;
-    }
     .eyebrow {
       display: block;
       margin-bottom: 4px;
@@ -1229,33 +1223,6 @@
       padding-top: 3px;
       border-top: 1px solid #f0f0f0;
     }
-    #history .description { margin-bottom: 13px; }
-    .tracking { margin-top: 0; gap: 6px; }
-    .tracking button { min-width: 58px; padding: 9px 12px; }
-    #history > .actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px;
-      margin-top: 8px;
-    }
-    #history > .actions button { min-height: 38px; padding: 8px; font-size: 11px; }
-    .history-group {
-      margin-top: 14px;
-      border-top: 1px solid var(--line);
-    }
-    .history-group summary {
-      padding: 14px 2px 9px;
-      color: #353942;
-      font-size: 13px;
-      font-weight: 800;
-      cursor: pointer;
-    }
-    .history-group .description { margin: 0 0 8px; font-size: 11px; }
-    .history-group .actions { margin-top: 8px; }
-    .history-group .actions button { min-height: 36px; padding: 7px 9px; font-size: 10.5px; }
-    .order-list { gap: 7px; margin-top: 5px; }
-    .order { padding: 10px; border-radius: 10px; }
-    .empty { padding: 18px 0; }
     footer { padding-bottom: 28px; font-size: 11px; }
     .chat-fab {
       right: 22px;
@@ -1349,10 +1316,6 @@
       .map-panel {
         grid-column: 1;
         grid-row: 2;
-      }
-      #history {
-        grid-column: 1;
-        grid-row: 3;
       }
       .quick-heading { display: flex; }
       .quick-badge { margin: 0; }
@@ -1648,32 +1611,6 @@
       </div>
     </section>
 
-    <section class="panel" id="history">
-      <span class="eyebrow">TRACKING</span>
-      <h2>이용 내역</h2>
-      <p class="description">
-        최근 스마트 딜리버리와 일반 배송 주문을 확인하고 상태를 조회하세요.
-      </p>
-      <div class="tracking">
-        <input id="trackingId" placeholder="partnerOrderId">
-        <button onclick="trackOrder()">조회</button>
-      </div>
-      <div class="actions">
-        <button class="secondary" onclick="refreshProvider()">카카오 상태 동기화</button>
-        <button class="danger" onclick="cancelTrackedOrder()">주문 취소</button>
-      </div>
-      <div class="result" id="trackResult">
-        <h3>주문 상세</h3>
-        <pre id="trackBody"></pre>
-        <div class="step-timeline" id="stepTimeline"></div>
-      </div>
-
-      <details class="history-group" open>
-        <summary>최근 주문</summary>
-        <div class="order-list" id="orderList"><div class="empty">주문을 불러오는 중입니다.</div></div>
-      </details>
-
-    </section>
   </main>
   <footer>
     모브 (MOVB) · Kakao Mobility Sandbox 연동 ·
@@ -1745,11 +1682,6 @@
     function goToSection(sectionId, navName) {
       setActiveNav(navName);
       byId(sectionId)?.scrollIntoView({behavior: "smooth", block: "start"});
-      if (sectionId === "history") {
-        const group = document.querySelector("#history .history-group");
-        if (group) group.open = true;
-        loadOrders();
-      }
       if (location.hash !== `#${sectionId}`) {
         window.history.replaceState(null, "", `#${sectionId}`);
       }
@@ -2251,7 +2183,7 @@
 
     function goToAccountHistory() {
       closeAuthModal();
-      goToSection("history", "history");
+      location.href = "/history";
     }
 
     function goToAdmin() {
@@ -2947,7 +2879,6 @@
           });
           id = result.data.partnerOrderId || result.data.order?.partnerOrderId;
         }
-        if (id) byId("trackingId").value = id;
         showResult(
           isSmartDelivery()
             ? "스마트 딜리버리 접수 결과"
@@ -3029,6 +2960,7 @@
 
     async function loadOrders() {
       const list = byId("orderList");
+      if (!list) return;
       try {
         const result = await api("/api/orders?limit=20");
         if (!result.data.length) {
@@ -3210,8 +3142,7 @@
             return;
           }
           if (action.target === "history") {
-            byId("chatWidget").classList.add("hidden");
-            goToSection("history", "history");
+            location.href = "/history";
             return;
           }
           byId("chatInput").value = action.message;
@@ -3296,9 +3227,6 @@
       if (location.hash === "#smartDelivery") {
         openSmartDelivery();
       }
-      if (location.hash === "#history") {
-        setActiveNav("history");
-      }
       try {
         const config = await api("/api/config");
         byId("serviceStatus").innerHTML = config.data.configured
@@ -3309,7 +3237,6 @@
         byId("serviceStatus").textContent = "설정 확인 실패";
         byId("mapMessage").textContent = "지도 설정을 확인하지 못했습니다.";
       }
-      await loadOrders();
     }
     const quickFormFields = [
       "orderType", "productSize", "fleet", "wishTime", "pickupAddress", "pickupDetailAddress",

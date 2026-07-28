@@ -1,0 +1,704 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>이용 내역 · MOVB</title>
+  <style>
+    :root {
+      --yellow: #ffcc00;
+      --yellow-soft: #fff8d8;
+      --navy: #10254d;
+      --ink: #17191f;
+      --muted: #667085;
+      --line: #e5e7eb;
+      --surface: #ffffff;
+      --background: #f5f6f8;
+      --danger: #c63737;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--background);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, a { font: inherit; }
+    button { cursor: pointer; }
+    :focus-visible {
+      outline: 3px solid rgba(16, 37, 77, .24);
+      outline-offset: 3px;
+    }
+    .history-main {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 38px 0 64px;
+    }
+    .history-hero {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      padding: 34px;
+      border-radius: 24px;
+      background: var(--navy);
+      color: #fff;
+      box-shadow: 0 18px 44px rgba(16, 37, 77, .14);
+    }
+    .eyebrow {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--yellow);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .13em;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(32px, 5vw, 50px);
+      line-height: 1.1;
+      letter-spacing: -.045em;
+    }
+    .hero-copy {
+      max-width: 610px;
+      margin: 12px 0 0;
+      color: #d7deeb;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+    .new-order {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      flex: none;
+      padding: 0 20px;
+      border-radius: 12px;
+      background: var(--yellow);
+      color: var(--ink);
+      font-weight: 900;
+      text-decoration: none;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 18px;
+    }
+    .summary-card {
+      min-height: 112px;
+      padding: 22px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--surface);
+    }
+    .summary-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+    .summary-card strong {
+      display: block;
+      margin-top: 8px;
+      color: var(--navy);
+      font-size: 28px;
+      letter-spacing: -.03em;
+    }
+    .history-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(360px, .92fr);
+      align-items: start;
+      gap: 18px;
+      margin-top: 18px;
+    }
+    .history-panel {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface);
+      box-shadow: 0 5px 20px rgba(23, 25, 31, .04);
+      overflow: hidden;
+    }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 24px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-head h2 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: -.025em;
+    }
+    .panel-head p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .filter-group {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 10px;
+      background: #f3f4f6;
+    }
+    .filter-button {
+      min-height: 36px;
+      border: 0;
+      border-radius: 8px;
+      padding: 0 11px;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .filter-button.active {
+      background: #fff;
+      color: var(--ink);
+      box-shadow: 0 1px 4px rgba(23, 25, 31, .1);
+    }
+    .order-list {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+    }
+    .order-card {
+      width: 100%;
+      min-height: 116px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      background: #fff;
+      color: var(--ink);
+      text-align: left;
+      transition: border-color .15s, background .15s, transform .15s;
+    }
+    .order-card:hover {
+      border-color: #aeb8ca;
+      transform: translateY(-1px);
+    }
+    .order-card.active {
+      border-color: var(--navy);
+      background: #f7f9fd;
+      box-shadow: inset 4px 0 0 var(--yellow);
+    }
+    .order-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .service-name {
+      color: var(--navy);
+      font-size: 14px;
+      font-weight: 900;
+    }
+    .status-badge {
+      flex: none;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: var(--yellow-soft);
+      color: #705c00;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .status-badge.terminal {
+      background: #f2f4f7;
+      color: #596273;
+    }
+    .route-line {
+      margin: 12px 0 8px;
+      overflow: hidden;
+      color: #384152;
+      font-size: 13px;
+      line-height: 1.45;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .order-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .detail-panel {
+      position: sticky;
+      top: 88px;
+    }
+    .detail-body { padding: 24px; }
+    .detail-placeholder, .empty-state {
+      display: grid;
+      place-items: center;
+      min-height: 280px;
+      padding: 38px 24px;
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.65;
+    }
+    .empty-state a {
+      margin-top: 12px;
+      color: var(--navy);
+      font-weight: 900;
+    }
+    .detail-summary {
+      padding: 18px;
+      border-radius: 14px;
+      background: #f7f8fa;
+    }
+    .detail-id {
+      display: block;
+      margin-top: 8px;
+      overflow-wrap: anywhere;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .detail-route {
+      margin: 18px 0 0;
+      color: #343b49;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .detail-item {
+      padding: 13px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .detail-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .detail-item strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 13px;
+    }
+    .step-title {
+      margin: 22px 0 10px;
+      font-size: 15px;
+    }
+    .step-list { display: grid; gap: 8px; }
+    .step-card {
+      position: relative;
+      padding: 13px 14px 13px 34px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .step-card::before {
+      position: absolute;
+      top: 17px;
+      left: 14px;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--yellow);
+      content: "";
+    }
+    .step-card strong, .step-card span { display: block; }
+    .step-card strong { font-size: 13px; }
+    .step-card span {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .detail-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 18px;
+    }
+    .detail-actions button {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 850;
+    }
+    .detail-actions .cancel-button { color: var(--danger); }
+    .detail-actions button:disabled {
+      cursor: not-allowed;
+      opacity: .45;
+    }
+    .error-box {
+      margin: 14px;
+      border: 1px solid #f1b8b8;
+      border-radius: 12px;
+      padding: 16px;
+      background: #fff5f5;
+      color: #9e2424;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    @media (max-width: 900px) {
+      .history-layout { grid-template-columns: 1fr; }
+      .detail-panel { position: static; }
+    }
+    @media (max-width: 640px) {
+      .history-main {
+        width: min(100% - 24px, 560px);
+        padding-top: 18px;
+      }
+      .history-hero {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 25px 22px;
+      }
+      .new-order { width: 100%; }
+      .summary-grid { grid-template-columns: 1fr; gap: 8px; }
+      .summary-card {
+        display: flex;
+        min-height: auto;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 18px;
+      }
+      .summary-card strong { margin: 0; font-size: 23px; }
+      .panel-head { align-items: stretch; flex-direction: column; padding: 20px; }
+      .filter-group { width: 100%; }
+      .filter-button { flex: 1; }
+      .detail-grid, .detail-actions { grid-template-columns: 1fr; }
+    }
+  </style>
+  {{SITE_HEADER_CSS}}
+</head>
+<body>
+  {{SITE_HEADER}}
+  <main class="history-main">
+    <section class="history-hero">
+      <div>
+        <span class="eyebrow">DELIVERY HISTORY</span>
+        <h1>이용 내역</h1>
+        <p class="hero-copy">접수한 일반 퀵배송과 스마트 딜리버리를 한곳에서 확인하고, 배송 상태를 새로 불러오거나 취소할 수 있어요.</p>
+      </div>
+      <a class="new-order" href="/#smartDelivery">새 배송 접수하기</a>
+    </section>
+
+    <section class="summary-grid" aria-label="이용 내역 요약">
+      <article class="summary-card"><span>전체 주문</span><strong id="totalCount">-</strong></article>
+      <article class="summary-card"><span>스마트 딜리버리</span><strong id="smartCount">-</strong></article>
+      <article class="summary-card"><span>진행 중</span><strong id="activeCount">-</strong></article>
+    </section>
+
+    <div class="history-layout">
+      <section class="history-panel" aria-labelledby="orderListTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="orderListTitle">최근 주문</h2>
+            <p>주문을 선택하면 상세 상태를 확인할 수 있어요.</p>
+          </div>
+          <div class="filter-group" aria-label="주문 종류 필터">
+            <button class="filter-button active" type="button" data-filter="ALL">전체</button>
+            <button class="filter-button" type="button" data-filter="SMART_DELIVERY">스마트</button>
+            <button class="filter-button" type="button" data-filter="QUICK">일반</button>
+          </div>
+        </div>
+        <div class="order-list" id="orderList" aria-live="polite">
+          <div class="empty-state">이용 내역을 불러오는 중입니다.</div>
+        </div>
+      </section>
+
+      <section class="history-panel detail-panel" aria-labelledby="orderDetailTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="orderDetailTitle">주문 상세</h2>
+            <p>선택한 주문의 경로와 배송 단계를 보여드려요.</p>
+          </div>
+        </div>
+        <div id="orderDetail" class="detail-placeholder" aria-live="polite">
+          왼쪽에서 확인할 주문을 선택해주세요.
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script>
+    const byId = id => document.getElementById(id);
+    const terminalStatuses = new Set([
+      "COMPLETED", "CANCELED", "MATCHING_FAILED", "ABORTED", "REQUEST_FAILED"
+    ]);
+    const statusLabels = {
+      PENDING: "접수 대기",
+      MATCHING: "기사 배정 중",
+      MATCHED: "기사 배정",
+      PICKUP_WAITING: "픽업 대기",
+      PICKUP_STARTED: "픽업 이동 중",
+      PICKUP_COMPLETED: "픽업 완료",
+      DROPOFF_WAITING: "배송 대기",
+      DROPOFF_STARTED: "배송 중",
+      DROPOFF_COMPLETED: "배송 완료",
+      INIT: "접수됨",
+      UNKNOWN: "상태 확인 중",
+      COMPLETED: "완료",
+      CANCELED: "취소",
+      MATCHING_FAILED: "배정 실패",
+      ABORTED: "중단",
+      REQUEST_FAILED: "접수 실패"
+    };
+    let orders = [];
+    let selectedId = "";
+    let activeFilter = "ALL";
+
+    async function api(path, options = {}) {
+      const response = await fetch(path, {
+        headers: {"Accept": "application/json", ...(options.headers || {})},
+        ...options
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.message || result.detail || `요청 실패 (${response.status})`);
+      }
+      return result;
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      return new Intl.DateTimeFormat("ko-KR", {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit"
+      }).format(new Date(value));
+    }
+
+    function serviceName(order) {
+      return order.serviceType === "SMART_DELIVERY" ? "스마트 딜리버리" : "일반 퀵배송";
+    }
+
+    function statusName(status) {
+      return statusLabels[status] || status || "상태 확인 중";
+    }
+
+    function makeText(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      node.textContent = text;
+      return node;
+    }
+
+    function updateSummary() {
+      byId("totalCount").textContent = `${orders.length}건`;
+      byId("smartCount").textContent =
+        `${orders.filter(order => order.serviceType === "SMART_DELIVERY").length}건`;
+      byId("activeCount").textContent =
+        `${orders.filter(order => !terminalStatuses.has(order.status)).length}건`;
+    }
+
+    function filteredOrders() {
+      if (activeFilter === "ALL") return orders;
+      if (activeFilter === "SMART_DELIVERY") {
+        return orders.filter(order => order.serviceType === "SMART_DELIVERY");
+      }
+      return orders.filter(order => order.serviceType !== "SMART_DELIVERY");
+    }
+
+    function renderOrders() {
+      const list = byId("orderList");
+      list.replaceChildren();
+      const visibleOrders = filteredOrders();
+      if (!visibleOrders.length) {
+        const empty = makeText(
+          "div", "empty-state",
+          orders.length
+            ? "선택한 종류의 주문이 아직 없습니다."
+            : "아직 이용 내역이 없습니다."
+        );
+        if (!orders.length) {
+          const link = makeText("a", "", "첫 배송 접수하기");
+          link.href = "/#smartDelivery";
+          empty.append(link);
+        }
+        list.append(empty);
+        return;
+      }
+
+      visibleOrders.forEach(order => {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = `order-card${order.partnerOrderId === selectedId ? " active" : ""}`;
+        card.dataset.orderId = order.partnerOrderId;
+        card.setAttribute("aria-label", `${serviceName(order)} ${statusName(order.status)} 상세 보기`);
+        card.addEventListener("click", () => selectOrder(order.partnerOrderId));
+
+        const top = makeText("div", "order-top", "");
+        top.append(
+          makeText("span", "service-name", serviceName(order)),
+          makeText(
+            "span",
+            `status-badge${terminalStatuses.has(order.status) ? " terminal" : ""}`,
+            statusName(order.status)
+          )
+        );
+        const route = makeText("p", "route-line", order.routeSummary || "배송 경로 확인 중");
+        const meta = makeText("div", "order-meta", "");
+        meta.append(
+          makeText("span", "", order.partnerOrderId),
+          makeText("time", "", formatDate(order.updatedAt))
+        );
+        card.append(top, route, meta);
+        list.append(card);
+      });
+    }
+
+    function addressFrom(location) {
+      if (!location) return "주소 정보 없음";
+      return location.basicAddress || location.address || "주소 정보 없음";
+    }
+
+    function routeFromDetail(detail) {
+      const request = detail.request || {};
+      const pickup = addressFrom(request.pickup?.location);
+      const dropoff = addressFrom(request.dropoff?.location);
+      const waypoints = Array.isArray(request.waypoints) ? request.waypoints.length : 0;
+      return waypoints
+        ? `${pickup} → 경유 ${waypoints}곳 → ${dropoff}`
+        : `${pickup} → ${dropoff}`;
+    }
+
+    function renderSteps(container, steps) {
+      container.replaceChildren();
+      if (!steps.length) {
+        container.append(makeText("div", "detail-placeholder", "배송 단계 정보가 아직 없습니다."));
+        return;
+      }
+      const kindLabels = {PICKUP: "출발지", DROPOFF: "도착지"};
+      steps.forEach((step, index) => {
+        const card = makeText("article", "step-card", "");
+        card.append(
+          makeText(
+            "strong", "",
+            `${index + 1}. ${kindLabels[step.kind] || step.kind?.replace("WAYPOINT_", "경유지 ") || "배송지"} · ${statusName(step.status)}`
+          ),
+          makeText("span", "", addressFrom(step.location)),
+          makeText(
+            "span", "",
+            step.estimatedEndedAt
+              ? `예상 완료 ${formatDate(step.estimatedEndedAt)}`
+              : (step.statusUpdatedAt ? `상태 갱신 ${formatDate(step.statusUpdatedAt)}` : "")
+          )
+        );
+        container.append(card);
+      });
+    }
+
+    function renderDetail(detail, steps) {
+      const order = orders.find(item => item.partnerOrderId === detail.partnerOrderId) || detail;
+      const body = byId("orderDetail");
+      body.className = "detail-body";
+      body.replaceChildren();
+
+      const summary = makeText("div", "detail-summary", "");
+      summary.append(
+        makeText("span", "service-name", serviceName(order)),
+        makeText("strong", "detail-id", detail.partnerOrderId),
+        makeText("p", "detail-route", order.routeSummary || routeFromDetail(detail))
+      );
+      const grid = makeText("div", "detail-grid", "");
+      [
+        ["현재 상태", statusName(detail.status)],
+        ["접수 일시", formatDate(detail.createdAt)],
+        ["마지막 갱신", formatDate(detail.updatedAt)],
+        ["서비스", serviceName(order)]
+      ].forEach(([label, value]) => {
+        const item = makeText("div", "detail-item", "");
+        item.append(makeText("span", "", label), makeText("strong", "", value));
+        grid.append(item);
+      });
+
+      const stepTitle = makeText("h3", "step-title", "배송 단계");
+      const stepList = makeText("div", "step-list", "");
+      renderSteps(stepList, steps);
+
+      const actions = makeText("div", "detail-actions", "");
+      const refreshButton = makeText("button", "", "카카오 상태 새로고침");
+      refreshButton.type = "button";
+      refreshButton.addEventListener("click", () => selectOrder(selectedId, true));
+      const cancelButton = makeText("button", "cancel-button", "주문 취소");
+      cancelButton.type = "button";
+      cancelButton.disabled = terminalStatuses.has(detail.status);
+      cancelButton.addEventListener("click", cancelSelectedOrder);
+      actions.append(refreshButton, cancelButton);
+
+      body.append(summary, grid, stepTitle, stepList, actions);
+    }
+
+    async function selectOrder(id, refresh = false) {
+      selectedId = id;
+      renderOrders();
+      const body = byId("orderDetail");
+      body.className = "detail-placeholder";
+      body.textContent = refresh ? "카카오 상태를 새로 불러오는 중입니다." : "주문 상세를 불러오는 중입니다.";
+      try {
+        const [detailResult, stepResult] = await Promise.all([
+          api(`/api/orders/${encodeURIComponent(id)}?refresh=${refresh}`),
+          api(`/api/orders/${encodeURIComponent(id)}/steps?refresh=${refresh}`)
+            .catch(() => ({data: {steps: []}}))
+        ]);
+        renderDetail(detailResult.data, stepResult.data?.steps || []);
+        const url = new URL(location.href);
+        url.searchParams.set("order", id);
+        history.replaceState(null, "", url);
+        if (refresh) await loadOrders(false);
+      } catch (error) {
+        body.className = "error-box";
+        body.textContent = error.message;
+      }
+    }
+
+    async function cancelSelectedOrder() {
+      if (!selectedId || !confirm("선택한 Sandbox 주문을 취소할까요?")) return;
+      try {
+        await api(`/api/orders/${encodeURIComponent(selectedId)}/cancel`, {method: "PATCH"});
+        await loadOrders(false);
+        await selectOrder(selectedId);
+      } catch (error) {
+        const body = byId("orderDetail");
+        body.className = "error-box";
+        body.textContent = error.message;
+      }
+    }
+
+    async function loadOrders(selectInitial = true) {
+      const list = byId("orderList");
+      try {
+        const result = await api("/api/orders?limit=50");
+        orders = Array.isArray(result.data) ? result.data : [];
+        updateSummary();
+        renderOrders();
+        if (!selectInitial || !orders.length) return;
+        const queryId = new URLSearchParams(location.search).get("order");
+        const initial = orders.find(order => order.partnerOrderId === queryId) || orders[0];
+        await selectOrder(initial.partnerOrderId);
+      } catch (error) {
+        list.replaceChildren(makeText("div", "error-box", error.message));
+        byId("totalCount").textContent = "-";
+        byId("smartCount").textContent = "-";
+        byId("activeCount").textContent = "-";
+      }
+    }
+
+    document.querySelectorAll(".filter-button").forEach(button => {
+      button.addEventListener("click", () => {
+        activeFilter = button.dataset.filter;
+        document.querySelectorAll(".filter-button").forEach(item => {
+          item.classList.toggle("active", item === button);
+        });
+        renderOrders();
+      });
+    });
+
+    loadOrders();
+  </script>
+</body>
+</html>

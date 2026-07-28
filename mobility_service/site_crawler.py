@@ -73,7 +73,7 @@ def extract_visible_sections(html: str) -> tuple[tuple[str, str], ...]:
 def crawl_site(
     base_url: str,
     *,
-    paths: tuple[str, ...] = ("/", "/features"),
+    paths: tuple[str, ...] = ("/", "/features", "/history"),
     timeout_seconds: float = 15.0,
 ) -> list[CrawledPage]:
     """같은 MOVB 호스트의 공개 안내 페이지만 제한적으로 수집한다."""

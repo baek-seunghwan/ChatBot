@@ -225,17 +225,24 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("/api/smart-delivery/orders", home.text)
         self.assertIn("grid-column: 1 / -1", home.text)
 
-    def test_home_keeps_chat_shortcuts_and_use_history(self) -> None:
+    def test_home_keeps_chat_shortcuts_and_links_to_separate_history(self) -> None:
         home = self.client.get("/")
+        history = self.client.get("/history")
 
         self.assertIn("배송 주문", home.text)
         self.assertIn("차량 선택", home.text)
         self.assertIn("예약 ETA", home.text)
         self.assertIn("배송 상태", home.text)
         self.assertIn("서비스 안내", home.text)
-        self.assertIn("<h2>이용 내역</h2>", home.text)
+        self.assertNotIn('id="history"', home.text)
+        self.assertIn('href="/history"', home.text)
         self.assertIn('id="smartPickupList"', home.text)
         self.assertIn('id="smartDropoffList"', home.text)
+        self.assertEqual(history.status_code, 200)
+        self.assertIn("<h1>이용 내역</h1>", history.text)
+        self.assertIn('id="orderList"', history.text)
+        self.assertIn('id="orderDetail"', history.text)
+        self.assertIn("/api/orders?limit=50", history.text)
 
     def test_customer_pages_use_the_exact_same_shared_header(self) -> None:
         pages = [
@@ -259,6 +266,24 @@ class MobilityApiTests(unittest.TestCase):
         self.assertNotIn("일반 퀵 접수", headers[0])
         self.assertIn("이용 내역", headers[0])
         self.assertIn("로그인", headers[0])
+
+    def test_history_page_preserves_shared_brand_and_header_position(self) -> None:
+        home = self.client.get("/")
+        history = self.client.get("/history")
+
+        self.assertEqual(history.status_code, 200)
+        brand_pattern = r'<a class="movb-brand".*?</a>'
+        home_brand = re.search(brand_pattern, home.text, re.DOTALL)
+        history_brand = re.search(brand_pattern, history.text, re.DOTALL)
+        self.assertIsNotNone(home_brand)
+        self.assertIsNotNone(history_brand)
+        self.assertEqual(home_brand.group(0), history_brand.group(0))
+        self.assertIn('id="movb-shared-header-styles"', history.text)
+        self.assertIn(
+            'class="movb-nav-item active" data-nav="history"',
+            history.text,
+        )
+        self.assertIn('href="/history"', history.text)
 
     def test_home_has_ollama_toggle_for_local_chat(self) -> None:
         home = self.client.get("/")
@@ -297,8 +322,9 @@ class MobilityApiTests(unittest.TestCase):
     def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
         home = self.client.get("/")
         features = self.client.get("/features")
+        history = self.client.get("/history")
 
-        for response in (home, features):
+        for response in (home, features, history):
             self.assertEqual(response.status_code, 200)
             self.assertIn("system-ui, -apple-system", response.text)
             self.assertIn("focus-visible", response.text)
