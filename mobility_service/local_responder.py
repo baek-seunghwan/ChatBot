@@ -32,6 +32,7 @@ _SYSTEM_PROMPT = (
 
 _TIME_PATTERN = re.compile(r"몇\s*시|지금\s*시간|시간\s*(알려|좀|뭐)")
 _DATE_PATTERN = re.compile(r"며칠|몇\s*일이|무슨\s*요일|오늘\s*날짜|날짜\s*(알려|좀|뭐)")
+_GREETING_PATTERN = re.compile(r"^(안녕|안녕하세요|하이|헬로|헬|ㅎㅇ|반가워|ㅇㅇ)+[!?.~ ]*$")
 _WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"]
 
 
@@ -138,6 +139,9 @@ def local_model_reply(prompt: str, engine: str = "ollama") -> str:
     dynamic = _dynamic_answer(text)
     if dynamic is not None:
         return dynamic
+
+    if _GREETING_PATTERN.fullmatch(text):
+        return "안녕하세요! MOVB 서비스에 대해 물어보세요 🙂"
 
     if engine == "own":
         return own_model_reply(text)

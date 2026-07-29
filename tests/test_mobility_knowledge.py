@@ -4,7 +4,9 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
 
+import httpx
 from fastapi.testclient import TestClient
 
 from mobility_service.agent import DeliveryAgent
@@ -13,6 +15,7 @@ from mobility_service.conversation_store import ConversationStore
 from mobility_service.geocode import KakaoGeocodeClient
 from mobility_service.knowledge import default_knowledge_base
 from mobility_service.models import Location
+from mobility_service import local_responder
 from mobility_service.site_crawler import (
     CrawledPage,
     extract_visible_sections,
@@ -135,6 +138,23 @@ class MobilityKnowledgeTests(unittest.TestCase):
                         for result in results
                     )
                 )
+
+
+class LocalResponderTests(unittest.TestCase):
+    def test_greetings_do_not_trigger_knowledge_search(self) -> None:
+        knowledge = default_knowledge_base()
+        with patch.object(
+            knowledge,
+            "search",
+            wraps=knowledge.search,
+        ) as mocked_search, patch(
+            "mobility_service.local_responder.httpx.post",
+            side_effect=httpx.ConnectError("offline"),
+        ):
+            reply = local_responder.local_model_reply("안녕", engine="ollama")
+
+        self.assertIn("안녕하세요", reply)
+        mocked_search.assert_not_called()
 
 
 class AgentKnowledgeRouteTests(unittest.TestCase):
