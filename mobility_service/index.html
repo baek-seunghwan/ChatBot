@@ -363,6 +363,10 @@
       font-weight: 550;
       line-height: 1.4;
     }
+    .product-size-guide {
+      margin-top: 7px;
+      white-space: normal;
+    }
     .field-error {
       border-color: var(--danger) !important;
       box-shadow: 0 0 0 3px rgba(196, 60, 53, .1) !important;
@@ -459,6 +463,9 @@
       padding-top: 15px;
       border-top: 1px dashed #d8dbe2;
     }
+    .address-party > .grid {
+      grid-template-columns: 1fr;
+    }
     .party-row {
       padding: 15px;
       border: 1px solid #e1e4ea;
@@ -473,12 +480,33 @@
       margin-bottom: 11px;
     }
     .party-row-head strong { font-size: 14px; }
+    .party-row-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
     .party-row-head button {
       min-height: 36px;
       padding: 7px 10px;
       background: #fff0ef;
       color: var(--danger);
       font-size: 12px;
+    }
+    .party-row-head .copy-contact {
+      min-height: 36px;
+      margin: 0;
+      padding: 7px 10px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--navy);
+      font-size: 12px;
+      box-shadow: none;
+    }
+    .party-row-head .copy-contact:hover {
+      background: #f4f6f8;
+      text-decoration: none;
     }
     .party-fields {
       display: grid;
@@ -487,6 +515,10 @@
     }
     .party-fields > label:first-child { grid-column: 1 / -1; }
     .party-fields .wide { grid-column: 1 / -1; }
+    .party-fields textarea {
+      min-height: 74px;
+      resize: vertical;
+    }
     .party-address {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -536,7 +568,25 @@
       font-size: 16px;
       outline: none;
     }
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      border: 1px solid #d8d8d8;
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: white;
+      color: var(--ink);
+      font: inherit;
+      font-size: 16px;
+      line-height: 1.45;
+      outline: none;
+      resize: vertical;
+    }
     input:focus, select:focus {
+      border-color: var(--ink);
+      box-shadow: 0 0 0 3px rgba(25, 25, 25, .08);
+    }
+    textarea:focus {
       border-color: var(--ink);
       box-shadow: 0 0 0 3px rgba(25, 25, 25, .08);
     }
@@ -791,6 +841,34 @@
     .chat-bubble.bot ul,
     .chat-bubble.bot ol { margin: 6px 0; padding-left: 20px; }
     .chat-bubble.bot li + li { margin-top: 3px; }
+    .chat-bubble.bot .chat-markdown-heading {
+      margin: 10px 0 6px;
+      color: var(--navy);
+      line-height: 1.3;
+      word-break: keep-all;
+    }
+    .chat-bubble.bot .chat-markdown-heading:first-child { margin-top: 0; }
+    .chat-bubble.bot .chat-markdown-table {
+      display: block;
+      width: 100%;
+      margin: 8px 0;
+      border-collapse: collapse;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .chat-bubble.bot .chat-markdown-table th,
+    .chat-bubble.bot .chat-markdown-table td {
+      padding: 7px 8px;
+      border: 1px solid var(--line);
+      vertical-align: top;
+      white-space: normal;
+      word-break: keep-all;
+    }
+    .chat-bubble.bot .chat-markdown-table th {
+      background: #f6f7fa;
+      color: var(--navy);
+      font-weight: 800;
+    }
     .chat-bubble.bot code {
       padding: 1px 4px;
       border-radius: 4px;
@@ -829,8 +907,53 @@
       border-top: 1px solid var(--line);
       background: white;
     }
-    .chat-widget-form input { flex: 1; }
+    .chat-widget-form input,
+    .chat-widget-form textarea { flex: 1; }
+    .chat-widget-form textarea {
+      min-width: 0;
+      min-height: 44px;
+      max-height: 110px;
+      resize: none;
+    }
     .chat-widget-form button { flex: 0 0 auto; padding: 11px 14px; }
+    .chat-attach-button {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      min-width: 42px;
+      padding: 0 !important;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--navy);
+    }
+    .chat-attach-button svg { width: 19px; height: 19px; }
+    .chat-link-card {
+      display: grid;
+      gap: 8px;
+      width: 100%;
+      margin-top: 8px;
+      padding: 10px;
+      border: 1px solid #d9e0eb;
+      border-radius: 8px;
+      background: #f8faff;
+    }
+    .chat-link-card a {
+      overflow: hidden;
+      color: var(--navy);
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .chat-link-card button { min-height: 32px; padding: 5px 9px; }
+    .chat-applied-summary {
+      display: block;
+      margin-top: 8px;
+      padding-top: 7px;
+      border-top: 1px solid var(--line);
+      color: #11663f;
+      font-size: 11px;
+      font-weight: 800;
+    }
     .chat-suggestions {
       display: flex;
       gap: 6px;
@@ -1150,6 +1273,9 @@
     }
     .contact-section .grid { grid-template-columns: 1fr; gap: 10px; }
     .contact-section .grid[style] { margin-top: 10px !important; }
+    .contact-section .grid > label { padding-bottom: 4px; }
+    .contact-section .grid > label .field-hint { margin-bottom: 2px; }
+    .contact-section .grid + .wide { margin-top: 10px; }
     .copy-contact {
       float: right;
       min-height: 28px;
@@ -1615,6 +1741,11 @@
     }
     .section-heading h3,
     .section-title-row h3 { margin: 0; }
+    .section-title-row h3 {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      word-break: keep-all;
+    }
     .section-heading > small {
       max-width: 520px;
       color: var(--muted);
@@ -1883,6 +2014,18 @@
       grid-template-columns: 1fr 1fr;
       gap: 10px;
       margin-top: 12px;
+    }
+    .handling-section.is-locked .handling-grid {
+      display: none;
+    }
+    .handling-section.is-locked .section-heading {
+      opacity: .72;
+    }
+    .handling-section.is-locked .handling-price {
+      margin-top: 12px;
+      border-left-color: var(--line);
+      background: #f4f5f7;
+      color: var(--muted);
     }
     .notice-check {
       display: flex;
@@ -2155,7 +2298,8 @@
       color: var(--navy);
     }
     .chat-widget-form { padding: 9px 10px; }
-    .chat-widget-form input { min-height: 40px; }
+    .chat-widget-form input,
+    .chat-widget-form textarea { min-height: 40px; }
     .chat-widget-form button { min-height: 40px; }
     .chat-fab {
       border-radius: 8px;
@@ -2303,6 +2447,9 @@
                   <label><span class="field-label">이름 <span class="required-mark">필수</span></span><input id="dropoffName" required maxlength="50" placeholder="받는 사람 이름"></label>
                   <label><span class="field-label">연락처 <span class="required-mark">필수</span></span><input id="dropoffPhone" required inputmode="tel" maxlength="13" placeholder="010-1000-0002"><small class="field-hint">기사님이 배송 시 연락할 번호예요.</small></label>
                 </div>
+                <label class="wide">전달 전 요청사항
+                  <textarea id="dropoffNote" maxlength="500" placeholder="예: 도착 전 연락"></textarea>
+                </label>
                 <label class="primary-owner" id="primaryOwnerField" hidden>
                   이 물품을 보내는 사람
                   <select id="primaryDropoffPickup"></select>
@@ -2393,7 +2540,6 @@
             <small class="field-hint">예약 시간 기준으로 요금이 적용되며 배송 상황에 따라 픽업 시간이 변경될 수 있어요.</small>
           </label>
           <div class="smart-mode-guide" id="smartModeGuide">
-            <strong id="deliveryModeGuideTitle">일반 퀵으로 바로 접수합니다.</strong>
             <span id="deliveryModeGuideText">사람을 추가하면 스마트 딜리버리로 자동 전환됩니다.</span>
             <label class="auto-match-option" id="autoMatchOption" hidden>
               <input type="checkbox" id="autoMatch">
@@ -2434,15 +2580,15 @@
           <div class="product-options-grid">
             <label><span class="field-label">전체 물품 크기 <span class="required-mark">필수</span></span>
               <select id="productSize">
-                <option value="XS">XS · 서류/초소형</option>
-                <option value="S">S · 소형 박스</option>
-                <option value="M">M · 중형 박스</option>
-                <option value="L">L · 대형 물품</option>
+                <option value="XS">XS · 서류/초소형 (서류봉투, A4 정도)</option>
+                <option value="S">S · 소형 박스 (작은 택배상자)</option>
+                <option value="M">M · 중형 박스 (보통 크기 상자)</option>
+                <option value="L">L · 대형 물품 (큰 박스·가전 일부)</option>
               </select>
-              <small class="field-hint">접수하는 물품 전체, 포장 완료 상태를 기준으로 선택해 주세요.</small>
+              <small class="field-hint product-size-guide">포장 완료 후 전체 크기로 선택해 주세요. 예시: XS=서류봉투·A4 정도, S=작은 택배상자, M=보통 상자, L=큰 박스·가전 일부.</small>
             </label>
             <label>전체 물품 가격
-              <input id="declaredValue" type="number" min="0" step="1000" inputmode="numeric" placeholder="예: 500000">
+              <input id="declaredValue" type="text" inputmode="numeric" autocomplete="off" placeholder="예: 2,000,000">
               <small class="field-hint">물품가액은 보험·보상 가능 여부 확인에 사용됩니다.</small>
             </label>
           </div>
@@ -2453,7 +2599,7 @@
           <p class="prohibited-notice"><b>취급불가 품목</b>(약품류, 현금류, 생물, 신분증 등)은 배송이 불가하며 적재물 책임 보험이 적용되지 않습니다.</p>
         </section>
 
-        <section class="form-section handling-section">
+        <section class="form-section handling-section" id="handlingSection">
           <div class="section-heading">
             <h3><span class="section-number">5</span>물품 운반 신청</h3>
             <small>다마스·라보·1톤 이용 시 기사님이 물품 픽업과 상·하차를 도와드리는 옵션입니다.</small>
@@ -2598,7 +2744,7 @@
         onclick="toggleOllama()"
       ></button>
       <span class="engine-copy">
-        <span class="engine-label">Ollama</span>
+        <span class="engine-label" id="localEngineLabel">공개 모델</span>
         <small id="ollamaStatus" aria-live="polite">사용 중 · 로컬 AI로 답변</small>
       </span>
     </div>
@@ -2608,6 +2754,9 @@
       </div>
     </div>
     <div class="chat-suggestions" aria-label="추천 질문">
+      <button type="button" onclick="focusSmartPaste()">문자 붙여넣기</button>
+      <button type="button" onclick="byId('chatImageInput').click()">사진 읽기</button>
+      <button type="button" onclick="createAddressRequestLink()">주소 요청 링크</button>
       <button type="button" onclick="openSmartDelivery()">스마트 딜리버리</button>
       <button type="button" onclick="openChatWithPrompt('퀵 배송 주문하고 싶어')">배송 주문</button>
       <button type="button" onclick="openChatWithPrompt('차량 선택지를 보여줘')">차량 선택</button>
@@ -2616,7 +2765,11 @@
       <button type="button" onclick="openChatWithPrompt('MOVB는 어떤 서비스야?')">서비스 안내</button>
     </div>
     <form class="chat-widget-form" id="chatForm">
-      <input id="chatInput" placeholder="메시지를 입력하세요" autocomplete="off">
+      <input type="file" id="chatImageInput" accept="image/png,image/jpeg,image/webp" hidden>
+      <button type="button" class="chat-attach-button" onclick="byId('chatImageInput').click()" aria-label="문자 사진 첨부">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5 12 20a6 6 0 0 1-8.5-8.5l9-9a4 4 0 0 1 5.7 5.7l-9 9a2 2 0 0 1-2.9-2.8l8.3-8.3"/></svg>
+      </button>
+      <textarea id="chatInput" rows="1" maxlength="5000" placeholder="문자·주소를 그대로 붙여넣어도 돼요" autocomplete="off"></textarea>
       <button type="submit">전송</button>
     </form>
   </div>
@@ -2851,6 +3004,7 @@
     function updateHandlingUi() {
       const eligible = byId("productSize").value === "L"
         && ["DAMAS", "LABO", "TON"].includes(byId("fleet").value);
+      byId("handlingSection").classList.toggle("is-locked", !eligible);
       document.querySelectorAll(
         'input[name="pickupHandling"], input[name="dropoffHandling"]'
       ).forEach(input => {
@@ -2864,7 +3018,7 @@
         ? total
           ? `선택한 운반 신청 예상 추가요금 ${won(total)} · 상차와 하차는 각각 계산됩니다.`
           : "운반을 신청하면 선택한 차량 기준 예상 추가요금을 안내해 드려요."
-        : "물품 운반 신청은 물품 크기 L과 다마스·라보·1톤을 선택했을 때 이용할 수 있어요.";
+        : "물품 크기 L과 다마스·라보·1톤을 선택하면 출발지·도착지 운반 옵션이 열립니다.";
     }
 
     function composeDriverNote(kind) {
@@ -2879,6 +3033,10 @@
       if (byId("needCart").checked) parts.push("[카트 필요]");
       if (!byId("contactlessOption").hidden && byId("contactlessDropoff").checked) {
         parts.push("[문 앞에 놓아주세요 (비대면 수령)]");
+      }
+      if (kind === "dropoff") {
+        const dropoffNote = byId("dropoffNote").value.trim();
+        if (dropoffNote) parts.push(dropoffNote);
       }
       const note = byId("driverNote").value.trim();
       if (note) parts.push(note);
@@ -2917,10 +3075,13 @@
           : "필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.";
       byId("quickBadgeText").textContent = smart
         ? `스마트 딜리버리 · ${1 + smartPickupNodes().length}명 → ${1 + smartDropoffNodes().length}명`
-        : autoMatch ? "공동배송 자동 매칭" : "일반 퀵 바로 접수";
-      byId("deliveryModeGuideTitle").textContent = smart
-        ? "스마트 딜리버리로 자동 전환되었습니다."
-        : "스마트 딜리버리를 구성하는 두 가지 방법";
+        : autoMatch ? "공동배송 자동 매칭" : "일반 퀵 접수";
+      const deliveryModeGuideTitle = byId("deliveryModeGuideTitle");
+      if (deliveryModeGuideTitle) {
+        deliveryModeGuideTitle.textContent = smart
+          ? "스마트 딜리버리로 자동 전환되었습니다."
+          : "스마트 딜리버리를 구성하는 두 가지 방법";
+      }
       byId("deliveryModeGuideText").textContent = smart
         ? "추가한 사람을 포함해 개별 배송 합계와 묶음 경로의 요금을 비교합니다."
         : "보내는 사람·받는 사람을 직접 추가하거나, 서버가 다른 사용자의 비슷한 주문을 찾도록 자동 매칭을 사용할 수 있습니다.";
@@ -2936,7 +3097,7 @@
         : "예상 시간·요금 확인";
       byId("orderButton").textContent = smart
         ? "스마트 딜리버리 접수"
-        : autoMatch ? "공동배송 매칭 접수" : "일반 퀵 바로 접수";
+        : autoMatch ? "공동배송 매칭 접수" : "일반 퀵 접수";
       updatePickupOwnerOptions();
       syncPaymentUi();
       if (smart) setActiveNav("bundle");
@@ -2953,7 +3114,7 @@
     }
 
     function bindPartyRow(row) {
-      row.querySelectorAll("input, select").forEach(field => {
+      row.querySelectorAll("input, select, textarea").forEach(field => {
         field.addEventListener(field.tagName === "SELECT" ? "change" : "input", () => {
           if (field.dataset.field === "phone") {
             field.value = formatPhone(field.value);
@@ -2966,6 +3127,15 @@
       row.querySelector('[data-action="address"]').addEventListener("click", () => {
         searchPartyAddress(row.querySelector('[data-field="address"]'));
       });
+      const copyContactButton = row.querySelector('[data-action="copy-contact"]');
+      if (copyContactButton) {
+        copyContactButton.addEventListener("click", () => {
+          copyPickupContactToFields(
+            row.querySelector('[data-field="name"]'),
+            row.querySelector('[data-field="phone"]')
+          );
+        });
+      }
       row.querySelector('[data-action="remove"]').addEventListener("click", () => {
         row.remove();
         updatePartyLabels();
@@ -3016,7 +3186,7 @@
 
     function addSmartDropoff() {
       if (smartDropoffNodes().length >= 4) {
-        showResult("추가할 수 없어요", "받는 사람은 기본 받는 사람을 포함해 최대 5명입니다.", true);
+        showResult("추가할 수 없어요", "도착지는 기본 도착지를 포함해 최대 5곳입니다.", true);
         return;
       }
       smartDropoffCounter += 1;
@@ -3024,8 +3194,11 @@
       row.className = "party-row";
       row.innerHTML = `
         <div class="party-row-head">
-          <strong data-label>추가 받는 사람</strong>
-          <button type="button" data-action="remove">− 삭제</button>
+          <strong data-label>도착지 2</strong>
+          <div class="party-row-actions">
+            <button type="button" class="copy-contact" data-action="copy-contact">보내는 분 연락처와 동일</button>
+            <button type="button" data-action="remove">− 삭제</button>
+          </div>
         </div>
         <div class="party-fields">
           <label><span class="field-label">배송 주소 <span class="required-mark">필수</span></span>
@@ -3043,8 +3216,8 @@
           <label>이 물품을 보내는 사람
             <select data-field="pickupKey"></select>
           </label>
-          <label class="wide">전달 요청사항
-            <input data-field="note" maxlength="500" placeholder="예: 도착 전 연락">
+          <label class="wide">전달 전 요청사항
+            <textarea data-field="note" maxlength="500" placeholder="예: 도착 전 연락"></textarea>
           </label>
         </div>`;
       byId("smartDropoffList").append(row);
@@ -3060,7 +3233,7 @@
         row.querySelector("[data-label]").textContent = `보내는 사람 ${index + 2}`;
       });
       smartDropoffNodes().forEach((row, index) => {
-        row.querySelector("[data-label]").textContent = `받는 사람 ${index + 2}`;
+        row.querySelector("[data-label]").textContent = `도착지 ${index + 2}`;
       });
     }
 
@@ -3098,6 +3271,15 @@
       });
     }
 
+    function copyPickupContactToFields(nameField, phoneField) {
+      nameField.value = byId("pickupName").value;
+      phoneField.value = formatPhone(byId("pickupPhone").value);
+      nameField.classList.remove("field-error");
+      phoneField.classList.remove("field-error");
+      handleQuickFormChange();
+      nameField.focus();
+    }
+
     function searchPartyAddress(input) {
       const Postcode = window.daum?.Postcode || window.kakao?.Postcode;
       if (!Postcode) {
@@ -3114,10 +3296,7 @@
     }
 
     function copyPickupContact() {
-      byId("dropoffName").value = byId("pickupName").value;
-      byId("dropoffPhone").value = byId("pickupPhone").value;
-      handleQuickFormChange();
-      byId("dropoffName").focus();
+      copyPickupContactToFields(byId("dropoffName"), byId("dropoffPhone"));
     }
 
     function formatPhone(value) {
@@ -3200,7 +3379,7 @@
         showResult("주소 확인이 필요해요", "주소를 직접 입력하지 말고 주소 검색 버튼이나 지도를 이용해 위치를 선택해주세요.", true);
         return false;
       }
-      const declaredValue = Number(byId("declaredValue").value || 0);
+      const declaredValue = Number(numericDigits(byId("declaredValue").value) || 0);
       if (declaredValue > 500000 && !byId("highValueNotice").checked) {
         byId("highValueNotice").focus();
         showResult(
@@ -3225,9 +3404,9 @@
             [row.querySelector('[data-field="phone"]'), "추가 보내는 사람의 연락처를 입력해주세요."],
           ]),
           ...dropoffRows.flatMap(row => [
-            [row.querySelector('[data-field="address"]'), "추가 받는 사람의 배송 주소를 입력해주세요."],
-            [row.querySelector('[data-field="name"]'), "추가 받는 사람의 이름을 입력해주세요."],
-            [row.querySelector('[data-field="phone"]'), "추가 받는 사람의 연락처를 입력해주세요."],
+            [row.querySelector('[data-field="address"]'), "추가 도착지의 배송 주소를 입력해주세요."],
+            [row.querySelector('[data-field="name"]'), "추가 도착지의 이름을 입력해주세요."],
+            [row.querySelector('[data-field="phone"]'), "추가 도착지의 연락처를 입력해주세요."],
           ]),
         ];
         for (const [input, message] of requiredPartyFields) {
@@ -3764,8 +3943,8 @@
       }
       const productName = byId("productName").value.trim();
       if (productName) payload.productName = productName;
-      const declaredRaw = byId("declaredValue").value.trim();
-      if (declaredRaw && Number.isFinite(Number(declaredRaw))) {
+      const declaredRaw = numericDigits(byId("declaredValue").value);
+      if (declaredRaw) {
         payload.declaredValue = Number(declaredRaw);
       }
       if (byId("roundTrip").checked) {
@@ -3849,7 +4028,7 @@
     }
 
     function smartOrderPayload() {
-      const declaredRaw = byId("declaredValue").value.trim();
+      const declaredRaw = numericDigits(byId("declaredValue").value);
       const fleet = byId("fleet").value;
       const pickups = smartPickupValues().map(({key, ...item}) => item);
       const dropoffs = smartDropoffValues();
@@ -3981,6 +4160,16 @@
 
     function won(value) {
       return `${Number(value || 0).toLocaleString("ko-KR")}원`;
+    }
+
+    function numericDigits(value) {
+      return String(value || "").replace(/\D/g, "");
+    }
+
+    function formatNumberWithCommas(value) {
+      const digits = numericDigits(value);
+      if (!digits) return "";
+      return Number(digits).toLocaleString("ko-KR");
     }
 
     function orderTypeLabel(orderType) {
@@ -4382,41 +4571,60 @@
     }
 
     const OLLAMA_SETTING_KEY = "movb_ollama_enabled";
+    const ADDRESS_REQUESTS_KEY = "movb_address_requests";
     let chatMode = "ai";
     let ollamaEnabled = localStorage.getItem(OLLAMA_SETTING_KEY) !== "false";
     let ollamaAvailable = null;
+    let vllmAvailable = null;
+    let checkingAddressRequests = false;
+    const appliedAddressRequestTokens = new Set();
+
+    function selectedLocalEngine() {
+      if (!ollamaEnabled) return "own";
+      if (vllmAvailable) return "vllm";
+      if (ollamaAvailable) return "ollama";
+      return "own";
+    }
 
     function updateOllamaUi() {
       const switchButton = byId("ollamaSwitch");
-      const connectedAndEnabled = ollamaAvailable === true && ollamaEnabled;
-      switchButton.disabled = ollamaAvailable !== true;
+      const modelAvailable = vllmAvailable === true || ollamaAvailable === true;
+      const connectedAndEnabled = modelAvailable && ollamaEnabled;
+      switchButton.disabled = !modelAvailable;
       switchButton.classList.toggle("on", connectedAndEnabled);
       switchButton.setAttribute("aria-checked", String(connectedAndEnabled));
-      if (ollamaAvailable === null) {
+      byId("localEngineLabel").textContent = vllmAvailable
+        ? "vLLM 공개 모델"
+        : ollamaAvailable
+          ? "Ollama"
+          : "자체 QA";
+      if (vllmAvailable === null || ollamaAvailable === null) {
         byId("ollamaStatus").textContent = "연결 확인 중";
-      } else if (!ollamaAvailable) {
-        byId("ollamaStatus").textContent = "연결 안 됨 · 자체 QA 사용";
+      } else if (!modelAvailable) {
+        byId("ollamaStatus").textContent = "모델 서버 없음 · 자체 QA 사용";
       } else {
         byId("ollamaStatus").textContent = ollamaEnabled
-          ? "연결됨 · 로컬 AI로 답변"
+          ? "연결됨 · 검색 근거로 답변"
           : "사용 안 함 · 자체 QA로 답변";
       }
     }
 
     function toggleOllama() {
-      if (!ollamaAvailable) return;
+      if (!vllmAvailable && !ollamaAvailable) return;
       ollamaEnabled = !ollamaEnabled;
       localStorage.setItem(OLLAMA_SETTING_KEY, String(ollamaEnabled));
       updateOllamaUi();
     }
 
     async function refreshOllamaStatus() {
-      try {
-        const result = await api("/api/local-chat/status");
-        ollamaAvailable = result.data?.available === true;
-      } catch {
-        ollamaAvailable = false;
-      }
+      const [vllmResult, ollamaResult] = await Promise.allSettled([
+        api("/api/vllm/status"),
+        api("/api/local-chat/status"),
+      ]);
+      vllmAvailable = vllmResult.status === "fulfilled"
+        && vllmResult.value.data?.available === true;
+      ollamaAvailable = ollamaResult.status === "fulfilled"
+        && ollamaResult.value.data?.available === true;
       updateOllamaUi();
     }
 
@@ -4461,7 +4669,76 @@
         paragraphLines = [];
       }
 
-      for (const line of lines) {
+      function renderHeading(level, content) {
+        flushParagraph();
+        list = null;
+        const heading = document.createElement(`h${level}`);
+        heading.className = "chat-markdown-heading";
+        appendInlineMarkdown(heading, content);
+        bubble.append(heading);
+      }
+
+      function renderTable(startIndex) {
+        flushParagraph();
+        list = null;
+
+        const rows = [];
+        let index = startIndex;
+        while (index < lines.length) {
+          const raw = lines[index].trim();
+          if (!raw || !raw.includes("|")) break;
+          rows.push(raw);
+          index += 1;
+        }
+
+        if (rows.length < 2) return startIndex;
+
+        const normalize = value => value.trim().replace(/^\|/, "").replace(/\|$/, "");
+        const headerCells = normalize(rows[0]).split("|").map(cell => cell.trim());
+        const separatorLike = rows[1].replace(/[\|:\-\s]/g, "");
+        if (!separatorLike) return startIndex;
+
+        const table = document.createElement("table");
+        table.className = "chat-markdown-table";
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        headerCells.forEach(cell => {
+          const th = document.createElement("th");
+          appendInlineMarkdown(th, cell);
+          headRow.append(th);
+        });
+        thead.append(headRow);
+        table.append(thead);
+
+        const tbody = document.createElement("tbody");
+        for (const rowText of rows.slice(2)) {
+          const cells = normalize(rowText).split("|").map(cell => cell.trim());
+          const tr = document.createElement("tr");
+          cells.forEach(cell => {
+            const td = document.createElement("td");
+            appendInlineMarkdown(td, cell);
+            tr.append(td);
+          });
+          tbody.append(tr);
+        }
+        table.append(tbody);
+        bubble.append(table);
+        return index - 1;
+      }
+
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        const headingMatch = line.match(/^(#{1,3})\s+(.+)$/);
+        if (headingMatch) {
+          renderHeading(headingMatch[1].length + 1, headingMatch[2]);
+          continue;
+        }
+
+        if (line.trim().startsWith("|") && index + 1 < lines.length && /^\s*\|?\s*:?[-]+/.test(lines[index + 1])) {
+          index = renderTable(index);
+          continue;
+        }
+
         const unordered = line.match(/^\s*[-*]\s+(.+)$/);
         const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
         const listItem = unordered || ordered;
@@ -4520,6 +4797,14 @@
             location.href = "/history";
             return;
           }
+          if (action.target === "addressRequest") {
+            createAddressRequestLink();
+            return;
+          }
+          if (action.target === "smartPaste") {
+            focusSmartPaste();
+            return;
+          }
           byId("chatInput").value = action.message;
           sendChatMessage();
         }, {once: true});
@@ -4533,7 +4818,11 @@
       bubble.className = "chat-bubble bot typing";
       const label = document.createElement("span");
       label.textContent = mode === "local"
-        ? (ollamaAvailable && ollamaEnabled ? "Ollama 답변 준비 중" : "자체 QA에서 답변 찾는 중")
+        ? (selectedLocalEngine() === "vllm"
+            ? "vLLM 공개 모델이 답변 준비 중"
+            : selectedLocalEngine() === "ollama"
+              ? "Ollama 답변 준비 중"
+              : "자체 QA에서 답변 찾는 중")
         : "답변 준비 중";
       const dots = document.createElement("span");
       dots.className = "typing-dots";
@@ -4547,8 +4836,8 @@
 
     function collectFormSnapshot() {
       const fieldIds = [
-        "pickupAddress", "pickupName", "pickupPhone",
-        "dropoffAddress", "dropoffName", "dropoffPhone",
+        "pickupAddress", "pickupDetailAddress", "pickupName", "pickupPhone",
+        "dropoffAddress", "dropoffDetailAddress", "dropoffName", "dropoffPhone", "dropoffNote",
         "orderType", "productSize", "productName",
         "declaredValue", "wishTime", "fleet",
       ];
@@ -4561,13 +4850,82 @@
       return snapshot;
     }
 
+    const SLOT_FIELD_LABELS = {
+      pickupAddress: "출발지",
+      pickupName: "보내는 분",
+      pickupPhone: "보내는 분 연락처",
+      dropoffAddress: "도착지",
+      dropoffDetailAddress: "도착지 상세주소",
+      dropoffName: "받는 사람",
+      dropoffPhone: "받는 사람 연락처",
+      dropoffNote: "도착지 요청사항",
+      productName: "물품",
+      declaredValue: "물품가액",
+      wishTime: "픽업 시간",
+      fleet: "차량",
+      orderType: "배송 옵션",
+      productSize: "물품 크기",
+    };
+
+    function applyAgentSlots(slots, {overwrite = false} = {}) {
+      if (!slots || typeof slots !== "object") return [];
+      const applied = [];
+      Object.entries(SLOT_FIELD_LABELS).forEach(([key, label]) => {
+        const value = slots[key];
+        const field = byId(key);
+        if (!field || value === undefined || value === null || value === "") return;
+        if (!overwrite && field.value.trim() && field.value.trim() !== String(value).trim()) return;
+        if (field.value.trim() === String(value).trim()) return;
+        field.value = key.endsWith("Phone") ? formatPhone(String(value)) : String(value);
+        field.classList.remove("field-error");
+        field.dispatchEvent(new Event(field.tagName === "SELECT" ? "change" : "input", {bubbles: true}));
+        applied.push(label);
+      });
+      if (slots.driverNote && byId("driverNote") && (overwrite || !byId("driverNote").value.trim())) {
+        byId("driverNote").value = slots.driverNote;
+        byId("driverNote").dispatchEvent(new Event("input", {bubbles: true}));
+        applied.push("기사님 전달사항");
+      }
+      if (applied.some(label => label.startsWith("도착지"))) {
+        dropoffResolved = false;
+        renderRoute(false);
+      }
+      return [...new Set(applied)];
+    }
+
+    function appendAppliedSummary(bubble, applied) {
+      if (!applied.length) return;
+      const summary = document.createElement("span");
+      summary.className = "chat-applied-summary";
+      summary.textContent = `✓ ${applied.join(" · ")} 입력칸에 반영했어요.`;
+      bubble.append(summary);
+    }
+
+    function focusSmartPaste() {
+      byId("chatWidget").classList.remove("hidden");
+      const input = byId("chatInput");
+      input.placeholder = "받은 문자를 통째로 붙여넣으세요";
+      input.focus();
+      appendChatBubble(
+        "bot",
+        "받은 문자를 그대로 붙여넣어 주세요. 주소·받는 사람·전화번호를 찾아 빈 입력칸에 자동으로 넣을게요."
+      );
+    }
+
+    function resizeChatInput() {
+      const input = byId("chatInput");
+      input.style.height = "auto";
+      input.style.height = `${Math.min(input.scrollHeight, 110)}px`;
+    }
+
     async function sendChatMessage() {
       const input = byId("chatInput");
       const message = input.value.trim();
       if (!message) return;
       appendChatBubble("user", message);
       input.value = "";
-      const sendButton = document.querySelector("#chatForm button");
+      resizeChatInput();
+      const sendButton = document.querySelector('#chatForm button[type="submit"]');
       const loading = appendLoadingBubble(chatMode);
       sendButton.disabled = true;
       try {
@@ -4577,7 +4935,7 @@
           body: JSON.stringify({
             message,
             mode: chatMode,
-            localEngine: ollamaAvailable && ollamaEnabled ? "ollama" : "own",
+            localEngine: selectedLocalEngine(),
             formSnapshot: collectFormSnapshot()
           })
         });
@@ -4586,6 +4944,8 @@
           "bot",
           result.data?.reply || "응답을 받았지만 표시할 내용이 없어요."
         );
+        const applied = applyAgentSlots(result.data?.slots);
+        appendAppliedSummary(responseBubble, applied);
         appendChatActions(responseBubble, result.data?.actions);
         if (result.data?.order) loadOrders();
       } catch (error) {
@@ -4596,15 +4956,206 @@
       }
     }
 
+    async function imageFileToPayload(file) {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        throw new Error("JPG, PNG 또는 WEBP 사진을 선택해주세요.");
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error("사진은 10MB 이하로 선택해주세요.");
+      }
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1800 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      return {
+        imageBase64: canvas.toDataURL("image/jpeg", .88),
+        contentType: "image/jpeg",
+      };
+    }
+
+    async function readChatImage(file) {
+      if (!file) return;
+      byId("chatWidget").classList.remove("hidden");
+      const loading = appendLoadingBubble("ocr");
+      loading.querySelector("span").textContent = "사진에서 문자 읽는 중";
+      try {
+        const payload = await imageFileToPayload(file);
+        const result = await api("/api/smart-input/ocr", {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+        loading.remove();
+        const recognized = result.data?.text?.trim();
+        if (!recognized) throw new Error("사진에서 문자를 찾지 못했습니다.");
+        appendChatBubble("user", `📷 사진에서 읽은 문자\n${recognized}`);
+        const applied = applyAgentSlots(result.data?.slots);
+        const bubble = appendChatBubble(
+          "bot",
+          applied.length
+            ? "사진에서 배송 정보를 찾았어요. 잘못 읽힌 부분이 없는지 입력칸을 한번 확인해주세요."
+            : "문자는 읽었지만 확실한 배송 정보를 찾지 못했어요. 읽은 내용을 채팅 입력창에 넣어둘게요."
+        );
+        appendAppliedSummary(bubble, applied);
+        if (!applied.length) {
+          byId("chatInput").value = recognized;
+          resizeChatInput();
+        }
+      } catch (error) {
+        loading.remove();
+        appendChatBubble("bot", `사진을 읽지 못했어요: ${error.message}`);
+      } finally {
+        byId("chatImageInput").value = "";
+      }
+    }
+
+    function savedAddressRequests() {
+      try {
+        const items = JSON.parse(localStorage.getItem(ADDRESS_REQUESTS_KEY) || "[]");
+        return Array.isArray(items) ? items : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveAddressRequests(items) {
+      localStorage.setItem(ADDRESS_REQUESTS_KEY, JSON.stringify(items.slice(-10)));
+    }
+
+    function appendAddressLinkCard(data) {
+      const bubble = appendChatBubble(
+        "bot",
+        "받는 사람이 직접 배송지를 입력할 수 있는 링크를 만들었어요. 아래 링크를 문자나 메신저로 보내주세요."
+      );
+      const card = document.createElement("div");
+      card.className = "chat-link-card";
+      const link = document.createElement("a");
+      link.href = data.url;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = data.url;
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.textContent = "링크 복사";
+      copy.addEventListener("click", async () => {
+        await navigator.clipboard.writeText(data.url);
+        copy.textContent = "복사 완료";
+      });
+      card.append(link, copy);
+      bubble.append(card);
+      byId("chatLog").scrollTop = byId("chatLog").scrollHeight;
+    }
+
+    async function createAddressRequestLink() {
+      byId("chatWidget").classList.remove("hidden");
+      try {
+        const result = await api("/api/address-requests", {
+          method: "POST",
+          headers: {"X-Session-Id": chatSessionId},
+          body: JSON.stringify({
+            recipientName: byId("dropoffName").value.trim() || null,
+            recipientPhone: byId("dropoffPhone").value.trim() || null,
+          }),
+        });
+        const requests = savedAddressRequests();
+        requests.push({token: result.data.token, status: "WAITING"});
+        saveAddressRequests(requests);
+        appendAddressLinkCard(result.data);
+      } catch (error) {
+        appendChatBubble("bot", `주소 요청 링크를 만들지 못했어요: ${error.message}`);
+      }
+    }
+
+    async function checkAddressRequests() {
+      if (checkingAddressRequests) return;
+      checkingAddressRequests = true;
+      try {
+        const saved = savedAddressRequests();
+        let serverItems = [];
+        try {
+          const result = await api("/api/address-requests", {
+            headers: {"X-Session-Id": chatSessionId},
+          });
+          serverItems = Array.isArray(result.data) ? result.data : [];
+        } catch {
+          // 서버 목록 조회가 실패하면 브라우저에 저장된 요청만 확인한다.
+        }
+        const byToken = new Map(saved.map(item => [item.token, item]));
+        serverItems.forEach(item => {
+          byToken.set(item.token, {...byToken.get(item.token), ...item});
+        });
+        const requests = [...byToken.values()];
+        if (!requests.length) return;
+        let changed = serverItems.length > 0;
+        for (const item of requests) {
+          if (item.status !== "WAITING") continue;
+          try {
+            const result = await api(`/api/address-requests/${encodeURIComponent(item.token)}`);
+            Object.assign(item, result.data);
+            changed = true;
+          } catch {
+            // 일시적인 네트워크 오류는 다음 확인 주기에 다시 시도한다.
+          }
+        }
+        const latestCompleted = [...requests]
+          .reverse()
+          .find(item => item.status === "COMPLETED");
+        if (
+          latestCompleted
+          && !appliedAddressRequestTokens.has(latestCompleted.token)
+        ) {
+          const applied = applyAgentSlots({
+            dropoffAddress: latestCompleted.address,
+            dropoffDetailAddress: latestCompleted.detailAddress,
+            dropoffName: latestCompleted.recipientName,
+            dropoffPhone: latestCompleted.recipientPhone,
+            dropoffNote: latestCompleted.note,
+          }, {overwrite: true});
+          appliedAddressRequestTokens.add(latestCompleted.token);
+          const bubble = appendChatBubble(
+            "bot",
+            "받는 사람이 배송지를 입력했어요. 도착지 입력칸에 자동으로 반영했습니다."
+          );
+          appendAppliedSummary(bubble, applied);
+        }
+        if (changed) saveAddressRequests(requests);
+      } finally {
+        checkingAddressRequests = false;
+      }
+    }
+
     byId("chatForm").addEventListener("submit", (event) => {
       event.preventDefault();
       sendChatMessage();
     });
+    byId("chatInput").addEventListener("input", resizeChatInput);
+    byId("chatInput").addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        byId("chatForm").requestSubmit();
+      }
+    });
+    byId("chatImageInput").addEventListener("change", event => {
+      readChatImage(event.target.files?.[0]);
+    });
     updateOllamaUi();
 
     async function initialize() {
+      window.setInterval(checkAddressRequests, 5000);
+      window.addEventListener("focus", checkAddressRequests);
+      window.addEventListener("online", checkAddressRequests);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") checkAddressRequests();
+      });
       await loadCurrentUser();
-      await refreshOllamaStatus();
+      await checkAddressRequests();
+      refreshOllamaStatus().catch(() => {
+        ollamaAvailable = false;
+        vllmAvailable = false;
+        updateOllamaUi();
+      });
       const query = new URLSearchParams(location.search);
       if (query.get("login") === "1") {
         openAuthModal();
@@ -4633,7 +5184,7 @@
     const quickFormFields = [
       "orderType", "productSize", "fleet", "wishTime", "pickupAddress", "pickupDetailAddress",
       "pickupName", "pickupPhone", "dropoffAddress", "dropoffDetailAddress",
-      "dropoffName", "dropoffPhone", "productName", "declaredValue",
+      "dropoffName", "dropoffPhone", "dropoffNote", "productName", "declaredValue",
       "driverNote", "highValueNotice", "noElevator", "needCart"
     ];
     quickFormFields.forEach(id => {
@@ -4649,6 +5200,9 @@
         if (id === "productSize") updateHandlingUi();
         if (id === "pickupPhone" || id === "dropoffPhone") {
           field.value = formatPhone(field.value);
+        }
+        if (id === "declaredValue") {
+          field.value = formatNumberWithCommas(field.value);
         }
         field.classList.remove("field-error");
         handleQuickFormChange();

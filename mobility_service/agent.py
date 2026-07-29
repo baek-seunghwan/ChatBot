@@ -34,6 +34,7 @@ from .models import (
     ProductSize,
 )
 from .orders import cancel_order_by_id, get_order_steps, place_order
+from .smart_input import extract_dropoff_slots
 from .store import MobilityStore
 
 MAX_HISTORY_TURNS = 6
@@ -123,8 +124,8 @@ SLOT_EXTRACT_PROMPT = """사용자의 배송 요청 메시지에서 알 수 있�
 가능한 키 (알 수 있는 것만 포함, 모르면 키 자체를 넣지 마세요):
 - orderType: QUICK, QUICK_ECONOMY, QUICK_EXPRESS, DOBO 중 하나
 - productSize: XS, S, M, L 중 하나
-- pickupAddress, pickupName, pickupPhone
-- dropoffAddress, dropoffName, dropoffPhone
+- pickupAddress, pickupDetailAddress, pickupName, pickupPhone
+- dropoffAddress, dropoffDetailAddress, dropoffName, dropoffPhone
 - productName, declaredValue(숫자), quantity, wishTime
 - paymentType: CARD, CASH_ON_PICKUP, CASH_ON_DROPOFF 중 하나
 - fleet: MOTORCYCLE, JIMBAJI_MOTORCYCLE, PASSENGER_CAR, DAMAS, LABO, TON 중 하나
@@ -185,6 +186,7 @@ def _slots_payload(slots: dict[str, Any]) -> dict[str, Any]:
         "pickup": {
             "location": {
                 "basicAddress": slots.get("pickupAddress"),
+                "detailAddress": slots.get("pickupDetailAddress"),
                 "latitude": slots.get("pickupLat"),
                 "longitude": slots.get("pickupLng"),
             },
@@ -196,6 +198,7 @@ def _slots_payload(slots: dict[str, Any]) -> dict[str, Any]:
         "dropoff": {
             "location": {
                 "basicAddress": slots.get("dropoffAddress"),
+                "detailAddress": slots.get("dropoffDetailAddress"),
                 "latitude": slots.get("dropoffLat"),
                 "longitude": slots.get("dropoffLng"),
             },
@@ -396,7 +399,12 @@ class DeliveryAgent:
         ):
             return "question"
 
-        if re.search(r"(010[- ]?\d{4}|출발지|도착지|받는\s*사람|보내는\s*사람)", text):
+        if re.search(
+            r"(010[- ]?\d{4}|출발지|도착지|배송지|받는\s*사람|보내는\s*사람|"
+            r"(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)"
+            r".*(?:로|길|동)\s*\d+)",
+            text,
+        ):
             return "provide_info"
         if re.search(r"(퀵|도보).*(보내|접수|주문|배송)", text):
             return "provide_info"
@@ -486,9 +494,9 @@ class DeliveryAgent:
 
     @staticmethod
     def _heuristic_slots(message: str) -> dict[str, Any]:
-        """버튼 선택과 명확한 한국어 차량명을 LLM 없이도 슬롯으로 반영한다."""
+        """명확한 차량 선택과 붙여넣은 수령인 정보를 LLM 없이도 반영한다."""
         text = message.lower()
-        slots: dict[str, Any] = {}
+        slots: dict[str, Any] = dict(extract_dropoff_slots(message)["slots"])
         for pattern, value in (
             (r"짐받이\s*오토바이", "JIMBAJI_MOTORCYCLE"),
             (r"오토바이|바이크", "MOTORCYCLE"),
@@ -544,8 +552,9 @@ class DeliveryAgent:
                 delta = {}
 
         allowed_keys = {
-            "orderType", "productSize", "pickupAddress", "pickupName", "pickupPhone",
-            "dropoffAddress", "dropoffName", "dropoffPhone", "productName",
+            "orderType", "productSize", "pickupAddress", "pickupDetailAddress",
+            "pickupName", "pickupPhone", "dropoffAddress", "dropoffDetailAddress",
+            "dropoffName", "dropoffPhone", "productName",
             "declaredValue", "quantity", "wishTime", "paymentType", "fleet",
         }
         applied = []
@@ -624,9 +633,39 @@ class DeliveryAgent:
 
     async def _ask_clarification(self, state: AgentState) -> AgentState:
         summary = state.get("missing_summary") or "필요한 정보가 더 있어요."
-        reply = f"주문을 진행하려면 아래 정보가 더 필요해요.\n{summary}"
+        slots = state.get("slots", {})
+        recognized_labels = [
+            label
+            for key, label in (
+                ("dropoffAddress", "도착지"),
+                ("dropoffDetailAddress", "상세주소"),
+                ("dropoffName", "받는 사람"),
+                ("dropoffPhone", "연락처"),
+                ("productName", "물품"),
+            )
+            if slots.get(key)
+        ]
+        acknowledgement = (
+            f"확인했어요. **{' · '.join(recognized_labels)}** 정보는 입력칸에 반영할게요.\n\n"
+            if recognized_labels
+            else ""
+        )
+        reply = (
+            f"{acknowledgement}이제 아래 정보만 더 알려주시면 다음 단계로 이어갈게요.\n"
+            f"{summary}"
+        )
         self._conversations.save_slots(state["session_id"], state.get("slots", {}), "collecting")
         actions = [
+            {
+                "label": "받는 사람에게 주소 요청",
+                "message": "받는 사람이 직접 주소를 입력하도록 요청",
+                "target": "addressRequest",
+            },
+            {
+                "label": "받은 문자 붙여넣기",
+                "message": "받은 문자 붙여넣기",
+                "target": "smartPaste",
+            },
             {"label": "차량 선택", "message": "차량 선택지를 보여줘"},
             {"label": "처음부터", "message": "주문 작성을 취소하고 처음부터 할래"},
         ]

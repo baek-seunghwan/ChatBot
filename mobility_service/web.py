@@ -20,3 +20,6 @@ ADMIN_HTML = Path(__file__).with_name("admin.html").read_text(encoding="utf-8")
 FEATURES_HTML = _page("features.html", active="bundle")
 HISTORY_HTML = _page("history.html", active="history")
 ABOUT_HTML = _page("about.html", active="about")
+RECIPIENT_ADDRESS_HTML = Path(__file__).with_name(
+    "recipient_address.html"
+).read_text(encoding="utf-8")

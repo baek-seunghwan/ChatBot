@@ -114,7 +114,7 @@ class BundleBookingTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def test_home_form_has_quick_and_automatic_smart_delivery_flow(self) -> None:
-        response = self.client.get("/")
+        response = self.client.get("/order")
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("+ 보내는 사람", response.text)
