@@ -8,17 +8,20 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import httpx
 from fastapi.testclient import TestClient
 
 from mobility_service.app import create_app
+from mobility_service.agent import DeliveryAgent
 from mobility_service.auth import build_authorization
 from mobility_service.client import KakaoMobilityClient
 from mobility_service.config import Settings
 from mobility_service.models import DeliveryDraft
 from mobility_service.my_model import load_qa_index, own_model_reply
+from mobility_service.providers import LLMRouter
+from mobility_service.smart_input import extract_dropoff_slots
 from mobility_service.store import MobilityStore
 
 
@@ -117,6 +120,41 @@ class KakaoClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("contact", payload["pickup"])
 
 
+class VllmProviderTests(unittest.TestCase):
+    def test_open_weight_vllm_can_generate_for_ai_agent(self) -> None:
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "choices": [{"message": {"content": "주소를 알려주세요."}}]
+        }
+        router = LLMRouter(
+            primary_provider="vllm",
+            fallback_provider=None,
+            vllm_base_url="https://model.example/v1",
+            vllm_api_key="test-secret",
+            vllm_model="Qwen/Qwen2.5-3B-Instruct",
+        )
+
+        with patch("mobility_service.providers.httpx.post", return_value=response) as post:
+            result = router.generate(
+                "퀵 접수하고 싶어",
+                system="배송 도우미",
+                max_tokens=100,
+                temperature=0.0,
+            )
+
+        self.assertEqual(result.provider, "vllm")
+        self.assertEqual(result.text, "주소를 알려주세요.")
+        self.assertEqual(
+            post.call_args.args[0],
+            "https://model.example/v1/chat/completions",
+        )
+        self.assertEqual(
+            post.call_args.kwargs["headers"]["Authorization"],
+            "Bearer test-secret",
+        )
+
+
 class FakeKakaoClient:
     def __init__(self) -> None:
         self.create_calls = 0
@@ -194,7 +232,7 @@ class MobilityApiTests(unittest.TestCase):
         self.temporary.cleanup()
 
     def test_feature_intro_page_is_linked_from_home(self) -> None:
-        home = self.client.get("/")
+        home = self.client.get("/order")
         features = self.client.get("/features")
 
         self.assertEqual(home.status_code, 200)
@@ -202,7 +240,7 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("스마트 딜리버리", home.text)
         self.assertEqual(features.status_code, 200)
         self.assertIn("여러 곳에서 픽업하고", features.text)
-        self.assertIn('href="/#smartDelivery"', features.text)
+        self.assertIn('href="/order#smartDelivery"', features.text)
         self.assertIn("기능 소개", features.text)
 
     def test_brand_intro_has_hero_image(self) -> None:
@@ -217,7 +255,7 @@ class MobilityApiTests(unittest.TestCase):
         self.assertGreater(len(hero.content), 100_000)
 
     def test_smart_delivery_is_integrated_into_home(self) -> None:
-        home = self.client.get("/")
+        home = self.client.get("/order")
         legacy = self.client.get("/bundle", follow_redirects=False)
         old_form = self.client.get("/smart-delivery/form", follow_redirects=False)
 
@@ -230,15 +268,15 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("/api/delivery-matches", home.text)
         self.assertIn("스마트 딜리버리", home.text)
         self.assertEqual(legacy.status_code, 307)
-        self.assertEqual(legacy.headers["location"], "/#smartDelivery")
+        self.assertEqual(legacy.headers["location"], "/order#smartDelivery")
         self.assertEqual(old_form.status_code, 307)
-        self.assertEqual(old_form.headers["location"], "/#smartDelivery")
+        self.assertEqual(old_form.headers["location"], "/order#smartDelivery")
         self.assertIn("/api/smart-delivery/quote", home.text)
         self.assertIn("/api/smart-delivery/orders", home.text)
         self.assertIn("grid-column: 1 / -1", home.text)
 
     def test_home_keeps_chat_shortcuts_and_links_to_separate_history(self) -> None:
-        home = self.client.get("/")
+        home = self.client.get("/order")
         history = self.client.get("/history")
 
         self.assertIn("배송 주문", home.text)
@@ -263,7 +301,7 @@ class MobilityApiTests(unittest.TestCase):
 
     def test_customer_pages_use_the_exact_same_shared_header(self) -> None:
         pages = [
-            self.client.get("/"),
+            self.client.get("/order"),
             self.client.get("/features"),
         ]
         headers: list[str] = []
@@ -285,7 +323,7 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("로그인", headers[0])
 
     def test_history_page_preserves_shared_brand_and_header_position(self) -> None:
-        home = self.client.get("/")
+        home = self.client.get("/order")
         history = self.client.get("/history")
 
         self.assertEqual(history.status_code, 200)
@@ -303,12 +341,135 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn('href="/history"', history.text)
 
     def test_home_has_ollama_toggle_for_local_chat(self) -> None:
-        home = self.client.get("/")
+        home = self.client.get("/order")
 
         self.assertEqual(home.status_code, 200)
         self.assertIn('id="ollamaSwitch"', home.text)
         self.assertIn('role="switch"', home.text)
-        self.assertIn('ollamaAvailable && ollamaEnabled ? "ollama" : "own"', home.text)
+        self.assertIn("function selectedLocalEngine()", home.text)
+        self.assertIn('return "vllm"', home.text)
+
+    def test_chat_can_apply_message_photo_and_shared_address_to_form(self) -> None:
+        home = self.client.get("/order")
+
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('id="chatImageInput"', home.text)
+        self.assertIn("문자 붙여넣기", home.text)
+        self.assertIn("사진 읽기", home.text)
+        self.assertIn("주소 요청 링크", home.text)
+        self.assertIn("function applyAgentSlots", home.text)
+        self.assertIn("/api/smart-input/ocr", home.text)
+        self.assertIn("/api/address-requests", home.text)
+        self.assertIn('localEngine: selectedLocalEngine()', home.text)
+
+    def test_smart_text_extracts_recipient_fields(self) -> None:
+        response = self.client.post(
+            "/api/smart-input/extract",
+            json={
+                "text": (
+                    "받는 사람: 김민수\n"
+                    "연락처: 010-1234-5678\n"
+                    "배송지: 대전광역시 서구 둔산로 100 3층\n"
+                    "물품: 서류 봉투"
+                )
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        slots = response.json()["data"]["slots"]
+        self.assertEqual(slots["dropoffName"], "김민수")
+        self.assertEqual(slots["dropoffPhone"], "010-1234-5678")
+        self.assertEqual(slots["dropoffAddress"], "대전광역시 서구 둔산로 100")
+        self.assertEqual(slots["dropoffDetailAddress"], "3층")
+        self.assertEqual(slots["productName"], "서류 봉투")
+
+        unlabeled = extract_dropoff_slots(
+            "여기로 보내줘\n경기도 성남시 분당구 판교역로 152, 13층\n"
+            "김서연 010 2222 3333"
+        )
+        self.assertEqual(unlabeled["slots"]["dropoffName"], "김서연")
+        self.assertEqual(unlabeled["slots"]["dropoffPhone"], "010-2222-3333")
+        agent_slots = DeliveryAgent._heuristic_slots(
+            "받는 사람: 김민수\n010-1234-5678\n"
+            "배송지: 대전광역시 서구 둔산로 100 3층"
+        )
+        self.assertEqual(agent_slots["dropoffAddress"], "대전광역시 서구 둔산로 100")
+
+    def test_ocr_text_uses_same_recipient_extractor(self) -> None:
+        with patch(
+            "mobility_service.app.extract_text_from_image",
+            return_value=(
+                "수령인: 박서연\n"
+                "010-9876-5432\n"
+                "주소: 서울특별시 중구 세종대로 110 5층"
+            ),
+        ):
+            response = self.client.post(
+                "/api/smart-input/ocr",
+                json={
+                    "imageBase64": "data:image/jpeg;base64," + ("A" * 40),
+                    "contentType": "image/jpeg",
+                },
+            )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["data"]
+        self.assertIn("서울특별시", data["text"])
+        self.assertEqual(data["slots"]["dropoffName"], "박서연")
+        self.assertEqual(data["slots"]["dropoffPhone"], "010-9876-5432")
+
+    def test_recipient_address_link_round_trip(self) -> None:
+        created = self.client.post(
+            "/api/address-requests",
+            headers={"X-Session-Id": "sender-session"},
+            json={
+                "recipientName": "받는사람",
+                "recipientPhone": "010-1000-0002",
+            },
+        )
+
+        self.assertEqual(created.status_code, 200)
+        token = created.json()["data"]["token"]
+        self.assertIn(f"/address-request/{token}", created.json()["data"]["url"])
+        self.assertNotIn("senderSessionId", created.json()["data"])
+
+        page = self.client.get(f"/address-request/{token}")
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("받으실 곳을 알려주세요", page.text)
+
+        submitted = self.client.put(
+            f"/api/address-requests/{token}",
+            json={
+                "name": "받는사람",
+                "phone": "010-1000-0002",
+                "address": "대전광역시 서구 둔산로 100",
+                "detailAddress": "3층",
+                "note": "도착 전 연락",
+            },
+        )
+        self.assertEqual(submitted.status_code, 200)
+
+        completed = self.client.get(f"/api/address-requests/{token}")
+        self.assertEqual(completed.status_code, 200)
+        result = completed.json()["data"]
+        self.assertEqual(result["status"], "COMPLETED")
+        self.assertEqual(result["address"], "대전광역시 서구 둔산로 100")
+        self.assertEqual(result["detailAddress"], "3층")
+        self.assertNotIn("senderSessionId", result)
+
+        sender_requests = self.client.get(
+            "/api/address-requests",
+            headers={"X-Session-Id": "sender-session"},
+        )
+        self.assertEqual(sender_requests.status_code, 200)
+        listed = sender_requests.json()["data"]
+        self.assertEqual(len(listed), 1)
+        self.assertEqual(listed[0]["token"], token)
+        self.assertEqual(listed[0]["status"], "COMPLETED")
+        self.assertNotIn("senderSessionId", listed[0])
+
+        missing_session = self.client.get("/api/address-requests")
+        self.assertEqual(missing_session.status_code, 400)
 
     def test_local_chat_status_reports_server_side_ollama_state(self) -> None:
         with patch(
@@ -326,7 +487,7 @@ class MobilityApiTests(unittest.TestCase):
         self.assertEqual(response.json()["data"]["model"], "gemma4:e2b")
 
     def test_quick_request_has_guided_booking_flow(self) -> None:
-        home = self.client.get("/")
+        home = self.client.get("/order")
 
         self.assertEqual(home.status_code, 200)
         self.assertIn("한 화면에서 순서대로 입력해요", home.text)
@@ -341,7 +502,7 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("도착지 미설정", home.text)
 
     def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
-        home = self.client.get("/")
+        home = self.client.get("/order")
         features = self.client.get("/features")
         history = self.client.get("/history")
 

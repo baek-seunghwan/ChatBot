@@ -16,6 +16,10 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434").rstrip(
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:e2b")
 # 첫 호출은 모델을 메모리에 올리느라 오래 걸릴 수 있다.
 OLLAMA_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_TIMEOUT_SECONDS", "120"))
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "").rstrip("/")
+VLLM_MODEL = os.getenv("VLLM_MODEL", "Qwen/Qwen2.5-3B-Instruct")
+VLLM_API_KEY = os.getenv("VLLM_API_KEY", "")
+VLLM_TIMEOUT_SECONDS = float(os.getenv("VLLM_TIMEOUT_SECONDS", "120"))
 
 _SYSTEM_PROMPT = (
     "당신은 MOVB 스마트 딜리버리 서비스의 로컬 챗봇입니다. "
@@ -65,6 +69,50 @@ def ollama_status() -> dict[str, object]:
         }
 
 
+def vllm_status() -> dict[str, object]:
+    if not VLLM_BASE_URL:
+        return {
+            "available": False,
+            "model": VLLM_MODEL,
+            "message": "VLLM_BASE_URL이 설정되지 않았습니다.",
+        }
+    headers = (
+        {"Authorization": f"Bearer {VLLM_API_KEY}"}
+        if VLLM_API_KEY
+        else {}
+    )
+    try:
+        response = httpx.get(
+            f"{VLLM_BASE_URL}/models",
+            headers=headers,
+            timeout=3.0,
+        )
+        response.raise_for_status()
+        body = response.json()
+        models = body.get("data", []) if isinstance(body, dict) else []
+        names = {
+            str(model.get("id", ""))
+            for model in models
+            if isinstance(model, dict)
+        }
+        available = VLLM_MODEL in names
+        return {
+            "available": available,
+            "model": VLLM_MODEL,
+            "message": (
+                "vLLM 공개 모델 서버가 준비되어 있습니다."
+                if available
+                else f"vLLM에 {VLLM_MODEL} 모델이 없습니다."
+            ),
+        }
+    except (httpx.HTTPError, ValueError):
+        return {
+            "available": False,
+            "model": VLLM_MODEL,
+            "message": "vLLM 모델 서버에 연결할 수 없습니다.",
+        }
+
+
 def _dynamic_answer(prompt: str) -> str | None:
     now = datetime.now()
     if _TIME_PATTERN.search(prompt):
@@ -79,6 +127,7 @@ def local_model_reply(prompt: str, engine: str = "ollama") -> str:
     """'내 로컬 채팅' 모드 응답. 동기 함수라 호출부에서 asyncio.to_thread로 감싼다.
 
     engine:
+      - "vllm": 공개 가중치 모델을 서빙하는 vLLM OpenAI 호환 API 사용.
       - "ollama": Ollama(gemma4) 사용. 꺼져 있으면 나만의 모델로 자동 폴백.
       - "own": 나만의 모델(자체 QA 매칭)만 사용 — 외부 서버 불필요.
     """
@@ -93,14 +142,55 @@ def local_model_reply(prompt: str, engine: str = "ollama") -> str:
     if engine == "own":
         return own_model_reply(text)
 
+    knowledge_results = default_knowledge_base().search(text, limit=3)
+    knowledge_context = (
+        "\n\n[검색된 MOVB 근거]\n"
+        + default_knowledge_base().context(knowledge_results)
+        if knowledge_results
+        else ""
+    )
+
+    if engine == "vllm":
+        if not VLLM_BASE_URL:
+            return "🔌 vLLM 서버가 설정되지 않아 자체 QA로 답했어요.\n" + own_model_reply(text)
+        headers = {"Content-Type": "application/json"}
+        if VLLM_API_KEY:
+            headers["Authorization"] = f"Bearer {VLLM_API_KEY}"
+        try:
+            response = httpx.post(
+                f"{VLLM_BASE_URL}/chat/completions",
+                headers=headers,
+                json={
+                    "model": VLLM_MODEL,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": _SYSTEM_PROMPT + knowledge_context,
+                        },
+                        {"role": "user", "content": text},
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 600,
+                },
+                timeout=VLLM_TIMEOUT_SECONDS,
+            )
+            response.raise_for_status()
+            body = response.json()
+            choices = body.get("choices", []) if isinstance(body, dict) else []
+            answer = (
+                choices[0].get("message", {}).get("content", "")
+                if choices and isinstance(choices[0], dict)
+                else ""
+            )
+            return str(answer).strip() or "vLLM 모델이 빈 응답을 반환했어요."
+        except httpx.ConnectError:
+            return "🔌 vLLM 서버에 연결할 수 없어 자체 QA로 답했어요.\n" + own_model_reply(text)
+        except httpx.TimeoutException:
+            return "vLLM 모델 응답이 너무 오래 걸려요. 잠시 후 다시 시도해주세요."
+        except (httpx.HTTPError, ValueError) as exc:
+            return f"vLLM 모델 응답 중 오류가 발생했어요: {type(exc).__name__}"
+
     try:
-        knowledge_results = default_knowledge_base().search(text, limit=3)
-        knowledge_context = (
-            "\n\n[검색된 MOVB 근거]\n"
-            + default_knowledge_base().context(knowledge_results)
-            if knowledge_results
-            else ""
-        )
         response = httpx.post(
             f"{OLLAMA_BASE_URL}/api/chat",
             json={

@@ -232,6 +232,29 @@ OLLAMA_BASE_URL=http://localhost:11434
 OLLAMA_MODEL=gemma4:e2b
 ```
 
+공개 가중치 모델을 vLLM으로 서빙하면 AI 채팅과 로컬 채팅이 해당 서버를
+자동 폴백으로 사용할 수 있습니다.
+
+```bash
+vllm serve Qwen/Qwen2.5-3B-Instruct \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --api-key change-me \
+  --max-model-len 4096
+```
+
+```dotenv
+VLLM_BASE_URL=http://127.0.0.1:8000/v1
+VLLM_MODEL=Qwen/Qwen2.5-3B-Instruct
+VLLM_API_KEY=change-me
+```
+
+챗봇 입력창에는 받은 문자를 통째로 붙여넣을 수 있습니다. 주소·수령인·전화번호를
+찾으면 배송 접수 폼의 빈 입력칸에 자동 반영합니다. 문자 화면을 사진으로 올리면
+한국어 OCR을 거쳐 같은 흐름으로 처리합니다. `주소 요청 링크`를 만들면 받는 사람이
+다른 컴퓨터나 휴대폰에서 배송지를 직접 입력할 수 있고, 완료된 정보는 원래 접수
+화면에 자동 반영됩니다.
+
 Render 같은 원격 서버의 `localhost`는 개발자 컴퓨터가 아닙니다. 원격 배포에서
 Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결할 수 없으면 MOVB가
 내장 Knowledge RAG와 저장소에 포함된 자체 QA 모드로 답변합니다. Ollama가 연결된
@@ -242,6 +265,10 @@ Ollama를 쓰려면 별도의 보안 HTTPS 모델 서버가 필요하며, 연결
 | 메서드 | 경로 | 설명 |
 |---|---|---|
 | `POST` | `/api/agent/chat` | AI·로컬 채팅 통합 진입점 |
+| `POST` | `/api/smart-input/extract` | 붙여넣은 문자에서 수령인 배송 정보 추출 |
+| `POST` | `/api/smart-input/ocr` | 문자 사진 OCR 및 배송 정보 추출 |
+| `POST` | `/api/address-requests` | 수령인 배송지 입력 링크 생성 |
+| `GET/PUT` | `/api/address-requests/{token}` | 수령인 배송지 조회·제출 |
 | `GET` | `/api/knowledge/search` | MOVB 지식 검색 결과 확인 |
 | `POST` | `/api/deliveries/price` | 배송 가격 조회 |
 | `POST` | `/api/deliveries/estimate` | 배송 ETA + 실도로/미래 운행 정보 |

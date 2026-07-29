@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+import httpx
 from langsmith import trace
 
 
@@ -28,6 +29,9 @@ class LLMRouter:
         gemini_api_key: str | None = None,
         anthropic_model: str | None = None,
         gemini_model: str | None = None,
+        vllm_base_url: str | None = None,
+        vllm_api_key: str | None = None,
+        vllm_model: str | None = None,
     ) -> None:
         self.primary_provider = primary_provider.lower().strip()
         self.fallback_provider = (
@@ -47,13 +51,35 @@ class LLMRouter:
         self.gemini_model = gemini_model or os.getenv(
             "GEMINI_MODEL", DEFAULT_GEMINI_MODEL
         )
+        self.vllm_base_url = (
+            vllm_base_url
+            if vllm_base_url is not None
+            else os.getenv("VLLM_BASE_URL", "")
+        ).rstrip("/")
+        self.vllm_api_key = (
+            vllm_api_key
+            if vllm_api_key is not None
+            else os.getenv("VLLM_API_KEY", "")
+        )
+        self.vllm_model = vllm_model or os.getenv(
+            "VLLM_MODEL", "Qwen/Qwen2.5-3B-Instruct"
+        )
 
     @property
     def provider_order(self) -> list[str]:
         providers = [self.primary_provider]
         if self.fallback_provider and self.fallback_provider not in providers:
             providers.append(self.fallback_provider)
+        if self.vllm_base_url and "vllm" not in providers:
+            providers.append("vllm")
         return providers
+
+    def _provider_model(self, provider: str) -> str:
+        return {
+            "anthropic": self.anthropic_model,
+            "gemini": self.gemini_model,
+            "vllm": self.vllm_model,
+        }.get(provider, provider)
 
     def _anthropic_generate(
         self,
@@ -117,6 +143,45 @@ class LLMRouter:
             raise RuntimeError("Gemini가 빈 응답을 반환했습니다.")
         return LLMResult(text=text, provider="gemini", model=self.gemini_model)
 
+    def _vllm_generate(
+        self,
+        prompt: str,
+        system: str,
+        max_tokens: int,
+        temperature: float,
+    ) -> LLMResult:
+        if not self.vllm_base_url:
+            raise RuntimeError("VLLM_BASE_URL이 설정되지 않았습니다.")
+        headers = {"Content-Type": "application/json"}
+        if self.vllm_api_key:
+            headers["Authorization"] = f"Bearer {self.vllm_api_key}"
+        response = httpx.post(
+            f"{self.vllm_base_url}/chat/completions",
+            headers=headers,
+            json={
+                "model": self.vllm_model,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": prompt},
+                ],
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        body = response.json()
+        choices = body.get("choices", []) if isinstance(body, dict) else []
+        text = (
+            choices[0].get("message", {}).get("content", "")
+            if choices and isinstance(choices[0], dict)
+            else ""
+        )
+        text = str(text).strip()
+        if not text:
+            raise RuntimeError("vLLM이 빈 응답을 반환했습니다.")
+        return LLMResult(text=text, provider="vllm", model=self.vllm_model)
+
     def generate(
         self,
         prompt: str,
@@ -139,7 +204,7 @@ class LLMRouter:
         ) as router_run:
             errors: list[str] = []
             for provider in self.provider_order:
-                model = self.anthropic_model if provider == "anthropic" else self.gemini_model
+                model = self._provider_model(provider)
                 try:
                     with trace(
                         f"{provider}.generate",
@@ -159,6 +224,10 @@ class LLMRouter:
                             )
                         elif provider == "gemini":
                             result = self._gemini_generate(
+                                prompt, system, max_tokens, temperature
+                            )
+                        elif provider == "vllm":
+                            result = self._vllm_generate(
                                 prompt, system, max_tokens, temperature
                             )
                         else:

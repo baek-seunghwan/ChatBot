@@ -67,7 +67,7 @@ class KakaoMobilityClient:
             raise KakaoApiError("카카오모빌리티 API 응답 시간이 초과됐습니다.") from exc
         except httpx.HTTPError as exc:
             raise KakaoApiError(
-                f"카카오모빌리티 API 연결에 실패했습니다: {type(exc).__name__}"
+                "카카오모빌리티 서버에 잠시 연결할 수 없어요. 잠시 후 다시 시도해주세요."
             ) from exc
 
         try:

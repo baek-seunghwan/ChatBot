@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import secrets
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -29,9 +30,11 @@ from .conversation_store import ConversationStore
 from .directions import KakaoDirectionsClient, RoutePlanner
 from .geocode import KakaoGeocodeClient
 from .knowledge import default_knowledge_base
-from .local_responder import local_model_reply, ollama_status
+from .local_responder import local_model_reply, ollama_status, vllm_status
 from .matching import build_pooled_order, compatible_for_pooling
 from .models import (
+    AddressShareCreateRequest,
+    AddressShareSubmitRequest,
     AgentChatRequest,
     ApiEnvelope,
     BundleOrderRequest,
@@ -40,10 +43,13 @@ from .models import (
     CreateDeliveryRequest,
     DeliveryDraft,
     LoginRequest,
+    OcrImageRequest,
     RegisterRequest,
     RouteSummaryRequest,
     SandboxStatusChange,
+    SmartTextRequest,
 )
+from .ocr import OcrUnavailableError, extract_text_from_image
 from .orders import (
     cancel_order_by_id,
     get_order_status,
@@ -51,8 +57,16 @@ from .orders import (
     place_order,
 )
 from .store import MobilityStore
+from .smart_input import extract_dropoff_slots
 from .user_store import DuplicateEmailError, SESSION_TTL_SECONDS, UserStore
-from .web import ABOUT_HTML, ADMIN_HTML, FEATURES_HTML, HISTORY_HTML, INDEX_HTML
+from .web import (
+    ABOUT_HTML,
+    ADMIN_HTML,
+    FEATURES_HTML,
+    HISTORY_HTML,
+    INDEX_HTML,
+    RECIPIENT_ADDRESS_HTML,
+)
 
 
 SESSION_COOKIE_NAME = "movb_session"
@@ -204,6 +218,14 @@ def create_app(
         return ABOUT_HTML
 
     @application.get(
+        "/address-request/{token}",
+        response_class=HTMLResponse,
+        include_in_schema=False,
+    )
+    async def recipient_address_page(token: str) -> str:
+        return RECIPIENT_ADDRESS_HTML
+
+    @application.get(
         "/assets/movb-brand-hero.webp",
         response_class=FileResponse,
         include_in_schema=False,
@@ -213,6 +235,105 @@ def create_app(
             BRAND_HERO_PATH,
             media_type="image/webp",
             headers={"Cache-Control": "public, max-age=604800"},
+        )
+
+    @application.post("/api/smart-input/extract", response_model=ApiEnvelope)
+    async def smart_text_extract(payload: SmartTextRequest) -> ApiEnvelope:
+        return ApiEnvelope(data=extract_dropoff_slots(payload.text))
+
+    @application.post("/api/smart-input/ocr", response_model=ApiEnvelope)
+    async def smart_image_ocr(payload: OcrImageRequest) -> ApiEnvelope:
+        try:
+            text = await asyncio.to_thread(
+                extract_text_from_image,
+                payload.image_base64,
+                payload.content_type,
+            )
+        except OcrUnavailableError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except RuntimeError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return ApiEnvelope(
+            data={
+                "text": text,
+                **extract_dropoff_slots(text),
+            }
+        )
+
+    def public_address_share(item: dict[str, Any]) -> dict[str, Any]:
+        return {
+            key: value
+            for key, value in item.items()
+            if key != "senderSessionId"
+        }
+
+    @application.post("/api/address-requests", response_model=ApiEnvelope)
+    async def create_address_request(
+        payload: AddressShareCreateRequest,
+        request: Request,
+        x_session_id: str | None = Header(default=None, alias="X-Session-Id"),
+    ) -> ApiEnvelope:
+        session_id = x_session_id or f"share-{uuid4().hex}"
+        token = secrets.token_urlsafe(24)
+        item = resolved_store.create_address_share(
+            token=token,
+            sender_session_id=session_id,
+            recipient_name=payload.recipient_name,
+            recipient_phone=payload.recipient_phone,
+        )
+        base_url = str(request.base_url).rstrip("/")
+        return ApiEnvelope(
+            data={
+                **public_address_share(item),
+                "url": f"{base_url}/address-request/{token}",
+            }
+        )
+
+    @application.get("/api/address-requests", response_model=ApiEnvelope)
+    async def list_address_requests(
+        x_session_id: str | None = Header(default=None, alias="X-Session-Id"),
+    ) -> ApiEnvelope:
+        if not x_session_id:
+            raise HTTPException(status_code=400, detail="세션 정보가 필요합니다.")
+        items = resolved_store.list_address_shares(x_session_id)
+        return ApiEnvelope(data=[public_address_share(item) for item in items])
+
+    @application.get(
+        "/api/address-requests/{token}",
+        response_model=ApiEnvelope,
+    )
+    async def get_address_request(token: str) -> ApiEnvelope:
+        item = resolved_store.get_address_share(token)
+        if item is None:
+            raise HTTPException(status_code=404, detail="주소 요청을 찾지 못했습니다.")
+        return ApiEnvelope(data=public_address_share(item))
+
+    @application.put(
+        "/api/address-requests/{token}",
+        response_model=ApiEnvelope,
+    )
+    async def submit_address_request(
+        token: str,
+        payload: AddressShareSubmitRequest,
+    ) -> ApiEnvelope:
+        item = resolved_store.complete_address_share(
+            token,
+            address=payload.address,
+            detail_address=payload.detail_address,
+            name=payload.name,
+            phone=payload.phone,
+            note=payload.note,
+        )
+        if item is None:
+            raise HTTPException(
+                status_code=404,
+                detail="주소 요청을 찾을 수 없거나 링크가 만료되었습니다.",
+            )
+        return ApiEnvelope(
+            data=public_address_share(item),
+            message="받는 사람의 배송지가 전달되었습니다.",
         )
 
     @application.get(
@@ -270,6 +391,10 @@ def create_app(
     @application.get("/api/local-chat/status", response_model=ApiEnvelope)
     async def local_chat_status() -> ApiEnvelope:
         return ApiEnvelope(data=await asyncio.to_thread(ollama_status))
+
+    @application.get("/api/vllm/status", response_model=ApiEnvelope)
+    async def public_model_status() -> ApiEnvelope:
+        return ApiEnvelope(data=await asyncio.to_thread(vllm_status))
 
     @application.get("/api/knowledge/search", response_model=ApiEnvelope)
     async def knowledge_search(

@@ -859,6 +859,15 @@
       return orders.filter(order => order.serviceType !== "SMART_DELIVERY");
     }
 
+    function orderSequence(order) {
+      const index = orders.findIndex(item => item.partnerOrderId === order.partnerOrderId);
+      return index >= 0 ? String(index + 1).padStart(2, "0") : "--";
+    }
+
+    function orderDisplayLabel(order) {
+      return `접수번호 ${orderSequence(order)}`;
+    }
+
     function renderOrders() {
       const list = byId("orderList");
       list.replaceChildren();
@@ -899,7 +908,7 @@
         const route = makeText("p", "route-line", order.routeSummary || "배송 경로 확인 중");
         const meta = makeText("div", "order-meta", "");
         meta.append(
-          makeText("span", "", order.partnerOrderId),
+          makeText("span", "", orderDisplayLabel(order)),
           makeText("time", "", formatDate(order.updatedAt))
         );
         card.append(top, route, meta);
@@ -1130,7 +1139,8 @@
       const summary = makeText("div", "detail-summary", "");
       summary.append(
         makeText("span", "service-name", serviceName(order)),
-        makeText("strong", "detail-id", detail.partnerOrderId),
+        makeText("strong", "detail-id", orderDisplayLabel(order)),
+        makeText("span", "detail-time", formatDate(detail.createdAt)),
         makeText("p", "detail-route", order.routeSummary || routeFromDetail(detail))
       );
       const grid = makeText("div", "detail-grid", "");

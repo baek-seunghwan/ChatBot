@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MOVB 배송지 입력</title>
+  <style>
+    :root { --navy: #10254d; --yellow: #ffcc00; --ink: #17191f; --muted: #667085; --line: #dfe3ea; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: #f4f6f9;
+      color: var(--ink);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    }
+    main {
+      width: min(560px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: clamp(24px, 6vw, 42px);
+      background: #fff;
+      box-shadow: 0 16px 44px rgba(16, 37, 77, .1);
+    }
+    .brand { display: flex; align-items: center; gap: 10px; color: var(--navy); font-weight: 900; }
+    .mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--yellow); }
+    h1 { margin: 28px 0 8px; color: var(--navy); font-size: clamp(25px, 7vw, 34px); letter-spacing: -.04em; }
+    .description { margin: 0 0 26px; color: var(--muted); line-height: 1.65; }
+    form { display: grid; gap: 16px; }
+    label { display: grid; gap: 7px; font-size: 14px; font-weight: 800; }
+    input, textarea {
+      width: 100%;
+      min-height: 48px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #fff;
+      color: var(--ink);
+      font: inherit;
+      font-size: 16px;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    input:focus, textarea:focus { outline: 3px solid rgba(16, 37, 77, .12); border-color: var(--navy); }
+    button {
+      min-height: 52px;
+      border: 0;
+      border-radius: 10px;
+      margin-top: 6px;
+      background: var(--navy);
+      color: #fff;
+      font: inherit;
+      font-weight: 900;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; cursor: wait; }
+    .notice { margin: 18px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .status { display: none; margin-top: 18px; border-radius: 10px; padding: 14px; line-height: 1.55; }
+    .status.visible { display: block; }
+    .status.success { background: #edf8f2; color: #11663f; }
+    .status.error { background: #fff0ef; color: #b42318; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="brand"><span class="mark">M</span><span>MOVB 스마트 딜리버리</span></div>
+    <h1>받으실 곳을 알려주세요</h1>
+    <p class="description" id="intro">보내는 분이 배송 접수를 준비하고 있어요. 정확한 배송지와 연락처를 직접 입력해주세요.</p>
+
+    <form id="addressForm">
+      <label>받는 사람 이름
+        <input id="recipientName" required maxlength="50" autocomplete="name">
+      </label>
+      <label>연락처
+        <input id="recipientPhone" required maxlength="13" inputmode="tel" autocomplete="tel" placeholder="010-1234-5678">
+      </label>
+      <label>도로명 또는 지번 주소
+        <input id="address" required maxlength="200" autocomplete="street-address" placeholder="예: 대전광역시 서구 둔산로 100">
+      </label>
+      <label>상세주소
+        <input id="detailAddress" maxlength="200" placeholder="건물명, 층, 동·호수">
+      </label>
+      <label>기사님께 전달할 내용
+        <textarea id="note" maxlength="300" placeholder="예: 도착하면 전화해주세요."></textarea>
+      </label>
+      <button type="submit" id="submitButton">배송지 전달하기</button>
+    </form>
+
+    <div class="status" id="status" role="status"></div>
+    <p class="notice">입력한 정보는 이 배송 접수를 준비하는 용도로만 사용됩니다. 링크는 24시간 후 만료됩니다.</p>
+  </main>
+  <script>
+    const token = location.pathname.split("/").filter(Boolean).at(-1);
+    const byId = id => document.getElementById(id);
+
+    function formatPhone(value) {
+      const digits = value.replace(/\D/g, "").slice(0, 11);
+      if (digits.length <= 3) return digits;
+      if (digits.length <= 7) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+      return `${digits.slice(0, 3)}-${digits.slice(3, 7)}-${digits.slice(7)}`;
+    }
+
+    function showStatus(message, type) {
+      const status = byId("status");
+      status.textContent = message;
+      status.className = `status visible ${type}`;
+    }
+
+    async function loadRequest() {
+      try {
+        const response = await fetch(`/api/address-requests/${encodeURIComponent(token)}`);
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "주소 요청을 찾지 못했습니다.");
+        const request = body.data;
+        if (request.status === "EXPIRED") {
+          byId("addressForm").hidden = true;
+          showStatus("이 주소 요청 링크는 만료되었습니다. 보내는 분에게 새 링크를 요청해주세요.", "error");
+          return;
+        }
+        if (request.recipientName) byId("recipientName").value = request.recipientName;
+        if (request.recipientPhone) byId("recipientPhone").value = request.recipientPhone;
+        if (request.status === "COMPLETED") {
+          byId("addressForm").hidden = true;
+          showStatus("배송지가 이미 전달되었습니다. 이제 이 창을 닫아도 됩니다.", "success");
+        }
+      } catch (error) {
+        byId("addressForm").hidden = true;
+        showStatus(error.message, "error");
+      }
+    }
+
+    byId("recipientPhone").addEventListener("input", event => {
+      event.target.value = formatPhone(event.target.value);
+    });
+
+    byId("addressForm").addEventListener("submit", async event => {
+      event.preventDefault();
+      const button = byId("submitButton");
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/address-requests/${encodeURIComponent(token)}`, {
+          method: "PUT",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            name: byId("recipientName").value.trim(),
+            phone: byId("recipientPhone").value.trim(),
+            address: byId("address").value.trim(),
+            detailAddress: byId("detailAddress").value.trim() || null,
+            note: byId("note").value.trim() || null,
+          }),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "배송지를 전달하지 못했습니다.");
+        byId("addressForm").hidden = true;
+        showStatus("배송지를 보냈습니다. 보내는 분의 접수 화면에 자동으로 반영됩니다.", "success");
+      } catch (error) {
+        showStatus(error.message, "error");
+        button.disabled = false;
+      }
+    });
+
+    loadRequest();
+  </script>
+</body>
+</html>

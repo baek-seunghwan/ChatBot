@@ -158,14 +158,46 @@ class ApiEnvelope(CamelModel):
 
 class AgentChatRequest(CamelModel):
     session_id: str | None = Field(default=None, alias="sessionId")
-    message: str = Field(min_length=1, max_length=1000)
+    message: str = Field(min_length=1, max_length=5000)
     mode: str = Field(default="ai", pattern=r"^(ai|local)$")
-    # 로컬 모드 엔진: ollama(기본) 또는 own(나만의 모델, 외부 서버 불필요)
+    # 로컬 모드 엔진: vLLM/Ollama 또는 own(나만의 모델, 외부 서버 불필요)
     local_engine: str = Field(
-        default="ollama", alias="localEngine", pattern=r"^(ollama|own)$"
+        default="ollama", alias="localEngine", pattern=r"^(vllm|ollama|own)$"
     )
     # 퀵 배송 접수 폼에 이미 입력된 값들. 챗봇이 같은 정보를 다시 묻지 않도록 슬롯의 기본값으로 사용된다.
     form_snapshot: dict[str, Any] | None = Field(default=None, alias="formSnapshot")
+
+
+class SmartTextRequest(CamelModel):
+    text: str = Field(min_length=1, max_length=5000)
+
+
+class OcrImageRequest(CamelModel):
+    image_base64: str = Field(alias="imageBase64", min_length=20)
+    content_type: str = Field(
+        alias="contentType", pattern=r"^image/(?:jpeg|png|webp)$"
+    )
+
+
+class AddressShareCreateRequest(CamelModel):
+    recipient_name: str | None = Field(
+        default=None, alias="recipientName", max_length=50
+    )
+    recipient_phone: str | None = Field(
+        default=None,
+        alias="recipientPhone",
+        pattern=r"^[0-9+\-\s]{8,20}$",
+    )
+
+
+class AddressShareSubmitRequest(CamelModel):
+    address: str = Field(min_length=2, max_length=200)
+    detail_address: str | None = Field(
+        default=None, alias="detailAddress", max_length=200
+    )
+    name: str = Field(min_length=1, max_length=50)
+    phone: str = Field(pattern=r"^[0-9+\-\s]{8,20}$")
+    note: str | None = Field(default=None, max_length=300)
 
 
 class BundlePickupQuoteRequest(CamelModel):

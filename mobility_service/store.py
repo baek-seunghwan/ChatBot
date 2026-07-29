@@ -5,7 +5,7 @@ import json
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -105,8 +105,146 @@ class MobilityStore:
 
                 CREATE INDEX IF NOT EXISTS idx_delivery_match_client
                 ON delivery_match_requests(client_id, created_at);
+
+                CREATE TABLE IF NOT EXISTS address_share_requests (
+                    token TEXT PRIMARY KEY,
+                    sender_session_id TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'WAITING',
+                    recipient_name TEXT,
+                    recipient_phone TEXT,
+                    address TEXT,
+                    detail_address TEXT,
+                    note TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    expires_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_address_share_sender
+                ON address_share_requests(sender_session_id, created_at);
                 """
             )
+
+    def create_address_share(
+        self,
+        *,
+        token: str,
+        sender_session_id: str,
+        recipient_name: str | None = None,
+        recipient_phone: str | None = None,
+        ttl_hours: int = 24,
+    ) -> dict[str, Any]:
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(hours=ttl_hours)
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO address_share_requests (
+                    token, sender_session_id, recipient_name, recipient_phone,
+                    created_at, updated_at, expires_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    token,
+                    sender_session_id,
+                    recipient_name,
+                    recipient_phone,
+                    now.isoformat(),
+                    now.isoformat(),
+                    expires_at.isoformat(),
+                ),
+            )
+        result = self.get_address_share(token)
+        if result is None:
+            raise RuntimeError("주소 요청 링크를 저장하지 못했습니다.")
+        return result
+
+    def get_address_share(self, token: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT token, sender_session_id, status, recipient_name,
+                       recipient_phone, address, detail_address, note,
+                       created_at, updated_at, expires_at
+                FROM address_share_requests
+                WHERE token = ?
+                """,
+                (token,),
+            ).fetchone()
+        if row is None:
+            return None
+
+        expired = datetime.fromisoformat(row["expires_at"]) <= datetime.now(timezone.utc)
+        status = "EXPIRED" if expired and row["status"] == "WAITING" else row["status"]
+        return {
+            "token": row["token"],
+            "senderSessionId": row["sender_session_id"],
+            "status": status,
+            "recipientName": row["recipient_name"],
+            "recipientPhone": row["recipient_phone"],
+            "address": row["address"],
+            "detailAddress": row["detail_address"],
+            "note": row["note"],
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+            "expiresAt": row["expires_at"],
+        }
+
+    def list_address_shares(
+        self,
+        sender_session_id: str,
+        *,
+        limit: int = 10,
+    ) -> list[dict[str, Any]]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT token
+                FROM address_share_requests
+                WHERE sender_session_id = ?
+                ORDER BY created_at ASC
+                LIMIT ?
+                """,
+                (sender_session_id, limit),
+            ).fetchall()
+        items = [self.get_address_share(row["token"]) for row in rows]
+        return [item for item in items if item is not None]
+
+    def complete_address_share(
+        self,
+        token: str,
+        *,
+        address: str,
+        detail_address: str | None,
+        name: str,
+        phone: str,
+        note: str | None,
+    ) -> dict[str, Any] | None:
+        existing = self.get_address_share(token)
+        if existing is None or existing["status"] == "EXPIRED":
+            return None
+        if existing["status"] == "COMPLETED":
+            return existing
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE address_share_requests
+                SET status = 'COMPLETED', address = ?, detail_address = ?,
+                    recipient_name = ?, recipient_phone = ?, note = ?,
+                    updated_at = ?
+                WHERE token = ?
+                """,
+                (
+                    address,
+                    detail_address,
+                    name,
+                    phone,
+                    note,
+                    utc_now(),
+                    token,
+                ),
+            )
+        return self.get_address_share(token)
 
     def reserve_order(
         self, partner_order_id: str, request_payload: dict[str, Any]
