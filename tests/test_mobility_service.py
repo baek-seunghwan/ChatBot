@@ -21,7 +21,10 @@ from mobility_service.config import Settings
 from mobility_service.models import DeliveryDraft
 from mobility_service.my_model import load_qa_index, own_model_reply
 from mobility_service.providers import LLMRouter
-from mobility_service.smart_input import extract_dropoff_slots
+from mobility_service.smart_input import (
+    address_is_specific_enough,
+    extract_dropoff_slots,
+)
 from mobility_service.store import MobilityStore
 
 
@@ -158,6 +161,7 @@ class VllmProviderTests(unittest.TestCase):
 class FakeKakaoClient:
     def __init__(self) -> None:
         self.create_calls = 0
+        self.price_calls = 0
         self.sandbox_status_calls: list[tuple[str, str, str | None]] = []
 
     async def auth_check(self) -> dict[str, bool]:
@@ -167,6 +171,7 @@ class FakeKakaoClient:
         return {"estimatedMinutes": 40, "orderType": request.order_type.value}
 
     async def price(self, request) -> dict[str, Any]:
+        self.price_calls += 1
         return {"totalPrice": 12000, "orderType": request.order_type.value}
 
     async def create_order(self, request, partner_order_id: str) -> dict[str, Any]:
@@ -361,6 +366,8 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("/api/smart-input/ocr", home.text)
         self.assertIn("/api/address-requests", home.text)
         self.assertIn('localEngine: selectedLocalEngine()', home.text)
+        self.assertIn('sessionStorage.getItem("moveops_session_id")', home.text)
+        self.assertIn('item.status === "COMPLETED" && !item.appliedAt', home.text)
 
     def test_smart_text_extracts_recipient_fields(self) -> None:
         response = self.client.post(
@@ -394,6 +401,37 @@ class MobilityApiTests(unittest.TestCase):
             "배송지: 대전광역시 서구 둔산로 100 3층"
         )
         self.assertEqual(agent_slots["dropoffAddress"], "대전광역시 서구 둔산로 100")
+
+    def test_unlabelled_short_address_stays_pending_until_user_confirms(self) -> None:
+        message = "백승환 와우로 85 토마토오피스텔1동 408호"
+        extracted = extract_dropoff_slots(message)
+        agent_slots = DeliveryAgent._heuristic_slots(message)
+
+        self.assertEqual(extracted["slots"]["dropoffName"], "백승환")
+        self.assertEqual(extracted["slots"]["dropoffAddress"], "와우로 85")
+        self.assertFalse(extracted["addressSpecificEnough"])
+        self.assertFalse(address_is_specific_enough("와우로 85"))
+        self.assertTrue(address_is_specific_enough("경기 화성시 와우로 85"))
+        self.assertNotIn("dropoffAddress", agent_slots)
+        self.assertNotIn("pickupAddress", agent_slots)
+        self.assertEqual(agent_slots["_pendingAddress"], "와우로 85")
+        self.assertEqual(agent_slots["_pendingContactName"], "백승환")
+        self.assertTrue(agent_slots["_addressRoleAmbiguous"])
+        self.assertTrue(agent_slots["_addressRegionAmbiguous"])
+
+        pasted_message_slots = DeliveryAgent._heuristic_slots(
+            message,
+            input_context="recipient_message",
+        )
+        self.assertNotIn("dropoffAddress", pasted_message_slots)
+        self.assertNotIn("pickupAddress", pasted_message_slots)
+        self.assertTrue(pasted_message_slots["_addressRoleAmbiguous"])
+
+        labelled = DeliveryAgent._heuristic_slots(
+            "도착지: 경기 화성시 와우로 85 토마토오피스텔1동 408호"
+        )
+        self.assertEqual(labelled["dropoffAddress"], "경기 화성시 와우로 85")
+        self.assertNotIn("_pendingAddress", labelled)
 
     def test_ocr_text_uses_same_recipient_extractor(self) -> None:
         with patch(

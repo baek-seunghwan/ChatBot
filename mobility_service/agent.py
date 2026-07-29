@@ -34,7 +34,7 @@ from .models import (
     ProductSize,
 )
 from .orders import cancel_order_by_id, get_order_steps, place_order
-from .smart_input import extract_dropoff_slots
+from .smart_input import address_is_specific_enough, extract_dropoff_slots
 from .store import MobilityStore
 
 MAX_HISTORY_TURNS = 6
@@ -67,6 +67,36 @@ ORDER_TYPE_LABELS = {
     "QUICK": "일반",
     "QUICK_EXPRESS": "급송",
     "DOBO": "도보 배송",
+}
+
+MAJOR_REGION_NAMES = (
+    "서울",
+    "부산",
+    "대구",
+    "인천",
+    "광주",
+    "대전",
+    "울산",
+    "세종",
+    "경기",
+    "강원",
+    "충북",
+    "충남",
+    "전북",
+    "전남",
+    "경북",
+    "경남",
+    "제주",
+)
+
+PENDING_ADDRESS_KEYS = {
+    "_pendingAddress",
+    "_pendingDetailAddress",
+    "_pendingContactName",
+    "_pendingContactPhone",
+    "_pendingRole",
+    "_addressRoleAmbiguous",
+    "_addressRegionAmbiguous",
 }
 
 CHITCHAT_SYSTEM = (
@@ -136,6 +166,7 @@ JSON 객체 하나만 출력하세요. 설명 문장은 쓰지 마세요."""
 class AgentState(TypedDict, total=False):
     session_id: str
     message: str
+    input_context: str
     form_snapshot: dict[str, Any]
     turns: list[dict[str, str]]
     slots: dict[str, Any]
@@ -149,6 +180,9 @@ class AgentState(TypedDict, total=False):
     order: dict[str, Any] | None
     sources: list[dict[str, Any]]
     actions: list[dict[str, str]]
+    changed_slots: dict[str, Any]
+    quote_requested: bool
+    clarification_reason: str | None
     trace: list[str]
 
 
@@ -162,6 +196,7 @@ class AgentChatResult:
     order: dict[str, Any] | None = None
     sources: list[dict[str, Any]] = field(default_factory=list)
     actions: list[dict[str, str]] = field(default_factory=list)
+    changed_slots: dict[str, Any] = field(default_factory=dict)
     trace: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
@@ -174,6 +209,7 @@ class AgentChatResult:
             "order": self.order,
             "sources": self.sources,
             "actions": self.actions,
+            "changedSlots": self.changed_slots,
             "trace": self.trace,
         }
 
@@ -323,8 +359,21 @@ class DeliveryAgent:
         session = self._conversations.get_or_create(state["session_id"])
         slots = dict(session["slots"])
         for key, value in (state.get("form_snapshot") or {}).items():
-            if value not in (None, "") and not slots.get(key):
-                slots[key] = value
+            if key.startswith("_") or value is None:
+                continue
+            if value == "":
+                if key in {"pickupAddress", "dropoffAddress"}:
+                    self._clear_geocoded_location(
+                        slots, "pickup" if key == "pickupAddress" else "dropoff"
+                    )
+                slots.pop(key, None)
+                continue
+            if key in {"pickupAddress", "dropoffAddress"} and slots.get(key) != value:
+                self._clear_geocoded_location(
+                    slots, "pickup" if key == "pickupAddress" else "dropoff"
+                )
+            # 화면에 보이는 주문서가 대화 세션의 오래된 초안보다 우선한다.
+            slots[key] = value
         return {
             "slots": slots,
             "turns": session["turns"],
@@ -341,6 +390,82 @@ class DeliveryAgent:
         if not turns:
             return "(대화 이력 없음)"
         return "\n".join(f"{t['role']}: {t['content']}" for t in turns)
+
+    @staticmethod
+    def _clear_geocoded_location(slots: dict[str, Any], kind: str) -> None:
+        for suffix in (
+            "Lat",
+            "Lng",
+            "AddressGeocoded",
+            "AddressLookupFailed",
+            "AddressNeedsRegion",
+        ):
+            slots.pop(f"{kind}{suffix}", None)
+
+    @staticmethod
+    def _set_slot(
+        slots: dict[str, Any],
+        changed_slots: dict[str, Any],
+        key: str,
+        value: Any,
+    ) -> None:
+        if key in {"pickupAddress", "dropoffAddress"} and slots.get(key) != value:
+            DeliveryAgent._clear_geocoded_location(
+                slots, "pickup" if key == "pickupAddress" else "dropoff"
+            )
+        slots[key] = value
+        if not key.startswith("_"):
+            changed_slots[key] = value
+
+    @staticmethod
+    def _role_from_message(message: str, input_context: str = "chat") -> str | None:
+        if re.search(r"(?:출발지|픽업지|보내는\s*(?:곳|사람))", message):
+            return "pickup"
+        if re.search(
+            r"(?:도착지|배송지|받는\s*(?:곳|사람)|수령인|수취인)", message
+        ):
+            return "dropoff"
+        return None
+
+    @staticmethod
+    def _message_requests_quote(message: str) -> bool:
+        return bool(
+            re.search(
+                r"(?:견적|요금|가격).*(?:확인|조회|계산|알려|내줘)|"
+                r"(?:확인|조회|계산).*(?:견적|요금|가격)|"
+                r"(?:접수|주문|진행|보내\s*줘|배송\s*해\s*줘)",
+                message,
+                re.IGNORECASE,
+            )
+        )
+
+    @staticmethod
+    def _address_is_grounded_in_message(address: str, message: str) -> bool:
+        """Reject an LLM address when it invents an administrative area."""
+
+        if not address_is_specific_enough(address):
+            return False
+        compact_message = re.sub(r"\s+", "", message)
+        compact_address = re.sub(r"\s+", "", address)
+        for region in MAJOR_REGION_NAMES:
+            if region in compact_address and region not in compact_message:
+                return False
+        for admin in re.findall(r"[가-힣]{2,}(?:시|군)", address):
+            if admin not in message:
+                return False
+        return True
+
+    @staticmethod
+    def _geocoded_address_matches_query(query: str, result: str) -> bool:
+        compact_query = re.sub(r"\s+", "", query)
+        compact_result = re.sub(r"\s+", "", result)
+        for region in MAJOR_REGION_NAMES:
+            if region in compact_query and region not in compact_result:
+                return False
+        for admin in re.findall(r"[가-힣]{2,}(?:시|군)", query):
+            if admin not in result:
+                return False
+        return True
 
     @staticmethod
     def _heuristic_intent(message: str, stage: str) -> str | None:
@@ -402,7 +527,7 @@ class DeliveryAgent:
         if re.search(
             r"(010[- ]?\d{4}|출발지|도착지|배송지|받는\s*사람|보내는\s*사람|"
             r"(?:서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)"
-            r".*(?:로|길|동)\s*\d+)",
+            r".*(?:로|길|동)\s*\d+|(?:로|길)\s*\d+(?:-\d+)?)",
             text,
         ):
             return "provide_info"
@@ -493,10 +618,63 @@ class DeliveryAgent:
         return value
 
     @staticmethod
-    def _heuristic_slots(message: str) -> dict[str, Any]:
-        """명확한 차량 선택과 붙여넣은 수령인 정보를 LLM 없이도 반영한다."""
+    def _heuristic_slots(
+        message: str,
+        input_context: str = "chat",
+    ) -> dict[str, Any]:
+        """Extract only fields that are safe to apply without guessing.
+
+        Any message that contains an unlabeled address is kept as a neutral
+        pending candidate. Even pasted recipient messages need an explicit
+        pickup/dropoff confirmation before they can change the order form.
+        """
+
         text = message.lower()
-        slots: dict[str, Any] = dict(extract_dropoff_slots(message)["slots"])
+        extracted = extract_dropoff_slots(message)
+        candidate_slots: dict[str, Any] = dict(extracted["slots"])
+        role = extracted.get("roleHint") or DeliveryAgent._role_from_message(
+            message, input_context
+        )
+        slots: dict[str, Any] = {}
+
+        candidate_address = candidate_slots.pop("dropoffAddress", None)
+        candidate_detail = candidate_slots.pop("dropoffDetailAddress", None)
+        candidate_name = candidate_slots.pop("dropoffName", None)
+        candidate_phone = candidate_slots.pop("dropoffPhone", None)
+        has_contact_candidate = bool(
+            candidate_address or candidate_name or candidate_phone
+        )
+        needs_region = bool(
+            candidate_address and not address_is_specific_enough(candidate_address)
+        )
+
+        if has_contact_candidate and (role is None or needs_region):
+            if candidate_address:
+                slots["_pendingAddress"] = candidate_address
+            if candidate_detail:
+                slots["_pendingDetailAddress"] = candidate_detail
+            if candidate_name:
+                slots["_pendingContactName"] = candidate_name
+            if candidate_phone:
+                slots["_pendingContactPhone"] = candidate_phone
+            if role:
+                slots["_pendingRole"] = role
+            if role is None:
+                slots["_addressRoleAmbiguous"] = True
+            if needs_region:
+                slots["_addressRegionAmbiguous"] = True
+        elif has_contact_candidate:
+            prefix = "pickup" if role == "pickup" else "dropoff"
+            if candidate_address:
+                slots[f"{prefix}Address"] = candidate_address
+            if candidate_detail:
+                slots[f"{prefix}DetailAddress"] = candidate_detail
+            if candidate_name:
+                slots[f"{prefix}Name"] = candidate_name
+            if candidate_phone:
+                slots[f"{prefix}Phone"] = candidate_phone
+
+        slots.update(candidate_slots)
         for pattern, value in (
             (r"짐받이\s*오토바이", "JIMBAJI_MOTORCYCLE"),
             (r"오토바이|바이크", "MOTORCYCLE"),
@@ -532,7 +710,11 @@ class DeliveryAgent:
 
     async def _extract_slots(self, state: AgentState) -> AgentState:
         slots = dict(state.get("slots", {}))
-        heuristic_delta = self._heuristic_slots(state["message"])
+        changed_slots: dict[str, Any] = {}
+        input_context = state.get("input_context", "chat")
+        heuristic_delta = self._heuristic_slots(
+            state["message"], input_context
+        )
         prompt = SLOT_EXTRACT_PROMPT.format(
             known_slots=json.dumps(slots, ensure_ascii=False), message=state["message"]
         )
@@ -557,23 +739,146 @@ class DeliveryAgent:
             "dropoffName", "dropoffPhone", "productName",
             "declaredValue", "quantity", "wishTime", "paymentType", "fleet",
         }
-        applied = []
+        applied: list[str] = []
+
+        pending_before = any(slots.get(key) for key in PENDING_ADDRESS_KEYS)
+        pending_from_message = any(
+            key in heuristic_delta for key in PENDING_ADDRESS_KEYS
+        )
+        for key in PENDING_ADDRESS_KEYS:
+            if key in heuristic_delta:
+                slots[key] = heuristic_delta[key]
+                applied.append(key)
         for key, value in heuristic_delta.items():
-            slots[key] = value
+            if key.startswith("_") and key not in PENDING_ADDRESS_KEYS:
+                slots[key] = value
+                applied.append(key)
+
+        role = (
+            heuristic_delta.get("_pendingRole")
+            or self._role_from_message(state["message"], input_context)
+            or slots.get("_pendingRole")
+        )
+        if role and (pending_before or pending_from_message):
+            slots["_pendingRole"] = role
+            slots.pop("_addressRoleAmbiguous", None)
+
+        public_role = None
+        if heuristic_delta.get("pickupAddress"):
+            public_role = "pickup"
+        elif heuristic_delta.get("dropoffAddress"):
+            public_role = "dropoff"
+
+        if (pending_before or pending_from_message) and public_role:
+            # A follow-up supplied a complete, explicitly labelled address.
+            # Carry over the previously extracted name/detail only after the
+            # user has made the role clear.
+            prefix = public_role
+            carry = {
+                f"{prefix}DetailAddress": slots.get("_pendingDetailAddress"),
+                f"{prefix}Name": slots.get("_pendingContactName"),
+                f"{prefix}Phone": slots.get("_pendingContactPhone"),
+            }
+            for key, value in carry.items():
+                if value and not heuristic_delta.get(key):
+                    heuristic_delta[key] = value
+            for key in PENDING_ADDRESS_KEYS:
+                slots.pop(key, None)
+        elif pending_before or pending_from_message:
+            pending_address = slots.get("_pendingAddress")
+            region_ready = not pending_address or address_is_specific_enough(
+                pending_address
+            )
+            if pending_address and not region_ready:
+                slots["_addressRegionAmbiguous"] = True
+            else:
+                slots.pop("_addressRegionAmbiguous", None)
+            if role and region_ready:
+                prefix = "pickup" if role == "pickup" else "dropoff"
+                pending_name = slots.get("_pendingContactName")
+                pending_phone = slots.get("_pendingContactPhone")
+                if (
+                    pending_name
+                    and slots.get(f"{prefix}Name") not in (None, pending_name)
+                    and not pending_phone
+                ):
+                    slots.pop(f"{prefix}Phone", None)
+                    changed_slots[f"{prefix}Phone"] = ""
+                resolved = {
+                    f"{prefix}Address": pending_address,
+                    f"{prefix}DetailAddress": slots.get("_pendingDetailAddress"),
+                    f"{prefix}Name": pending_name,
+                    f"{prefix}Phone": pending_phone,
+                }
+                for key, value in resolved.items():
+                    if value not in (None, ""):
+                        self._set_slot(slots, changed_slots, key, value)
+                        applied.append(key)
+                for key in PENDING_ADDRESS_KEYS:
+                    slots.pop(key, None)
+            elif not role:
+                slots["_addressRoleAmbiguous"] = True
+
+        for prefix in ("pickup", "dropoff"):
+            incoming_name = heuristic_delta.get(f"{prefix}Name")
+            incoming_phone = heuristic_delta.get(f"{prefix}Phone")
+            if (
+                incoming_name
+                and slots.get(f"{prefix}Name") not in (None, incoming_name)
+                and not incoming_phone
+            ):
+                slots.pop(f"{prefix}Phone", None)
+                changed_slots[f"{prefix}Phone"] = ""
+
+        for key, value in heuristic_delta.items():
+            if key.startswith("_") or value in (None, ""):
+                continue
+            self._set_slot(slots, changed_slots, key, value)
             applied.append(key)
+
+        pending_unresolved = bool(
+            slots.get("_pendingAddress")
+            or slots.get("_pendingContactName")
+            or slots.get("_pendingContactPhone")
+        )
+        heuristic_public_keys = {
+            key for key in heuristic_delta if not key.startswith("_")
+        }
         for key, value in delta.items():
             if key not in allowed_keys or value in (None, ""):
                 continue
+            if pending_unresolved and key in {
+                "pickupAddress", "pickupDetailAddress", "pickupName", "pickupPhone",
+                "dropoffAddress", "dropoffDetailAddress", "dropoffName", "dropoffPhone",
+            }:
+                continue
+            if key in heuristic_public_keys:
+                # Deterministic extraction wins over an LLM paraphrase.
+                continue
             coerced = self._coerce_slot_value(key, value)
+            if (
+                key in {"pickupAddress", "dropoffAddress"}
+                and isinstance(coerced, str)
+                and not self._address_is_grounded_in_message(
+                    coerced, state["message"]
+                )
+            ):
+                continue
             if coerced is not None:
-                slots[key] = coerced
+                self._set_slot(slots, changed_slots, key, coerced)
                 applied.append(key)
 
         self._conversations.save_slots(state["session_id"], slots, state.get("stage", "collecting"))
-        return {"slots": slots, "trace": state.get("trace", []) + [f"extract_slots:{applied}"]}
+        return {
+            "slots": slots,
+            "changed_slots": changed_slots,
+            "quote_requested": self._message_requests_quote(state["message"]),
+            "trace": state.get("trace", []) + [f"extract_slots:{applied}"],
+        }
 
     async def _geocode_addresses(self, state: AgentState) -> AgentState:
         slots = dict(state.get("slots", {}))
+        changed_slots = dict(state.get("changed_slots", {}))
         for kind in ("pickup", "dropoff"):
             address_key = f"{kind}Address"
             lat_key, lng_key = f"{kind}Lat", f"{kind}Lng"
@@ -583,22 +888,91 @@ class DeliveryAgent:
                 continue
             if slots.get(geocoded_key) == address and slots.get(lat_key) is not None:
                 continue
+            self._clear_geocoded_location(slots, kind)
+            if not address_is_specific_enough(address):
+                slots[f"{kind}AddressNeedsRegion"] = address
+                continue
             location = await self._geocoder.search_address(address)
             if location is None:
+                slots[f"{kind}AddressLookupFailed"] = address
+                continue
+            if not self._geocoded_address_matches_query(
+                address, location.basic_address
+            ):
+                slots[f"{kind}AddressLookupFailed"] = address
                 continue
             slots[lat_key] = location.latitude
             slots[lng_key] = location.longitude
             slots[address_key] = location.basic_address
             slots[geocoded_key] = location.basic_address
+            if changed_slots.get(address_key) is not None:
+                changed_slots[address_key] = location.basic_address
 
         self._conversations.save_slots(state["session_id"], slots, state.get("stage", "collecting"))
-        return {"slots": slots, "trace": state.get("trace", []) + ["geocode_addresses"]}
+        return {
+            "slots": slots,
+            "changed_slots": changed_slots,
+            "trace": state.get("trace", []) + ["geocode_addresses"],
+        }
 
     async def _check_completeness(self, state: AgentState) -> AgentState:
         slots = state.get("slots", {})
+        if any(slots.get(key) for key in PENDING_ADDRESS_KEYS):
+            return {
+                "missing_summary": "주소 역할 또는 지역 확인이 필요합니다.",
+                "clarification_reason": "ambiguous_address",
+                "trace": state.get("trace", [])
+                + ["check_completeness:ambiguous_address"],
+            }
+        address_problem = next(
+            (
+                (kind, problem)
+                for kind in ("pickup", "dropoff")
+                for problem in ("AddressNeedsRegion", "AddressLookupFailed")
+                if slots.get(f"{kind}{problem}")
+            ),
+            None,
+        )
+        if address_problem:
+            kind, problem = address_problem
+            return {
+                "missing_summary": "주소 확인이 필요합니다.",
+                "clarification_reason": (
+                    f"{kind}_address_needs_region"
+                    if problem == "AddressNeedsRegion"
+                    else f"{kind}_address_lookup_failed"
+                ),
+                "trace": state.get("trace", [])
+                + [f"check_completeness:{kind}_{problem}"],
+            }
         reservation_missing = bool(
             slots.get("_reservationRequested") and not slots.get("wishTime")
         )
+        required_fields = (
+            ("pickupAddress", "출발지 주소"),
+            ("pickupName", "보내는 분 성함"),
+            ("pickupPhone", "보내는 분 연락처"),
+            ("dropoffAddress", "도착지 주소"),
+            ("dropoffName", "받는 분 성함"),
+            ("dropoffPhone", "받는 분 연락처"),
+            ("productName", "물품명"),
+        )
+        missing_required = [
+            label for key, label in required_fields if not slots.get(key)
+        ]
+        if missing_required or reservation_missing:
+            missing_labels = (
+                (["픽업 예약 시간"] if reservation_missing else [])
+                + missing_required
+            )
+            return {
+                "missing_summary": "\n".join(
+                    f"- {label}" for label in missing_labels
+                ),
+                "clarification_reason": "missing_fields",
+                "trace": state.get("trace", [])
+                + [f"check_completeness:missing_required({len(missing_labels)})"],
+            }
         payload = _slots_payload(slots)
         try:
             CreateDeliveryRequest(**payload, partnerOrderId="validation-check-0000")
@@ -614,16 +988,26 @@ class DeliveryAgent:
                 lines.append(f"- {label}" if label else f"- {error['msg']}")
             return {
                 "missing_summary": "\n".join(lines),
+                "clarification_reason": "missing_fields",
                 "trace": state.get("trace", []) + [f"check_completeness:invalid({len(lines)})"],
             }
         if reservation_missing:
             return {
                 "missing_summary": "- 픽업 예약 시간",
+                "clarification_reason": "missing_fields",
                 "trace": state.get("trace", [])
                 + ["check_completeness:reservation_time_missing"],
             }
+        if not state.get("quote_requested"):
+            return {
+                "missing_summary": "견적 확인 전 최종 검토가 필요합니다.",
+                "clarification_reason": "ready_for_quote",
+                "trace": state.get("trace", [])
+                + ["check_completeness:ready_for_quote"],
+            }
         return {
             "missing_summary": None,
+            "clarification_reason": None,
             "trace": state.get("trace", []) + ["check_completeness:ok"],
         }
 
@@ -634,6 +1018,124 @@ class DeliveryAgent:
     async def _ask_clarification(self, state: AgentState) -> AgentState:
         summary = state.get("missing_summary") or "필요한 정보가 더 있어요."
         slots = state.get("slots", {})
+        reason = state.get("clarification_reason")
+        if reason == "ambiguous_address":
+            address = slots.get("_pendingAddress")
+            detail = slots.get("_pendingDetailAddress")
+            name = slots.get("_pendingContactName")
+            role = slots.get("_pendingRole")
+            found = " · ".join(
+                value for value in (name, address, detail) if value
+            )
+            checks: list[str] = []
+            actions: list[dict[str, str]] = []
+            if not role:
+                checks.append("이 정보가 **출발지·보내는 사람**인지, **도착지·받는 사람**인지 알려주세요.")
+                actions.extend(
+                    [
+                        {"label": "출발지예요", "message": "출발지예요"},
+                        {"label": "도착지예요", "message": "도착지예요"},
+                    ]
+                )
+            if slots.get("_addressRegionAmbiguous"):
+                checks.append(
+                    f"`{address}`만으로는 지역을 하나로 정할 수 없어요. "
+                    "시·군·구를 포함한 전체 주소를 알려주세요. "
+                    "예: `경기 화성시 와우로 85`"
+                )
+                actions.append(
+                    {
+                        "label": "전체 주소 입력",
+                        "message": "시·군·구를 포함한 주소를 입력해주세요",
+                        "target": "chatInput",
+                    }
+                )
+            reply = (
+                f"**{found or '입력하신 정보'}**로 읽었지만 아직 주문서에는 넣지 않았어요.\n\n"
+                + "\n\n".join(
+                    f"{index}. {text}" for index, text in enumerate(checks, start=1)
+                )
+            )
+            self._conversations.save_slots(
+                state["session_id"], slots, "collecting"
+            )
+            return {
+                "reply": reply,
+                "stage": "collecting",
+                "actions": actions
+                + [{"label": "다시 입력", "message": "정보를 다시 입력할게", "target": "chatInput"}],
+                "trace": state.get("trace", [])
+                + ["ask_clarification:ambiguous_address"],
+            }
+
+        if reason in {
+            "pickup_address_needs_region",
+            "dropoff_address_needs_region",
+            "pickup_address_lookup_failed",
+            "dropoff_address_lookup_failed",
+        }:
+            kind = "pickup" if reason.startswith("pickup") else "dropoff"
+            label = "출발지" if kind == "pickup" else "도착지"
+            address = slots.get(f"{kind}Address", "")
+            lookup_failed = reason.endswith("lookup_failed")
+            reply = (
+                f"`{address}`"
+                + (
+                    " 주소를 지도에서 정확히 찾지 못했어요."
+                    if lookup_failed
+                    else " 주소는 지역이 부족해 한 곳으로 확정할 수 없어요."
+                )
+                + f"\n\n{label}를 **시·군·구와 도로명 번호까지** 다시 알려주세요. "
+                "주소를 확인하기 전에는 견적을 계산하지 않을게요."
+            )
+            return {
+                "reply": reply,
+                "stage": "collecting",
+                "actions": [
+                    {
+                        "label": f"{label} 다시 입력",
+                        "message": f"{label}: 시·군·구를 포함한 전체 주소",
+                        "target": "chatInput",
+                    },
+                    {
+                        "label": "받는 사람에게 요청",
+                        "message": "받는 사람이 직접 주소를 입력하도록 요청",
+                        "target": "addressRequest",
+                    },
+                ],
+                "trace": state.get("trace", [])
+                + [f"ask_clarification:{reason}"],
+            }
+
+        if reason == "ready_for_quote":
+            route = (
+                f"{slots.get('pickupAddress')} → {slots.get('dropoffAddress')}"
+            )
+            reply = (
+                "필수 정보가 모두 준비됐어요. 바로 접수하지 않고 먼저 확인할게요.\n\n"
+                f"- 배송 경로: **{route}**\n"
+                f"- 보내는 분: **{slots.get('pickupName')}**\n"
+                f"- 받는 분: **{slots.get('dropoffName')}**\n"
+                f"- 물품: **{slots.get('productName')}**\n\n"
+                "이 내용으로 예상 시간과 요금을 확인할까요?"
+            )
+            return {
+                "reply": reply,
+                "stage": "collecting",
+                "actions": [
+                    {"label": "견적 확인", "message": "이 내용으로 견적 확인해줘"},
+                    {
+                        "label": "주소 수정",
+                        "message": "수정할 주소를 입력해주세요",
+                        "target": "chatInput",
+                    },
+                    {"label": "처음부터", "message": "주문 작성을 취소하고 처음부터 할래"},
+                ],
+                "trace": state.get("trace", [])
+                + ["ask_clarification:ready_for_quote"],
+            }
+
+        changed = state.get("changed_slots", {})
         recognized_labels = [
             label
             for key, label in (
@@ -643,19 +1145,78 @@ class DeliveryAgent:
                 ("dropoffPhone", "연락처"),
                 ("productName", "물품"),
             )
-            if slots.get(key)
+            if key in changed and changed.get(key) not in (None, "")
         ]
         acknowledgement = (
             f"확인했어요. **{' · '.join(recognized_labels)}** 정보는 입력칸에 반영할게요.\n\n"
             if recognized_labels
             else ""
         )
-        reply = (
-            f"{acknowledgement}이제 아래 정보만 더 알려주시면 다음 단계로 이어갈게요.\n"
-            f"{summary}"
-        )
+        next_question = "다음으로 필요한 정보를 알려주세요."
+        contextual_actions: list[dict[str, str]] = []
+        if "픽업 예약 시간" in summary:
+            next_question = "예약 배송이군요. **픽업 예약 시간은 언제로 할까요?**"
+        elif "출발지 주소" in summary:
+            next_question = "먼저 **어디에서 픽업할까요?** 시·군·구를 포함한 출발지 주소를 알려주세요."
+            contextual_actions.append(
+                {
+                    "label": "출발지 입력",
+                    "message": "출발지: 시·군·구를 포함한 전체 주소",
+                    "target": "chatInput",
+                }
+            )
+        elif "보내는 분 성함" in summary or "보내는 분 연락처" in summary:
+            next_question = "픽업할 때 기사님이 연락할 **보내는 분 이름과 연락처**를 알려주세요."
+            contextual_actions.append(
+                {
+                    "label": "보내는 분 입력",
+                    "message": "보내는 분: 이름 / 연락처",
+                    "target": "chatInput",
+                }
+            )
+        elif "도착지 주소" in summary:
+            next_question = "이제 **어디로 배송할까요?** 시·군·구를 포함한 도착지 주소를 알려주세요."
+            contextual_actions.extend(
+                [
+                    {
+                        "label": "도착지 입력",
+                        "message": "도착지: 시·군·구를 포함한 전체 주소",
+                        "target": "chatInput",
+                    },
+                    {
+                        "label": "받는 사람에게 요청",
+                        "message": "받는 사람이 직접 주소를 입력하도록 요청",
+                        "target": "addressRequest",
+                    },
+                ]
+            )
+        elif "받는 분 성함" in summary or "받는 분 연락처" in summary:
+            next_question = "배송 기사님이 연락할 **받는 분 이름과 연락처**를 알려주세요."
+            contextual_actions.extend(
+                [
+                    {
+                        "label": "받는 분 입력",
+                        "message": "받는 분: 이름 / 연락처",
+                        "target": "chatInput",
+                    },
+                    {
+                        "label": "받는 사람에게 요청",
+                        "message": "받는 사람이 직접 주소를 입력하도록 요청",
+                        "target": "addressRequest",
+                    },
+                ]
+            )
+        elif "물품명" in summary:
+            next_question = "마지막으로 **무엇을 보내시나요?** 포장된 물품을 구체적으로 알려주세요."
+            contextual_actions.extend(
+                [
+                    {"label": "서류 봉투", "message": "물품은 서류 봉투예요"},
+                    {"label": "소형 박스", "message": "물품은 소형 박스예요"},
+                ]
+            )
+        reply = f"{acknowledgement}{next_question}"
         self._conversations.save_slots(state["session_id"], state.get("slots", {}), "collecting")
-        actions = [
+        actions = contextual_actions + [
             {
                 "label": "받는 사람에게 주소 요청",
                 "message": "받는 사람이 직접 주소를 입력하도록 요청",
@@ -669,6 +1230,14 @@ class DeliveryAgent:
             {"label": "차량 선택", "message": "차량 선택지를 보여줘"},
             {"label": "처음부터", "message": "주문 작성을 취소하고 처음부터 할래"},
         ]
+        deduplicated_actions: list[dict[str, str]] = []
+        seen_action_labels: set[str] = set()
+        for action in actions:
+            if action["label"] in seen_action_labels:
+                continue
+            seen_action_labels.add(action["label"])
+            deduplicated_actions.append(action)
+        actions = deduplicated_actions
         if state.get("slots", {}).get("_reservationRequested") and not state.get(
             "slots", {}
         ).get("wishTime"):
@@ -1168,12 +1737,14 @@ class DeliveryAgent:
         session_id: str,
         message: str,
         form_snapshot: dict[str, Any] | None = None,
+        input_context: str = "chat",
     ) -> AgentChatResult:
         state = await self._graph.ainvoke(
             {
                 "session_id": session_id,
                 "message": message,
                 "form_snapshot": form_snapshot or {},
+                "input_context": input_context,
             },
             config={
                 "run_name": "delivery-agent",
@@ -1190,6 +1761,7 @@ class DeliveryAgent:
             order=state.get("order"),
             sources=state.get("sources", []),
             actions=state.get("actions", []),
+            changed_slots=state.get("changed_slots", {}),
             trace=state.get("trace", []),
         )
 

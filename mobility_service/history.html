@@ -681,9 +681,31 @@
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || result.ok === false) {
-        throw new Error(result.message || result.detail || `요청 실패 (${response.status})`);
+        throw new Error(userFacingErrorMessage(result.message || result.detail || `요청 실패 (${response.status})`));
       }
       return result;
+    }
+
+    function userFacingErrorMessage(error) {
+      const raw = typeof error === "string"
+        ? error
+        : (error && typeof error.message === "string" ? error.message : "");
+      const message = String(raw || "").trim();
+      if (!message) return "요청 처리 중 문제가 발생했어요. 잠시 후 다시 시도해주세요.";
+
+      if (
+        /connecterror|api 연결에 실패|서버에 잠시 연결할 수 없어요|길찾기 정보를 잠시 불러올 수 없어요/i.test(message)
+      ) {
+        return "카카오 연동이 일시적으로 불안정해 상세 정보를 가져오지 못했어요. 잠시 후 다시 시도해주세요.";
+      }
+      if (/응답 시간이 초과|timeout/i.test(message)) {
+        return "응답이 지연되고 있어요. 잠시 후 다시 시도해주세요.";
+      }
+      if (/지도 키가 설정되지 않았습니다|카카오 지도를 불러오지 못했습니다/i.test(message)) {
+        return "지도 기능을 잠시 불러올 수 없어요. 잠시 후 다시 시도해주세요.";
+      }
+
+      return message.replace(/:\s*[A-Za-z_][A-Za-z0-9_]*Error\b.*$/, "").trim();
     }
 
     function formatDate(value) {
@@ -823,7 +845,10 @@
         await loadOrders(false);
         if (partnerOrderId) await selectOrder(partnerOrderId, false);
       } catch (error) {
-        button.textContent = error.message;
+        button.textContent = "다시 시도해주세요";
+        byId("matchList").prepend(
+          makeText("div", "error-box", userFacingErrorMessage(error))
+        );
       } finally {
         button.disabled = false;
         if (!byId("retryDialog").hidden) {
@@ -847,7 +872,9 @@
         await loadOrders(false);
         openRetryDialog(requestId);
       } catch (error) {
-        byId("matchList").prepend(makeText("div", "error-box", error.message));
+        byId("matchList").prepend(
+          makeText("div", "error-box", userFacingErrorMessage(error))
+        );
       }
     }
 
@@ -1172,7 +1199,7 @@
       renderTracking(detail, pickerData, mapNode, trackingMode, trackingNote)
         .catch(error => {
           trackingMode.textContent = "지도 표시 불가";
-          trackingNote.textContent = error.message;
+          trackingNote.textContent = userFacingErrorMessage(error);
         });
 
       const stepTitle = makeText("h3", "step-title", "배송 단계");
@@ -1242,7 +1269,7 @@
         if (refresh) await loadOrders(false);
       } catch (error) {
         body.className = "error-box";
-        body.textContent = error.message;
+        body.textContent = userFacingErrorMessage(error);
       }
     }
 
@@ -1255,7 +1282,7 @@
       } catch (error) {
         const body = byId("orderDetail");
         body.className = "error-box";
-        body.textContent = error.message;
+        body.textContent = userFacingErrorMessage(error);
       }
     }
 
@@ -1278,7 +1305,9 @@
         const initial = orders.find(order => order.partnerOrderId === queryId) || orders[0];
         await selectOrder(initial.partnerOrderId);
       } catch (error) {
-        list.replaceChildren(makeText("div", "error-box", error.message));
+        list.replaceChildren(
+          makeText("div", "error-box", userFacingErrorMessage(error))
+        );
         byId("totalCount").textContent = "-";
         byId("smartCount").textContent = "-";
         byId("waitingCount").textContent = "-";

@@ -2794,6 +2794,7 @@
     function openChatWithPrompt(promptText) {
       byId("chatWidget").classList.remove("hidden");
       setChatMode("ai");
+      chatInputContext = "chat";
       const input = byId("chatInput");
       input.value = promptText;
       input.focus();
@@ -4558,13 +4559,14 @@
     }
 
     const chatSessionId = (() => {
-      let id = localStorage.getItem("moveops_session_id");
+      let id = sessionStorage.getItem("moveops_session_id");
       if (!id) {
         id = crypto.randomUUID();
-        localStorage.setItem("moveops_session_id", id);
+        sessionStorage.setItem("moveops_session_id", id);
       }
       return id;
     })();
+    let chatInputContext = "chat";
 
     function toggleChat() {
       byId("chatWidget").classList.toggle("hidden");
@@ -4805,7 +4807,16 @@
             focusSmartPaste();
             return;
           }
+          if (action.target === "chatInput") {
+            chatInputContext = "chat";
+            const input = byId("chatInput");
+            input.value = "";
+            input.placeholder = action.message || "내용을 입력해주세요";
+            input.focus();
+            return;
+          }
           byId("chatInput").value = action.message;
+          chatInputContext = "chat";
           sendChatMessage();
         }, {once: true});
         container.append(button);
@@ -4845,7 +4856,7 @@
       fieldIds.forEach(id => {
         const field = byId(id);
         const value = field ? field.value.trim() : "";
-        if (value) snapshot[id] = value;
+        snapshot[id] = value;
       });
       return snapshot;
     }
@@ -4873,7 +4884,15 @@
       Object.entries(SLOT_FIELD_LABELS).forEach(([key, label]) => {
         const value = slots[key];
         const field = byId(key);
-        if (!field || value === undefined || value === null || value === "") return;
+        if (!field || value === undefined) return;
+        if (value === null || value === "") {
+          if (!field.value) return;
+          field.value = "";
+          field.classList.remove("field-error");
+          field.dispatchEvent(new Event(field.tagName === "SELECT" ? "change" : "input", {bubbles: true}));
+          applied.push(`${label} 재확인 필요`);
+          return;
+        }
         if (!overwrite && field.value.trim() && field.value.trim() !== String(value).trim()) return;
         if (field.value.trim() === String(value).trim()) return;
         field.value = key.endsWith("Phone") ? formatPhone(String(value)) : String(value);
@@ -4903,6 +4922,7 @@
 
     function focusSmartPaste() {
       byId("chatWidget").classList.remove("hidden");
+      chatInputContext = "recipient_message";
       const input = byId("chatInput");
       input.placeholder = "받은 문자를 통째로 붙여넣으세요";
       input.focus();
@@ -4922,6 +4942,8 @@
       const input = byId("chatInput");
       const message = input.value.trim();
       if (!message) return;
+      const inputContext = chatInputContext;
+      chatInputContext = "chat";
       appendChatBubble("user", message);
       input.value = "";
       resizeChatInput();
@@ -4936,6 +4958,7 @@
             message,
             mode: chatMode,
             localEngine: selectedLocalEngine(),
+            inputContext,
             formSnapshot: collectFormSnapshot()
           })
         });
@@ -4944,7 +4967,10 @@
           "bot",
           result.data?.reply || "응답을 받았지만 표시할 내용이 없어요."
         );
-        const applied = applyAgentSlots(result.data?.slots);
+        const applied = applyAgentSlots(
+          result.data?.changedSlots || {},
+          {overwrite: true}
+        );
         appendAppliedSummary(responseBubble, applied);
         appendChatActions(responseBubble, result.data?.actions);
         if (result.data?.order) loadOrders();
@@ -4991,17 +5017,22 @@
         const recognized = result.data?.text?.trim();
         if (!recognized) throw new Error("사진에서 문자를 찾지 못했습니다.");
         appendChatBubble("user", `📷 사진에서 읽은 문자\n${recognized}`);
-        const applied = applyAgentSlots(result.data?.slots);
+        const explicitDropoff = result.data?.roleHint === "dropoff";
+        const applied = explicitDropoff
+          ? applyAgentSlots(result.data?.slots, {overwrite: true})
+          : [];
         const bubble = appendChatBubble(
           "bot",
-          applied.length
-            ? "사진에서 배송 정보를 찾았어요. 잘못 읽힌 부분이 없는지 입력칸을 한번 확인해주세요."
-            : "문자는 읽었지만 확실한 배송 정보를 찾지 못했어요. 읽은 내용을 채팅 입력창에 넣어둘게요."
+          explicitDropoff && applied.length
+            ? "사진에서 받는 사람과 배송지 표시를 확인해 주문서에 반영했어요. 잘못 읽힌 부분이 없는지 확인해주세요."
+            : "문자는 읽었지만 출발지인지 도착지인지 확실하지 않아 주문서에는 아직 넣지 않았어요. 아래 전송 버튼을 누르면 역할과 전체 주소를 차례로 확인할게요."
         );
         appendAppliedSummary(bubble, applied);
-        if (!applied.length) {
+        if (!explicitDropoff || !applied.length) {
           byId("chatInput").value = recognized;
+          chatInputContext = "chat";
           resizeChatInput();
+          byId("chatInput").focus();
         }
       } catch (error) {
         loading.remove();
@@ -5101,7 +5132,7 @@
         }
         const latestCompleted = [...requests]
           .reverse()
-          .find(item => item.status === "COMPLETED");
+          .find(item => item.status === "COMPLETED" && !item.appliedAt);
         if (
           latestCompleted
           && !appliedAddressRequestTokens.has(latestCompleted.token)
@@ -5114,6 +5145,16 @@
             dropoffNote: latestCompleted.note,
           }, {overwrite: true});
           appliedAddressRequestTokens.add(latestCompleted.token);
+          const appliedAt = new Date().toISOString();
+          requests.forEach(item => {
+            if (item.status !== "COMPLETED" || item.appliedAt) return;
+            item.appliedAt = appliedAt;
+            item.appliedSessionId = chatSessionId;
+            if (item.token !== latestCompleted.token) {
+              item.supersededBy = latestCompleted.token;
+            }
+          });
+          changed = true;
           const bubble = appendChatBubble(
             "bot",
             "받는 사람이 배송지를 입력했어요. 도착지 입력칸에 자동으로 반영했습니다."

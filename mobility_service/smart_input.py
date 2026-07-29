@@ -19,6 +19,10 @@ _ADDRESS_LABEL_PATTERN = re.compile(
     r"^(?:받는\s*곳|배송지|도착지|주소|수령\s*주소)\s*[:：\-]?\s*",
     re.IGNORECASE,
 )
+_PICKUP_LABEL_PATTERN = re.compile(
+    r"^(?:보내는\s*곳|출발지|픽업지|픽업\s*주소)\s*[:：\-]?\s*",
+    re.IGNORECASE,
+)
 _ADDRESS_REGION_PATTERN = re.compile(
     r"(서울(?:특별시)?|부산(?:광역시)?|대구(?:광역시)?|인천(?:광역시)?|"
     r"광주(?:광역시)?|대전(?:광역시)?|울산(?:광역시)?|세종(?:특별자치시)?|"
@@ -34,6 +38,10 @@ _DETAIL_PATTERN = re.compile(
 _PRODUCT_PATTERN = re.compile(
     r"(?:물품|품목|보낼\s*것|배송\s*물품)\s*[:：\-]?\s*(.{1,80})",
     re.IGNORECASE,
+)
+_CITY_OR_COUNTY_PATTERN = re.compile(r"[가-힣]{2,}(?:시|군)(?=\s|$)")
+_LEADING_NAME_PATTERN = re.compile(
+    r"^\s*([가-힣]{2,5})\s+(.+(?:로|길)\s*\d+(?:-\d+)?.*)$"
 )
 
 
@@ -61,6 +69,44 @@ def _address_score(line: str) -> int:
     return score
 
 
+def address_is_specific_enough(address: str | None) -> bool:
+    """Return whether an address is safe enough to geocode without guessing.
+
+    A bare road name such as ``와우로 85`` exists in more than one area.  We
+    only let the agent geocode an address when it also contains a province,
+    metropolitan city, city, or county.
+    """
+
+    value = _clean_line(address or "")
+    if not value:
+        return False
+    has_street_number = bool(
+        _ROAD_ADDRESS_PATTERN.search(value) or _LOT_ADDRESS_PATTERN.search(value)
+    )
+    has_admin_area = bool(
+        _ADDRESS_REGION_PATTERN.search(value) or _CITY_OR_COUNTY_PATTERN.search(value)
+    )
+    return has_street_number and has_admin_area
+
+
+def _address_role_hint(text: str) -> str | None:
+    if re.search(
+        r"(?:출발지|픽업지|보내는\s*(?:곳|사람|분))\s*[:：\-]?",
+        text,
+        re.IGNORECASE,
+    ):
+        return "pickup"
+    if re.search(
+        r"(?:도착지|배송지|받는\s*(?:곳|사람|분)|수령인|수취인|수령\s*주소)\s*[:：\-]?",
+        text,
+        re.IGNORECASE,
+    ):
+        return "dropoff"
+    if re.search(r"(?:여기|이쪽|아래\s*주소)(?:로|에)\s*(?:보내|배송)", text):
+        return "dropoff"
+    return None
+
+
 def extract_dropoff_slots(text: str) -> dict[str, Any]:
     """Extract recipient fields from a copied message or OCR text.
 
@@ -75,6 +121,8 @@ def extract_dropoff_slots(text: str) -> dict[str, Any]:
 
     slots: dict[str, Any] = {}
     detected: list[str] = []
+    role_hint = _address_role_hint(normalized)
+    leading_name_candidate: str | None = None
 
     phone_match = _PHONE_PATTERN.search(normalized)
     if phone_match:
@@ -95,6 +143,17 @@ def extract_dropoff_slots(text: str) -> dict[str, Any]:
         if 2 <= len(name) <= 20:
             slots["dropoffName"] = name
             detected.append("받는 사람")
+    elif "\n" not in normalized:
+        leading_name_match = _LEADING_NAME_PATTERN.match(normalized)
+        if leading_name_match:
+            candidate = leading_name_match.group(1)
+            if (
+                not _ADDRESS_REGION_PATTERN.fullmatch(candidate)
+                and not re.search(r"(?:시|군|구|도|읍|면|동)$", candidate)
+            ):
+                leading_name_candidate = candidate
+                slots["dropoffName"] = candidate
+                detected.append("이름 후보")
 
     lines = [_clean_line(line) for line in normalized.splitlines()]
     lines = [line for line in lines if line]
@@ -103,7 +162,12 @@ def extract_dropoff_slots(text: str) -> dict[str, Any]:
         key=lambda item: (-item[0], item[1]),
     )
     if candidates and candidates[0][0] >= 4:
-        address_line = _ADDRESS_LABEL_PATTERN.sub("", candidates[0][2]).strip()
+        address_line = _PICKUP_LABEL_PATTERN.sub("", candidates[0][2]).strip()
+        address_line = _ADDRESS_LABEL_PATTERN.sub("", address_line).strip()
+        if leading_name_candidate and address_line.startswith(
+            f"{leading_name_candidate} "
+        ):
+            address_line = address_line[len(leading_name_candidate) + 1 :].strip()
         address_line = _PHONE_PATTERN.sub("", address_line)
         address_line = re.sub(
             r"\s*(?:받는\s*(?:분|사람)|수령인|이름|성함)\s*[:：]\s*"
@@ -146,4 +210,8 @@ def extract_dropoff_slots(text: str) -> dict[str, Any]:
         "slots": slots,
         "detected": detected,
         "confidence": round(confidence, 2),
+        "roleHint": role_hint,
+        "addressSpecificEnough": address_is_specific_enough(
+            slots.get("dropoffAddress")
+        ),
     }
