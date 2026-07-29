@@ -12,6 +12,7 @@ from mobility_service.app import create_app
 from mobility_service.conversation_store import ConversationStore
 from mobility_service.geocode import KakaoGeocodeClient
 from mobility_service.knowledge import default_knowledge_base
+from mobility_service.models import Location
 from mobility_service.site_crawler import (
     CrawledPage,
     extract_visible_sections,
@@ -24,6 +25,30 @@ from tests.test_mobility_service import FakeKakaoClient, settings
 class OfflineRouter:
     def generate(self, *args, **kwargs):
         raise RuntimeError("테스트에서는 외부 LLM을 호출하지 않습니다.")
+
+
+class DeterministicGeocoder:
+    def __init__(self) -> None:
+        self.queries: list[str] = []
+
+    async def search_address(self, query: str) -> Location | None:
+        self.queries.append(query)
+        locations = {
+            "서울 동작구 사당로2가길 10-3": Location(
+                basicAddress="서울 동작구 사당로2가길 10-3",
+                latitude=37.48,
+                longitude=126.97,
+            ),
+            "경기 화성시 와우로 85": Location(
+                basicAddress="경기 화성시 봉담읍 와우로 85",
+                latitude=37.21,
+                longitude=126.95,
+            ),
+        }
+        return locations.get(query)
+
+    async def close(self) -> None:
+        return None
 
 
 class MobilityKnowledgeTests(unittest.TestCase):
@@ -120,10 +145,10 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
         client = FakeKakaoClient()
         store = MobilityStore(root / "mobility.db")
         conversations = ConversationStore(root / "mobility.db")
-        geocoder = KakaoGeocodeClient(app_settings)
+        geocoder = DeterministicGeocoder()
         agent = DeliveryAgent(
             client,  # type: ignore[arg-type]
-            geocoder,
+            geocoder,  # type: ignore[arg-type]
             store,
             conversations,
             router=OfflineRouter(),  # type: ignore[arg-type]
@@ -133,11 +158,14 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
                 settings=app_settings,
                 client=client,  # type: ignore[arg-type]
                 store=store,
-                geocoder=geocoder,
+                geocoder=geocoder,  # type: ignore[arg-type]
                 conversations=conversations,
                 agent=agent,
             )
         )
+        self.fake = client
+        self.conversations = conversations
+        self.geocoder = geocoder
 
     def tearDown(self) -> None:
         self.client.close()
@@ -241,6 +269,135 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
         self.assertIn("픽업 예약 시간", data["reply"])
         self.assertEqual(data["actions"][0]["label"], "내일 15시")
         self.assertTrue(data["slots"]["_reservationRequested"])
+
+    def test_ambiguous_address_asks_before_touching_form_or_quoting(self) -> None:
+        session_id = "ambiguous-address-session"
+        self.conversations.get_or_create(session_id)
+        self.conversations.save_slots(
+            session_id,
+            {
+                "pickupAddress": "서울 동작구 사당로2가길 10-3",
+                "pickupLat": 37.48,
+                "pickupLng": 126.97,
+                "pickupAddressGeocoded": "서울 동작구 사당로2가길 10-3",
+                "pickupName": "기존 발송자",
+                "pickupPhone": "010-1000-0203",
+                "dropoffAddress": "서울 동작구 기존로 1",
+                "dropoffLat": 37.49,
+                "dropoffLng": 126.98,
+                "dropoffAddressGeocoded": "서울 동작구 기존로 1",
+                "dropoffName": "ㅇ",
+                "dropoffPhone": "010-1002-3091",
+                "productName": "서류",
+            },
+            "collecting",
+        )
+
+        first = self.client.post(
+            "/api/agent/chat",
+            headers={"X-Session-Id": session_id},
+            json={
+                "message": "백승환 와우로 85 토마토오피스텔1동 408호",
+                "formSnapshot": {
+                    "pickupAddress": "서울 동작구 사당로2가길 10-3",
+                    "pickupName": "기존 발송자",
+                    "pickupPhone": "010-1000-0203",
+                    "dropoffAddress": "서울 동작구 기존로 1",
+                    "dropoffName": "ㅇ",
+                    "dropoffPhone": "010-1002-3091",
+                    "productName": "서류",
+                },
+            },
+        ).json()["data"]
+
+        self.assertEqual(self.fake.price_calls, 0)
+        self.assertIsNone(first["quote"])
+        self.assertEqual(first["changedSlots"], {})
+        self.assertNotIn("서울 동작구 와우로 85", str(first["slots"]))
+        self.assertIn("출발지·보내는 사람", first["reply"])
+        self.assertIn("경기 화성시 와우로 85", first["reply"])
+        self.assertEqual(
+            [item["label"] for item in first["actions"][:2]],
+            ["출발지예요", "도착지예요"],
+        )
+
+        role = self.client.post(
+            "/api/agent/chat",
+            headers={"X-Session-Id": session_id},
+            json={"message": "도착지예요"},
+        ).json()["data"]
+        self.assertEqual(self.fake.price_calls, 0)
+        self.assertIn("시·군·구", role["reply"])
+
+        corrected = self.client.post(
+            "/api/agent/chat",
+            headers={"X-Session-Id": session_id},
+            json={"message": "경기 화성시 와우로 85"},
+        ).json()["data"]
+        self.assertEqual(self.fake.price_calls, 0)
+        self.assertEqual(
+            corrected["changedSlots"]["dropoffAddress"],
+            "경기 화성시 봉담읍 와우로 85",
+        )
+        self.assertEqual(corrected["changedSlots"]["dropoffName"], "백승환")
+        self.assertEqual(corrected["changedSlots"]["dropoffPhone"], "")
+        self.assertIn("받는 분 이름과 연락처", corrected["reply"])
+
+        contact = self.client.post(
+            "/api/agent/chat",
+            headers={"X-Session-Id": session_id},
+            json={"message": "받는 사람 연락처: 010-1000-0456"},
+        ).json()["data"]
+        self.assertEqual(self.fake.price_calls, 0)
+        self.assertIn("이 내용으로 예상 시간과 요금을 확인할까요", contact["reply"])
+
+        quoted = self.client.post(
+            "/api/agent/chat",
+            headers={"X-Session-Id": session_id},
+            json={"message": "이 내용으로 견적 확인해줘"},
+        ).json()["data"]
+        self.assertEqual(self.fake.price_calls, 1)
+        self.assertIsNotNone(quoted["quote"])
+
+    def test_failed_new_geocode_clears_old_coordinates_and_blocks_quote(self) -> None:
+        session_id = "failed-geocode-session"
+        self.conversations.get_or_create(session_id)
+        self.conversations.save_slots(
+            session_id,
+            {
+                "pickupAddress": "서울 동작구 사당로2가길 10-3",
+                "pickupLat": 37.48,
+                "pickupLng": 126.97,
+                "pickupAddressGeocoded": "서울 동작구 사당로2가길 10-3",
+                "pickupName": "발송자",
+                "pickupPhone": "010-1000-0001",
+                "dropoffAddress": "서울 동작구 기존로 1",
+                "dropoffLat": 37.49,
+                "dropoffLng": 126.98,
+                "dropoffAddressGeocoded": "서울 동작구 기존로 1",
+                "dropoffName": "수령인",
+                "dropoffPhone": "010-1000-0002",
+                "productName": "서류",
+            },
+            "collecting",
+        )
+
+        response = self.client.post(
+            "/api/agent/chat",
+            headers={"X-Session-Id": session_id},
+            json={
+                "message": "도착지: 경기 화성시 없는로 999로 바꾸고 견적 확인해줘"
+            },
+        ).json()["data"]
+
+        self.assertEqual(self.fake.price_calls, 0)
+        self.assertNotIn("dropoffLat", response["slots"])
+        self.assertNotIn("dropoffLng", response["slots"])
+        self.assertEqual(
+            response["slots"]["dropoffAddressLookupFailed"],
+            "경기 화성시 없는로 999로 바꾸고 견적 확인해줘",
+        )
+        self.assertIn("정확히 찾지 못했어요", response["reply"])
 
 
 if __name__ == "__main__":

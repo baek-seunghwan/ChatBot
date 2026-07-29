@@ -943,6 +943,7 @@ def create_app(
             session_id=session_id,
             message=request.message,
             form_snapshot=request.form_snapshot,
+            input_context=request.input_context,
         )
         return ApiEnvelope(data=result.to_dict())
 
