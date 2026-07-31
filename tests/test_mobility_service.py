@@ -16,6 +16,7 @@ from fastapi.testclient import TestClient
 from mobility_service.app import create_app
 from mobility_service.agent import DeliveryAgent
 from mobility_service.auth import build_authorization
+from mobility_service.chat_cache import GREETING_REPLY
 from mobility_service.client import KakaoMobilityClient
 from mobility_service.config import Settings
 from mobility_service.models import DeliveryDraft
@@ -135,7 +136,7 @@ class VllmProviderTests(unittest.TestCase):
             fallback_provider=None,
             vllm_base_url="https://model.example/v1",
             vllm_api_key="test-secret",
-            vllm_model="Qwen/Qwen2.5-3B-Instruct",
+            vllm_model="Qwen/Qwen3-4B-Instruct-2507",
         )
 
         with patch("mobility_service.providers.httpx.post", return_value=response) as post:
@@ -255,6 +256,10 @@ class MobilityApiTests(unittest.TestCase):
         self.assertEqual(about.status_code, 200)
         self.assertIn('url("/assets/movb-brand-hero.webp")', about.text)
         self.assertIn("MOVB BRAND", about.text)
+        self.assertIn(
+            'href="/order?booking=scheduled"',
+            about.text,
+        )
         self.assertEqual(hero.status_code, 200)
         self.assertEqual(hero.headers["content-type"], "image/webp")
         self.assertGreater(len(hero.content), 100_000)
@@ -528,16 +533,26 @@ class MobilityApiTests(unittest.TestCase):
         home = self.client.get("/order")
 
         self.assertEqual(home.status_code, 200)
-        self.assertIn("한 화면에서 순서대로 입력해요", home.text)
+        self.assertIn(
+            "필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.",
+            home.text,
+        )
         self.assertNotIn('class="booking-steps"', home.text)
         self.assertIn("보내는 분 연락처와 동일", home.text)
         self.assertIn("받는 사람 이름", home.text)
         self.assertIn('id="quickReview"', home.text)
         self.assertIn('id="quoteButton"', home.text)
         self.assertIn('id="orderButton"', home.text)
+        self.assertIn('id="reviewEmpty"', home.text)
+        self.assertIn('id="paymentStepScreen"', home.text)
+        self.assertIn('onclick="openPaymentStep()"', home.text)
+        self.assertIn('id="finalOrderButton"', home.text)
         self.assertIn("주소 확인이 필요해요", home.text)
         self.assertIn("출발지 미설정", home.text)
         self.assertIn("도착지 미설정", home.text)
+        self.assertIn('id="wishDate"', home.text)
+        self.assertIn('id="pickupSchedule"', home.text)
+        self.assertIn("level: 5", home.text)
 
     def test_customer_pages_include_accessible_typography_and_controls(self) -> None:
         home = self.client.get("/order")
@@ -564,16 +579,21 @@ class MobilityApiTests(unittest.TestCase):
                     "message": "MOVB가 뭐야?",
                     "mode": "local",
                     "localEngine": "own",
+                    "formSnapshot": {"pickupAddress": "서울역"},
                 },
             )
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["data"]["reply"], "자체 QA 응답")
         self.assertEqual(response.json()["data"]["trace"], ["local_model:own"])
-        responder.assert_called_once_with("MOVB가 뭐야?", "own")
+        responder.assert_called_once_with(
+            "MOVB가 뭐야?",
+            "own",
+            {"pickupAddress": "서울역"},
+        )
 
     def test_own_model_handles_basic_deployed_chat(self) -> None:
-        greeting = "안녕하세요! MOVB 서비스에 대해 물어보세요 🙂"
+        greeting = GREETING_REPLY
         self.assertEqual(own_model_reply("헬로"), greeting)
         self.assertEqual(own_model_reply("ㅇㅇ"), greeting)
         self.assertIn("MOVB", own_model_reply("MOVB가 뭐야"))
@@ -597,6 +617,18 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("2,000원", own_model_reply("기사 대기료가 얼마야?"))
         self.assertIn("픽업 출발", own_model_reply("기사님 위치는 언제 보여?"))
         self.assertIn("서비스 문의", own_model_reply("고객센터 어디야?"))
+
+    def test_product_size_uses_measurable_api_limits(self) -> None:
+        answer = own_model_reply("물품 크기는 어떤 게 있어")
+        order_page = (
+            Path(__file__).resolve().parents[1] / "mobility_service" / "index.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("80cm·2kg 이하", answer)
+        self.assertIn("140cm·20kg 이하", answer)
+        self.assertIn("가로+세로+높이 100cm 이하 · 5kg 이하", order_page)
+        self.assertNotIn("작은 택배상자", order_page)
+        self.assertNotIn("보통 크기 상자", order_page)
 
     def test_own_model_answers_general_chat_without_ollama(self) -> None:
         self.assertIn("힘드셨겠어요", own_model_reply("오늘 기분이 안 좋아"))

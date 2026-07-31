@@ -62,7 +62,7 @@ class LLMRouter:
             else os.getenv("VLLM_API_KEY", "")
         )
         self.vllm_model = vllm_model or os.getenv(
-            "VLLM_MODEL", "Qwen/Qwen2.5-3B-Instruct"
+            "VLLM_MODEL", "Qwen/Qwen3-4B-Instruct-2507"
         )
 
     @property

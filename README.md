@@ -78,13 +78,17 @@ LLM 호출이 아니라 검증된 Workflow가 수행하는 하이브리드 구�
 
 현재 지식베이스는 홈페이지 안내를 포함한 7개 문서로 구성되어 있습니다.
 
-### Ollama 없는 내 로컬 채팅
+### 로컬 채팅과 공개 가중치 모델
 
 - `mobility_service/local_chat_qa.jsonl`의 일상 대화 QA를 저장소에 함께 배포
 - MOVB 핵심 질문과 실제 주문 요청을 일반 QA보다 먼저 구분
 - 문자 2·3-gram 유사도와 변형 질문으로 가장 가까운 학습 답변 검색
 - 모르는 질문은 답을 지어내지 않고 로컬 QA의 지원 범위를 안내
 - 배송 견적·접수·조회·취소 요청은 실제 업무를 수행하는 AI 채팅으로 안내
+- 공개 가중치 `Qwen/Qwen3-4B-Instruct-2507`를 vLLM으로 서빙하면 로컬 채팅이
+  자동으로 OpenAI 호환 모델 서버를 사용
+- 현재 주문 화면의 주소·연락처·물품 등 허용된 폼 값만 로컬 모델 문맥으로 전달
+- 홈페이지 공개 문구와 MOVB 정책은 파인튜닝하지 않고 Knowledge RAG로 주입
 
 ### 배송 운영
 
@@ -132,8 +136,8 @@ LLM 호출이 아니라 검증된 Workflow가 수행하는 하이브리드 구�
 
 | 평가 | 데이터 | 현재 결과 |
 |---|---:|---:|
-| 지식 검색 Source Hit@3 | 26문항 | **26/26 (100%)** |
-| 자동 테스트 | API·인증·스마트 딜리버리·주문·경로·Step·RAG·Agent·로컬 QA | **51개 통과** |
+| 지식 검색 Source Hit@3 | 32문항 | **32/32 (100%)** |
+| 자동 테스트 | API·인증·스마트 딜리버리·주문·경로·Step·RAG·Agent·로컬 QA·vLLM | **73개 통과** |
 
 평가 실행:
 
@@ -236,7 +240,7 @@ OLLAMA_MODEL=gemma4:e2b
 자동 폴백으로 사용할 수 있습니다.
 
 ```bash
-vllm serve Qwen/Qwen2.5-3B-Instruct \
+vllm serve Qwen/Qwen3-4B-Instruct-2507 \
   --host 0.0.0.0 \
   --port 8000 \
   --api-key change-me \
@@ -245,9 +249,27 @@ vllm serve Qwen/Qwen2.5-3B-Instruct \
 
 ```dotenv
 VLLM_BASE_URL=http://127.0.0.1:8000/v1
-VLLM_MODEL=Qwen/Qwen2.5-3B-Instruct
+VLLM_MODEL=Qwen/Qwen3-4B-Instruct-2507
 VLLM_API_KEY=change-me
 ```
+
+NVIDIA GPU Linux 또는 EC2에서는 공식 vLLM 이미지가 포함된 Compose 구성을
+바로 사용할 수 있습니다.
+
+```bash
+docker compose \
+  -f docker-compose.yml \
+  -f docker-compose.vllm.yml \
+  up -d
+```
+
+실행 사양, 보안 설정, EC2 절차와 로컬 챗봇 데이터 구조는
+[`docs/vllm-ec2.md`](docs/vllm-ec2.md)에 정리했습니다.
+
+`local_chat_qa.jsonl`과 `knowledge/*.md`는 가중치를 업데이트하는 학습 데이터가
+아닙니다. 전자는 자체 QA 검색표이고, 후자는 vLLM·Ollama에 검색 근거로 전달되는
+지식 문서입니다. 정적 홈페이지 전체를 모델이 실시간으로 읽지는 않지만, 공개
+문구 스냅샷과 현재 화면의 허용된 폼 값은 로컬 채팅 문맥에 포함됩니다.
 
 챗봇 입력창에는 받은 문자를 통째로 붙여넣을 수 있습니다. 주소·수령인·전화번호를
 찾으면 배송 접수 폼의 빈 입력칸에 자동 반영합니다. 문자 화면을 사진으로 올리면

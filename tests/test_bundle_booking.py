@@ -118,7 +118,8 @@ class BundleBookingTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertIn("+ 보내는 사람", response.text)
-        self.assertIn("+ 경유지 추가", response.text)
+        self.assertIn('id="addSmartDropoff"', response.text)
+        self.assertIn("경유지 추가", response.text)
         self.assertIn('id="roundTrip"', response.text)
         self.assertIn('data-order-type="SMART"', response.text)
         self.assertIn('data-fleet="MOTORCYCLE"', response.text)
@@ -137,10 +138,13 @@ class BundleBookingTests(unittest.TestCase):
             'class="form-section product-section"',
             'class="form-section handling-section"',
             'class="form-section driver-note-section"',
-            'class="form-section payment-section"',
         ]
         section_positions = [response.text.index(label) for label in section_order]
         self.assertEqual(section_positions, sorted(section_positions))
+        self.assertGreater(
+            response.text.index('id="paymentStepScreen"'),
+            section_positions[-1],
+        )
         self.assertIn('id="quoteButton"', response.text)
         self.assertIn('id="orderButton"', response.text)
         self.assertIn("/api/smart-delivery/quote", response.text)

@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import httpx
 from fastapi.testclient import TestClient
@@ -156,6 +156,67 @@ class LocalResponderTests(unittest.TestCase):
         self.assertIn("안녕하세요", reply)
         mocked_search.assert_not_called()
 
+    def test_own_local_chat_can_read_current_form_snapshot(self) -> None:
+        reply = local_responder.local_model_reply(
+            "지금 화면에 입력된 배송 정보 알려줘",
+            engine="own",
+            form_snapshot={
+                "pickupAddress": "서울역",
+                "dropoffAddress": "대전역",
+                "productName": "계약서",
+                "unknownField": "모델에 보내면 안 되는 값",
+            },
+        )
+
+        self.assertIn("출발지: 서울역", reply)
+        self.assertIn("도착지: 대전역", reply)
+        self.assertIn("물품명: 계약서", reply)
+        self.assertNotIn("unknownField", reply)
+        self.assertNotIn("모델에 보내면 안 되는 값", reply)
+
+    def test_vllm_receives_retrieved_knowledge_and_current_form(self) -> None:
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = {
+            "choices": [{"message": {"content": "현재 입력 내용을 확인했어요."}}]
+        }
+
+        with patch.object(
+            local_responder,
+            "VLLM_BASE_URL",
+            "https://model.example/v1",
+        ), patch.object(
+            local_responder,
+            "VLLM_API_KEY",
+            "test-secret",
+        ), patch(
+            "mobility_service.local_responder.httpx.post",
+            return_value=response,
+        ) as post:
+            reply = local_responder.local_model_reply(
+                "MOVB 스마트 딜리버리로 접수하려면 어떻게 해?",
+                engine="vllm",
+                form_snapshot={
+                    "pickupAddress": "서울역",
+                    "dropoffAddress": "대전역",
+                },
+            )
+
+        self.assertEqual(reply, "현재 입력 내용을 확인했어요.")
+        self.assertEqual(
+            post.call_args.args[0],
+            "https://model.example/v1/chat/completions",
+        )
+        system_prompt = post.call_args.kwargs["json"]["messages"][0]["content"]
+        self.assertIn("[검색된 MOVB 근거]", system_prompt)
+        self.assertIn("[현재 화면에 입력된 배송 정보]", system_prompt)
+        self.assertIn("출발지: 서울역", system_prompt)
+        self.assertIn("도착지: 대전역", system_prompt)
+        self.assertEqual(
+            post.call_args.kwargs["headers"]["Authorization"],
+            "Bearer test-secret",
+        )
+
 
 class AgentKnowledgeRouteTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -251,9 +312,10 @@ class AgentKnowledgeRouteTests(unittest.TestCase):
         )
         data = response.json()["data"]
 
-        self.assertIn("MOVB", data["reply"])
-        self.assertIn("스마트 딜리버리", data["reply"])
-        self.assertNotIn("필요한 정보가 더", data["reply"])
+        self.assertEqual(
+            data["reply"],
+            "안녕하세요! MOVB 서비스에 대해 물어보세요 🙂",
+        )
 
     def test_vehicle_choice_is_interactive_and_saved_without_llm(self) -> None:
         menu = self.client.post(
