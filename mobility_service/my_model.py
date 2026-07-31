@@ -5,6 +5,7 @@ import re
 from functools import lru_cache
 from pathlib import Path
 
+from .chat_cache import GREETING_REPLY, cached_chat_response
 from .knowledge import default_knowledge_base
 
 # "나만의 모델": 외부 서버(Ollama) 없이 동작하는 자체 QA 검색 모델.
@@ -36,7 +37,9 @@ MOVB_QA: list[tuple[str, str]] = [
     ),
     (
         "물품 크기는 어떤 게 있어",
-        "XS(서류/초소형), S(소형), M(중형), L(대형) 네 가지예요.",
+        "포장한 물품의 가로·세로·높이 합계와 전체 무게로 선택해요. "
+        "XS는 80cm·2kg 이하, S는 100cm·5kg 이하, M은 140cm·20kg 이하이고, "
+        "둘 중 하나라도 M 기준을 넘으면 L이에요. L은 적재 가능한 화물 차량을 함께 선택해야 해요.",
     ),
     (
         "주문은 어떻게 해",
@@ -222,9 +225,13 @@ def _best_match(prompt: str) -> tuple[str | None, float]:
 
 def own_model_reply(prompt: str) -> str:
     """외부 모델 없이 로컬 QA와 MOVB 근거 문서만으로 답한다."""
+    cached = cached_chat_response(prompt)
+    if cached is not None:
+        return cached.reply
+
     conversation_key = re.sub(r"[^가-힣ㄱ-ㅎㅏ-ㅣa-z0-9]", "", prompt.lower())
     if _GREETING_PATTERN.fullmatch(conversation_key):
-        return "안녕하세요! MOVB 서비스에 대해 물어보세요 🙂"
+        return GREETING_REPLY
     if _OLLAMA_PATTERN.search(conversation_key):
         return (
             "Ollama를 꺼도 괜찮아요. 지금은 외부 서버를 쓰지 않는 Leon의 로컬 QA로 "

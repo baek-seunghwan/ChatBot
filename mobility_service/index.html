@@ -12,7 +12,7 @@
       --ink: #191919;
       --muted: #686868;
       --line: #e7e7e7;
-      --surface: #f7f7f5;
+      --surface: #f5f6f8;
       --panel: #fff;
       --success: #137a49;
       --danger: #c43c35;
@@ -29,10 +29,7 @@
       font-size: 16px;
       line-height: 1.5;
       color: var(--ink);
-      background:
-        radial-gradient(circle at 12% 6%, rgba(83, 71, 255, .11), transparent 24%),
-        radial-gradient(circle at 88% 88%, rgba(15, 138, 115, .08), transparent 26%),
-        var(--surface);
+      background: var(--surface);
     }
     .site-header {
       display: flex;
@@ -115,50 +112,68 @@
       white-space: nowrap;
       border: 0;
     }
-    body.auth-open { overflow: hidden; }
+    body.auth-open { overflow: auto; }
     .auth-backdrop {
       position: fixed;
       z-index: 100;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      padding: 20px;
-      background: rgba(10, 10, 14, .66);
-      backdrop-filter: blur(7px);
+      top: var(--auth-popover-top, 72px);
+      right: var(--auth-popover-right, 20px);
+      width: min(360px, calc(100vw - 24px));
+      padding: 0;
+      background: transparent;
     }
     .auth-backdrop.hidden { display: none; }
+    .auth-backdrop::before {
+      position: absolute;
+      z-index: 1;
+      top: -5px;
+      right: 24px;
+      width: 10px;
+      height: 10px;
+      border-top: 1px solid #e2e5eb;
+      border-left: 1px solid #e2e5eb;
+      background: #fff;
+      content: "";
+      transform: rotate(45deg);
+    }
     .auth-card {
-      width: min(420px, 100%);
-      border: 1px solid rgba(255, 255, 255, .55);
-      border-radius: 24px;
-      padding: 24px;
+      position: relative;
+      width: 100%;
+      max-height: calc(100vh - var(--auth-popover-top, 72px) - 12px);
+      overflow-y: auto;
+      border: 1px solid #e2e5eb;
+      border-radius: 12px;
+      padding: 18px;
       background: white;
-      box-shadow: 0 28px 70px rgba(0, 0, 0, .3);
+      box-shadow: 0 18px 42px rgba(16, 37, 77, .18);
     }
     .auth-head {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 14px;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
     }
-    .auth-head h2 { margin: 0 0 5px; }
-    .auth-head p { margin: 0; color: var(--muted); font-size: 13px; }
+    .auth-head h2 { margin: 0 0 4px; font-size: 18px; }
+    .auth-head p { margin: 0; color: var(--muted); font-size: 12px; }
     .auth-close {
-      padding: 7px 10px;
+      min-width: 34px;
+      min-height: 34px;
+      padding: 6px 9px;
+      border-radius: 7px;
       background: #f0f0f0;
       color: var(--ink);
       box-shadow: none;
-      font-size: 17px;
+      font-size: 15px;
     }
     .auth-close:hover { transform: none; box-shadow: none; }
     .auth-tabs {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px;
-      margin-bottom: 18px;
+      margin-bottom: 14px;
       padding: 5px;
-      border-radius: 14px;
+      border-radius: 9px;
       background: #f1f2f6;
     }
     .auth-tab {
@@ -181,16 +196,16 @@
       font-size: 12px;
     }
     .auth-error.visible { display: block; }
-    .account-view { display: grid; gap: 16px; }
+    .account-view { display: grid; gap: 12px; }
     .account-view.hidden, .auth-form-view.hidden, .register-name.hidden { display: none; }
     .account-profile {
-      padding: 18px;
-      border-radius: 16px;
-      background: linear-gradient(135deg, #fff3c4, #fffdf2);
+      padding: 14px;
+      border-radius: 8px;
+      background: #fff9dc;
       border: 1px solid #f0d878;
     }
-    .account-profile strong { display: block; font-size: 19px; }
-    .account-profile span { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; }
+    .account-profile strong { display: block; font-size: 16px; }
+    .account-profile span { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
     .account-actions { display: flex; gap: 8px; }
     .account-actions button { flex: 1; }
     .account-actions .hidden { display: none; }
@@ -1778,6 +1793,31 @@
       justify-content: flex-end;
       gap: 7px;
     }
+    #addSmartDropoff {
+      display: inline-flex;
+      min-width: 124px;
+      min-height: 40px;
+      flex: 0 0 auto;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      padding: 8px 13px;
+      white-space: nowrap;
+      word-break: keep-all;
+    }
+    .add-route-icon {
+      display: inline-grid;
+      width: 22px;
+      height: 22px;
+      flex: none;
+      place-items: center;
+      border-radius: 50%;
+      background: #fff2a8;
+      color: var(--navy);
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1;
+    }
     .address-actions .benefit-chip,
     .address-actions .round-trip-toggle {
       display: none;
@@ -1926,7 +1966,7 @@
     }
     .pickup-time-field {
       display: grid;
-      grid-template-columns: 115px minmax(180px, 280px) minmax(0, 1fr);
+      grid-template-columns: 100px minmax(320px, 480px) minmax(0, 1fr);
       align-items: center;
       gap: 10px;
       margin-top: 12px;
@@ -1936,6 +1976,28 @@
       font-weight: 850;
     }
     .pickup-time-field .field-hint { margin: 0; }
+    .pickup-time-title { white-space: nowrap; }
+    .schedule-controls {
+      display: grid;
+      grid-template-columns: minmax(138px, .9fr) minmax(170px, 1.1fr);
+      gap: 8px;
+      min-width: 0;
+      scroll-margin-top: 120px;
+    }
+    .schedule-field {
+      display: grid;
+      min-width: 0;
+      gap: 5px;
+      color: #667085;
+      font-size: 10px;
+      font-weight: 800;
+    }
+    .schedule-field input[type="date"] {
+      min-width: 0;
+      min-height: 44px;
+      font-size: 13px;
+      font-weight: 700;
+    }
     .time-select { position: relative; display: block; min-width: 0; }
     .time-select-button {
       display: flex;
@@ -2330,16 +2392,830 @@
       .quick-review .review-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
+  <style id="history-inspired-order-ui">
+    body {
+      background: #f4f5f7;
+      color: #17191f;
+    }
+    .sandbox {
+      width: min(1180px, calc(100% - 40px));
+      margin: 18px auto 0;
+      border: 1px solid #ead77b;
+      border-radius: 8px;
+      background: #fff8cf;
+      color: #665513;
+      box-shadow: none;
+    }
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 18px 0 64px;
+    }
+    #quickRequest {
+      grid-row: 1;
+      padding: 0;
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    #quickRequest .quick-heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 28px;
+      margin: 0;
+      border: 0;
+      border-radius: 12px;
+      padding: 34px;
+      overflow: hidden;
+      background: #10254d;
+      color: #fff;
+      box-shadow: none;
+    }
+    #quickRequest .quick-eyebrow {
+      display: block;
+      margin-bottom: 8px;
+      color: #ffcc00;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .13em;
+    }
+    #quickRequest .quick-heading h1 {
+      margin: 0;
+      color: #fff;
+      font-size: clamp(32px, 5vw, 50px);
+      line-height: 1.1;
+      letter-spacing: -.045em;
+    }
+    #quickRequest .quick-heading .description {
+      max-width: 610px;
+      margin: 12px 0 0;
+      color: #d7deeb;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+    #quickRequest .quick-badge {
+      flex: none;
+      margin-bottom: 2px;
+      border: 1px solid rgba(255, 204, 0, .4);
+      border-radius: 8px;
+      padding: 10px 13px;
+      background: rgba(255, 204, 0, .12);
+      color: #ffe36b;
+    }
+    #quickRequest .quick-badge > span {
+      background: #ffcc00;
+    }
+    #quickRequest .live-ops {
+      margin-top: 18px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+    }
+    #quickRequest .live-ops-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 46px;
+      border-bottom: 1px solid #eef0f2;
+      padding: 11px 18px;
+      background: #f8f9fb;
+    }
+    #quickRequest .live-dot {
+      width: 9px;
+      height: 9px;
+      flex: none;
+      border-radius: 50%;
+      background: #28a36a;
+      box-shadow: 0 0 0 0 rgba(40, 163, 106, .3);
+      animation: livePulse 2s ease-out infinite;
+    }
+    #quickRequest .live-ops-copy {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      min-width: 0;
+    }
+    #quickRequest .live-kicker {
+      color: #28a36a;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    #quickRequest .live-ops-copy strong {
+      color: #10254d;
+      font-size: 13px;
+    }
+    #quickRequest .live-refresh {
+      margin-left: auto;
+      color: #667085;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    #quickRequest .live-ops-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: stretch;
+      min-height: 82px;
+    }
+    #quickRequest .live-activity {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      align-content: center;
+      column-gap: 12px;
+      min-width: 0;
+      padding: 16px 18px;
+    }
+    #quickRequest .live-activity-icon {
+      grid-row: 1 / span 2;
+      display: grid;
+      width: 36px;
+      height: 36px;
+      place-items: center;
+      border-radius: 8px;
+      background: #fff8d8;
+      color: #10254d;
+      font-size: 17px;
+    }
+    #quickRequest .live-activity strong {
+      overflow: hidden;
+      align-self: end;
+      color: #17191f;
+      font-size: 13px;
+      line-height: 1.4;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #quickRequest .live-activity small {
+      overflow: hidden;
+      align-self: start;
+      margin-top: 3px;
+      color: #667085;
+      font-size: 11px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #quickRequest .live-counts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(86px, 1fr));
+      border-left: 1px solid #eef0f2;
+    }
+    #quickRequest .live-metric {
+      display: flex;
+      min-width: 0;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 16px 18px;
+      text-align: center;
+    }
+    #quickRequest .live-metric + .live-metric {
+      border-left: 1px solid #eef0f2;
+    }
+    #quickRequest .live-metric span {
+      display: block;
+    }
+    #quickRequest .live-metric span {
+      color: #667085;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    #quickRequest .live-metric strong {
+      color: #10254d;
+      font-size: 20px;
+      line-height: 1.2;
+    }
+    #quickRequest .live-metric em {
+      color: #667085;
+      font-size: 10px;
+      font-style: normal;
+      font-weight: 700;
+    }
+    #quickRequest .live-metric strong.updated {
+      animation: liveValue 450ms ease;
+    }
+    #quickRequest .live-ops.delayed .live-dot {
+      background: #d89a18;
+      animation: none;
+      box-shadow: none;
+    }
+    #quickRequest .live-ops.delayed .live-kicker {
+      color: #b2760b;
+    }
+    @keyframes livePulse {
+      70% { box-shadow: 0 0 0 7px rgba(40, 163, 106, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(40, 163, 106, 0); }
+    }
+    @keyframes liveValue {
+      0% { color: #b28e00; transform: translateY(-2px); }
+      100% { color: #10254d; transform: translateY(0); }
+    }
+    #quickRequest .form-sections {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      align-items: start;
+      gap: 14px;
+      margin-top: 0;
+    }
+    #quickRequest .order-entry-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(340px, 390px);
+      align-items: start;
+      gap: 14px;
+      margin-top: 18px;
+    }
+    #quickRequest .order-sidebar {
+      position: sticky;
+      top: 82px;
+      display: grid;
+      min-width: 0;
+      gap: 14px;
+    }
+    #quickRequest .order-sidebar .map-panel {
+      order: -1;
+    }
+    #quickRequest .form-section {
+      grid-column: auto;
+      min-width: 0;
+      margin: 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 22px;
+      background: #fff;
+      box-shadow: none;
+    }
+    #quickRequest .address-section,
+    #quickRequest .vehicle-section,
+    #quickRequest .delivery-option-section,
+    #quickRequest .product-section,
+    #quickRequest .handling-section,
+    #quickRequest .driver-note-section,
+    #quickRequest .payment-section {
+      grid-column: 1 / -1;
+    }
+    #quickRequest .section-title-row,
+    #quickRequest .section-heading {
+      min-height: 32px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid #eef0f2;
+      padding-bottom: 12px;
+    }
+    #quickRequest .section-heading h3,
+    #quickRequest .section-title-row h3 {
+      color: #10254d;
+      font-size: 15px;
+      letter-spacing: -.02em;
+    }
+    #quickRequest .section-heading > small {
+      color: #667085;
+    }
+    #quickRequest .section-number {
+      display: inline-grid;
+      width: 24px;
+      height: 24px;
+      margin-right: 7px;
+      place-items: center;
+      border-radius: 6px;
+      background: #10254d;
+      color: #fff;
+      font-size: 11px;
+    }
+    #quickRequest .section-tabs {
+      width: 100%;
+      gap: 22px;
+    }
+    #quickRequest .section-tab {
+      min-height: 34px;
+      color: #667085;
+    }
+    #quickRequest .section-tab.active {
+      border-bottom-color: #ffcc00;
+      color: #10254d;
+    }
+    #quickRequest input,
+    #quickRequest select,
+    #quickRequest textarea,
+    #quickRequest .time-select-button {
+      border-color: #dfe3e8;
+      border-radius: 7px;
+      background-color: #fff;
+      box-shadow: none;
+    }
+    #quickRequest input:focus,
+    #quickRequest select:focus,
+    #quickRequest textarea:focus,
+    #quickRequest .time-select.open .time-select-button {
+      border-color: #10254d;
+      box-shadow: 0 0 0 3px rgba(16, 37, 77, .08);
+    }
+    #quickRequest .address-party,
+    #quickRequest .recent-address-panel,
+    #quickRequest .handling-grid fieldset {
+      border-color: #e5e7eb;
+      border-radius: 8px;
+      background: #f8f9fb;
+    }
+    #quickRequest .choice-card-grid {
+      gap: 8px;
+    }
+    #quickRequest .vehicle-card-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+    #quickRequest .delivery-card-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    #quickRequest .choice-card {
+      min-height: 88px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+      box-shadow: none;
+    }
+    #quickRequest .choice-card:hover {
+      border-color: #aeb8c8;
+      background: #f8f9fb;
+    }
+    #quickRequest .choice-card.active {
+      border: 1px solid #10254d;
+      padding: 12px;
+      background: #f7f9fc;
+      color: #10254d;
+      box-shadow: inset 4px 0 0 #ffcc00;
+    }
+    #quickRequest .choice-icon {
+      min-height: 22px;
+    }
+    #quickRequest .choice-icon svg {
+      width: 20px;
+      height: 20px;
+    }
+    #quickRequest .choice-card strong {
+      font-size: 12px;
+    }
+    #quickRequest .choice-card small {
+      font-size: 9.5px;
+    }
+    #quickRequest .pickup-time-field {
+      grid-template-columns: 90px minmax(320px, 470px) minmax(0, 1fr);
+    }
+    #quickRequest .delivery-option-section .pickup-time-field {
+      grid-template-columns: 90px minmax(320px, 470px) minmax(0, 1fr);
+    }
+    #quickRequest .smart-mode-guide,
+    #quickRequest .payment-help,
+    #quickRequest .handling-price,
+    #quickRequest .prohibited-notice {
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid #ffcc00;
+      border-radius: 8px;
+      background: #fffdf3;
+      box-shadow: none;
+    }
+    #quickRequest .payment-card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+    }
+    #quickRequest .payment-card.active {
+      border: 1px solid #10254d;
+      padding: 12px;
+      background: #f7f9fc;
+      box-shadow: inset 4px 0 0 #ffcc00;
+    }
+    #quickRequest .quick-review {
+      margin-top: 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 22px;
+      background: #fff;
+      color: #17191f;
+      box-shadow: none;
+    }
+    #quickRequest .review-empty {
+      margin: 0;
+      border: 1px dashed #cfd5df;
+      border-radius: 8px;
+      padding: 16px;
+      background: #f8f9fb;
+      color: #667085;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+    #quickRequest .quick-review .review-grid {
+      grid-template-columns: 1fr;
+      gap: 0;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    #quickRequest .quick-review .review-item {
+      display: grid;
+      grid-template-columns: 84px minmax(0, 1fr);
+      align-items: start;
+      gap: 12px;
+      border: 0;
+      border-radius: 0;
+      padding: 12px 14px;
+      background: #fff;
+    }
+    #quickRequest .quick-review .review-item + .review-item {
+      border-top: 1px solid #eef0f2;
+    }
+    #quickRequest .quick-review .review-item span {
+      padding-top: 1px;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    #quickRequest .quick-review .review-item strong {
+      margin: 0;
+      overflow: visible;
+      font-size: 13px;
+      line-height: 1.45;
+      text-align: right;
+      text-overflow: clip;
+      white-space: normal;
+      word-break: keep-all;
+    }
+    #quickRequest .quick-review-head {
+      border-bottom: 1px solid #eef0f2;
+      padding-bottom: 12px;
+    }
+    #quickRequest .quick-review-head h3,
+    #quickRequest .review-route,
+    #quickRequest .review-item strong {
+      color: #10254d;
+    }
+    #quickRequest .review-route {
+      border: 1px solid #e5e7eb;
+      border-left: 3px solid #ffcc00;
+      background: #fffdf3;
+    }
+    #quickRequest .review-item {
+      border: 1px solid #e5e7eb;
+      background: #f8f9fb;
+    }
+    #quickRequest .review-item span {
+      color: #667085;
+    }
+    #quickRequest .quote-status {
+      border: 1px solid #dfe3e8;
+      background: #f4f6f8;
+      color: #445066;
+    }
+    #quickRequest .quick-actions {
+      grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+    #quickRequest .quick-actions button {
+      min-height: 48px;
+      border-radius: 7px;
+      font-size: 13px;
+    }
+    #quickRequest .quick-actions .primary {
+      border-color: #10254d;
+      background: #10254d;
+      color: #fff;
+    }
+    #quickRequest .quick-actions .primary:hover {
+      background: #183766;
+    }
+    #quickRequest .result,
+    #quickRequest .safety-note {
+      border-radius: 8px;
+      box-shadow: none;
+    }
+    .map-panel {
+      grid-column: auto;
+      grid-row: auto;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: none;
+    }
+    .map-panel .map-header {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 22px 24px;
+    }
+    .map-panel .map-header h2 {
+      color: #10254d;
+    }
+    .map-panel .eyebrow {
+      color: #b28e00;
+      letter-spacing: .12em;
+    }
+    .map-panel .map-stage {
+      min-height: 250px;
+    }
+    .map-panel .map-stage,
+    .map-panel #map {
+      height: 250px;
+    }
+    .map-panel .route-summary {
+      border-top: 1px solid #e5e7eb;
+      background: #f8f9fb;
+    }
+    #quickRequest.payment-stage .quick-heading,
+    #quickRequest.payment-stage .live-ops,
+    #quickRequest.payment-stage .order-entry-layout {
+      display: none;
+    }
+    #quickRequest .payment-step-screen {
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 30px;
+      background: #fff;
+    }
+    #quickRequest .checkout-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      border-bottom: 1px solid #eef0f2;
+      padding-bottom: 22px;
+    }
+    #quickRequest .checkout-head-copy {
+      min-width: 0;
+    }
+    #quickRequest .checkout-step-label {
+      display: block;
+      margin-bottom: 7px;
+      color: #b28e00;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: .08em;
+    }
+    #quickRequest .checkout-head h2 {
+      margin: 0;
+      color: #10254d;
+      font-size: 28px;
+      letter-spacing: -.035em;
+    }
+    #quickRequest .checkout-head p {
+      margin: 7px 0 0;
+      color: #667085;
+      font-size: 13px;
+    }
+    #quickRequest .checkout-back {
+      flex: none;
+      border: 1px solid #dfe3e8;
+      background: #fff;
+      color: #10254d;
+    }
+    #quickRequest .checkout-layout {
+      display: grid;
+      grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+      align-items: start;
+      gap: 18px;
+      margin-top: 22px;
+    }
+    #quickRequest .checkout-summary,
+    #quickRequest .payment-step-screen .payment-section {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 22px;
+      background: #fff;
+    }
+    #quickRequest .checkout-summary h3 {
+      margin: 0 0 14px;
+      color: #10254d;
+      font-size: 16px;
+    }
+    #quickRequest .checkout-summary-list {
+      display: grid;
+      margin: 0;
+    }
+    #quickRequest .checkout-summary-row {
+      display: grid;
+      grid-template-columns: 90px minmax(0, 1fr);
+      gap: 14px;
+      border-top: 1px solid #eef0f2;
+      padding: 13px 0;
+    }
+    #quickRequest .checkout-summary-row dt {
+      color: #667085;
+      font-size: 11px;
+      font-weight: 750;
+    }
+    #quickRequest .checkout-summary-row dd {
+      margin: 0;
+      color: #10254d;
+      font-size: 13px;
+      font-weight: 800;
+      line-height: 1.5;
+      text-align: right;
+    }
+    #quickRequest .payment-step-screen .payment-section {
+      margin: 0;
+    }
+    #quickRequest .checkout-actions {
+      display: grid;
+      grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr);
+      gap: 10px;
+      margin-top: 18px;
+    }
+    #quickRequest .checkout-actions button {
+      min-height: 50px;
+      border-radius: 7px;
+    }
+    @media (min-width: 1200px) {
+      body.chat-open .sandbox,
+      body.chat-open main {
+        width: min(1180px, calc(100% - 440px));
+        margin-right: 420px;
+        margin-left: max(20px, calc((100vw - 1620px) / 2));
+      }
+    }
+    @media (min-width: 1200px) and (max-width: 1499px) {
+      body.chat-open #quickRequest .order-entry-layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      body.chat-open #quickRequest .order-sidebar {
+        position: static;
+      }
+    }
+    @media (max-width: 1100px) {
+      #quickRequest .order-entry-layout {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      #quickRequest .order-sidebar {
+        position: static;
+      }
+    }
+    @media (max-width: 860px) {
+      .sandbox,
+      main {
+        width: min(100% - 28px, 1180px);
+      }
+      #quickRequest .form-sections {
+        grid-template-columns: 1fr;
+      }
+      #quickRequest .live-ops {
+        margin-top: 14px;
+      }
+      #quickRequest .live-ops-body {
+        grid-template-columns: 1fr;
+      }
+      #quickRequest .live-counts {
+        border-top: 1px solid #eef0f2;
+        border-left: 0;
+      }
+      #quickRequest .form-section,
+      #quickRequest .address-section,
+      #quickRequest .vehicle-section,
+      #quickRequest .delivery-option-section,
+      #quickRequest .product-section,
+      #quickRequest .payment-section {
+        grid-column: 1;
+      }
+      #quickRequest .vehicle-card-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      #quickRequest .delivery-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      #quickRequest .quick-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        justify-content: flex-end;
+      }
+      #quickRequest .quick-badge {
+        margin-top: 6px;
+      }
+      #quickRequest .checkout-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 560px) {
+      .sandbox,
+      main {
+        width: min(100% - 24px, 1180px);
+      }
+      main {
+        padding-bottom: 40px;
+      }
+      #quickRequest .quick-heading {
+        border-radius: 10px;
+        padding: 28px 22px;
+      }
+      #quickRequest .quick-heading h1 {
+        font-size: 28px;
+      }
+      #quickRequest .quick-eyebrow {
+        font-size: 10px;
+      }
+      #quickRequest .quick-heading .description {
+        font-size: 12px;
+      }
+      #quickRequest .form-section,
+      #quickRequest .quick-review {
+        padding: 18px;
+      }
+      #quickRequest .live-ops {
+        margin-top: 12px;
+      }
+      #quickRequest .live-ops-head {
+        align-items: flex-start;
+        padding: 11px 14px;
+      }
+      #quickRequest .live-ops-copy {
+        display: block;
+      }
+      #quickRequest .live-ops-copy strong {
+        display: block;
+        margin-top: 1px;
+      }
+      #quickRequest .live-refresh {
+        font-size: 9px;
+        white-space: nowrap;
+      }
+      #quickRequest .live-activity {
+        padding: 14px;
+      }
+      #quickRequest .live-counts {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      #quickRequest .live-metric {
+        display: block;
+        padding: 12px 6px;
+      }
+      #quickRequest .live-metric strong {
+        display: inline-block;
+        margin-top: 3px;
+        font-size: 17px;
+      }
+      #quickRequest .live-metric em {
+        display: inline-block;
+      }
+      #quickRequest .vehicle-card-grid,
+      #quickRequest .delivery-card-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      #quickRequest .choice-card {
+        min-height: 86px;
+      }
+      #quickRequest .pickup-time-field,
+      #quickRequest .quick-actions {
+        grid-template-columns: 1fr;
+      }
+      #quickRequest .delivery-option-section .pickup-time-field {
+        grid-template-columns: 1fr;
+      }
+      #quickRequest .schedule-controls {
+        grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+      }
+      #quickRequest .quick-review .review-grid {
+        grid-template-columns: 1fr;
+      }
+      #quickRequest .payment-step-screen {
+        padding: 20px 18px;
+      }
+      #quickRequest .checkout-head {
+        display: grid;
+      }
+      #quickRequest .checkout-head h2 {
+        font-size: 24px;
+      }
+      #quickRequest .checkout-back {
+        grid-row: 1;
+        justify-self: start;
+      }
+      #quickRequest .checkout-actions {
+        grid-template-columns: 1fr;
+      }
+      .map-panel .map-header {
+        padding: 18px;
+      }
+      .map-panel .map-stage {
+        min-height: 260px;
+      }
+      .map-panel .map-stage,
+      .map-panel #map {
+        height: 260px;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #quickRequest .live-dot,
+      #quickRequest .live-metric strong.updated {
+        animation: none;
+      }
+    }
+  </style>
 </head>
 <body id="top">
   {{SITE_HEADER}}
 
-  <div class="auth-backdrop hidden" id="authModal" role="dialog" aria-modal="true" aria-labelledby="authTitle" onclick="closeAuthFromBackdrop(event)">
+  <div class="auth-backdrop hidden" id="authModal" role="dialog" aria-modal="false" aria-labelledby="authTitle">
     <section class="auth-card">
       <div class="auth-head">
         <div>
           <h2 id="authTitle">MOVB 로그인</h2>
-          <p>스마트 딜리버리 접수 내역을 한 곳에서 관리하세요.</p>
+          <p>퀵 접수 내역을 한 곳에서 관리하세요.</p>
         </div>
         <button type="button" class="auth-close" onclick="closeAuthModal()" aria-label="로그인 창 닫기">✕</button>
       </div>
@@ -2383,13 +3259,47 @@
     <section class="panel" id="quickRequest">
       <div class="quick-heading">
         <div>
+          <span class="quick-eyebrow" id="quickEyebrow">QUICK DELIVERY</span>
           <h1 id="quickTitle">퀵 배송 접수</h1>
-          <p class="description" id="quickDescription">필요한 정보는 한 화면에서 순서대로 입력해요. 입력을 마치면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
+          <p class="description" id="quickDescription">필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.</p>
         </div>
-        <span class="quick-badge"><span></span><b id="quickBadgeText">안전한 테스트 접수</b></span>
+        <span class="quick-badge"><span></span><b id="quickBadgeText">바로 접수 가능</b></span>
       </div>
 
-      <div class="form-sections">
+      <section class="live-ops" id="liveOps" aria-label="실시간 운영 현황">
+        <div class="live-ops-head">
+          <span class="live-dot" aria-hidden="true"></span>
+          <div class="live-ops-copy">
+            <span class="live-kicker">실시간 배차</span>
+            <strong id="liveServiceState">지금 바로 접수할 수 있어요</strong>
+          </div>
+          <small class="live-refresh" id="liveUpdatedAt">서버 연결 중</small>
+        </div>
+        <div class="live-ops-body">
+          <div class="live-activity">
+            <span class="live-activity-icon" aria-hidden="true">↗</span>
+            <strong id="liveRecentRoute">최근 배송 흐름을 확인하고 있어요</strong>
+            <small id="liveRecentMeta">접수 내역을 불러오는 중입니다</small>
+          </div>
+          <div class="live-counts">
+            <article class="live-metric">
+              <span>배송 진행</span>
+              <strong id="liveActiveOrders">0</strong><em>건</em>
+            </article>
+            <article class="live-metric">
+              <span>매칭 대기</span>
+              <strong id="liveWaitingMatches">0</strong><em>건</em>
+            </article>
+            <article class="live-metric">
+              <span>오늘 접수</span>
+              <strong id="liveTodayOrders">0</strong><em>건</em>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <div class="order-entry-layout">
+        <div class="form-sections">
         <section class="form-section address-section" id="addressSection">
           <div class="section-title-row">
             <div class="section-tabs" role="tablist" aria-label="주소 정보 메뉴">
@@ -2397,7 +3307,10 @@
               <button type="button" class="section-tab" id="recentAddressTab" role="tab" aria-selected="false">최근 이용 내역</button>
             </div>
             <div class="address-actions">
-              <button type="button" class="secondary" id="addSmartDropoff">+ 경유지 추가</button>
+              <button type="button" class="secondary" id="addSmartDropoff">
+                <span class="add-route-icon" aria-hidden="true">+</span>
+                <span>경유지 추가</span>
+              </button>
               <span class="benefit-chip">혜택 · 공동배송 요금 비교</span>
               <label class="round-trip-toggle">
                 <input type="checkbox" id="roundTrip">
@@ -2526,21 +3439,31 @@
               <span class="new-badge">NEW</span><span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span><strong>스마트 딜리버리</strong><small>다른 배송과 자동 매칭</small>
             </button>
           </div>
-          <label class="pickup-time-field" id="wishTimeField">픽업 시간
-            <span class="time-select" id="wishTimeSelect">
-              <select id="wishTime" class="visually-hidden" tabindex="-1" aria-hidden="true">
-                <option value="">오늘, 바로 픽업</option>
-              </select>
-              <button type="button" class="time-select-button" id="wishTimeButton" aria-haspopup="listbox" aria-expanded="false">
-                <span id="wishTimeButtonLabel">오늘, 바로 픽업</span>
-                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 7.5l4.5 5 4.5-5"/></svg>
-              </button>
-              <div class="time-select-panel" id="wishTimePanel" role="listbox" hidden></div>
-            </span>
+          <div class="pickup-time-field" id="wishTimeField">
+            <span class="pickup-time-title">픽업 일정</span>
+            <div class="schedule-controls" id="pickupSchedule">
+              <label class="schedule-field">
+                날짜
+                <input type="date" id="wishDate" aria-label="픽업 날짜">
+              </label>
+              <div class="schedule-field">
+                <span>시간</span>
+                <span class="time-select" id="wishTimeSelect">
+                  <select id="wishTime" class="visually-hidden" tabindex="-1" aria-hidden="true">
+                    <option value="">바로 픽업</option>
+                  </select>
+                  <button type="button" class="time-select-button" id="wishTimeButton" aria-haspopup="listbox" aria-expanded="false">
+                    <span id="wishTimeButtonLabel">바로 픽업</span>
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 7.5l4.5 5 4.5-5"/></svg>
+                  </button>
+                  <div class="time-select-panel" id="wishTimePanel" role="listbox" hidden></div>
+                </span>
+              </div>
+            </div>
             <small class="field-hint">예약 시간 기준으로 요금이 적용되며 배송 상황에 따라 픽업 시간이 변경될 수 있어요.</small>
-          </label>
+          </div>
           <div class="smart-mode-guide" id="smartModeGuide">
-            <span id="deliveryModeGuideText">사람을 추가하면 스마트 딜리버리로 자동 전환됩니다.</span>
+            <span id="deliveryModeGuideText">사람을 추가하면 배송 옵션이 스마트 딜리버리로 자동 전환됩니다.</span>
             <label class="auto-match-option" id="autoMatchOption" hidden>
               <input type="checkbox" id="autoMatch">
               <span>
@@ -2580,12 +3503,12 @@
           <div class="product-options-grid">
             <label><span class="field-label">전체 물품 크기 <span class="required-mark">필수</span></span>
               <select id="productSize">
-                <option value="XS">XS · 서류/초소형 (서류봉투, A4 정도)</option>
-                <option value="S">S · 소형 박스 (작은 택배상자)</option>
-                <option value="M">M · 중형 박스 (보통 크기 상자)</option>
-                <option value="L">L · 대형 물품 (큰 박스·가전 일부)</option>
+                <option value="XS">XS · 가로+세로+높이 80cm 이하 · 2kg 이하</option>
+                <option value="S">S · 가로+세로+높이 100cm 이하 · 5kg 이하</option>
+                <option value="M">M · 가로+세로+높이 140cm 이하 · 20kg 이하</option>
+                <option value="L">L · 가로+세로+높이 140cm 초과 또는 20kg 초과</option>
               </select>
-              <small class="field-hint product-size-guide">포장 완료 후 전체 크기로 선택해 주세요. 예시: XS=서류봉투·A4 정도, S=작은 택배상자, M=보통 상자, L=큰 박스·가전 일부.</small>
+              <small class="field-hint product-size-guide">포장한 물품의 가로·세로·높이를 더하고 전체 무게를 재서 선택해 주세요. L은 적재 가능한 화물 차량을 함께 선택해야 합니다.</small>
             </label>
             <label>전체 물품 가격
               <input id="declaredValue" type="text" inputmode="numeric" autocomplete="off" placeholder="예: 2,000,000">
@@ -2632,81 +3555,129 @@
           <textarea id="driverNote" maxlength="400" placeholder="기사님께 전달할 내용을 입력하세요. 예: 주차장 정문으로 와주세요"></textarea>
         </section>
 
-        <section class="form-section payment-section">
-          <div class="section-heading">
-            <h3><span class="section-number">7</span>결제 방법</h3>
-          </div>
-          <div class="payment-methods">
-            <label class="payment-card active">
-              <input type="radio" name="paymentType" value="CARD" checked>
-              <span><strong>카드 선결제</strong><small>접수 금액을 등록 카드로 결제</small></span>
-            </label>
-            <label class="payment-card">
-              <input type="radio" name="paymentType" value="CASH_ON_PICKUP">
-              <span><strong>출발지 현금</strong><small>픽업할 때 현장 결제</small></span>
-            </label>
-            <label class="payment-card">
-              <input type="radio" name="paymentType" value="CASH_ON_DROPOFF">
-              <span><strong>도착지 현금</strong><small>배송 완료 시 현장 결제</small></span>
-            </label>
-          </div>
-          <p class="payment-help" id="paymentHelp">
-            실제 서비스에서는 등록 카드의 결제 확인 후 접수됩니다. 현재는 Sandbox라 결제 없이 주문 흐름만 시험합니다.
-          </p>
-        </section>
-      </div>
+        </div>
 
-      <div class="quick-review" id="quickReview">
+        <aside class="order-sidebar" aria-label="배송 경로와 접수 요약">
+          <div class="quick-review" id="quickReview">
         <div class="quick-review-head">
           <h3>접수 내용 확인</h3>
           <span class="quote-status" id="quoteStatus">요금 확인 전</span>
         </div>
         <p class="review-route" id="reviewRoute"><strong>출발지와 도착지를 입력해주세요.</strong></p>
-        <div class="review-grid">
+        <p class="review-empty" id="reviewEmpty">
+          배송 정보를 입력하고 예상 시간·요금을 확인하면 최종 주문 내용이 여기에 표시됩니다.
+        </p>
+        <div class="review-grid" id="reviewGrid" hidden>
           <div class="review-item"><span>배송 상품</span><strong id="reviewService">퀵</strong></div>
-          <div class="review-item"><span>물품</span><strong id="reviewProduct">입력 전</strong></div>
-          <div class="review-item"><span>결제</span><strong id="reviewPayment">카드 선결제</strong></div>
-          <div class="review-item"><span>예상 요금</span><strong id="reviewPrice">조회 전</strong></div>
+          <div class="review-item"><span>물품</span><strong id="reviewProduct"></strong></div>
+          <div class="review-item"><span>예상 요금</span><strong id="reviewPrice"></strong></div>
         </div>
+          </div>
+
+          <div class="quick-actions">
+            <button type="button" class="secondary" id="quoteButton" onclick="callPrice(this)">예상 시간·요금 확인</button>
+            <button type="button" class="primary" id="orderButton" onclick="openPaymentStep()" disabled>다음 · 결제 방법</button>
+          </div>
+          <div class="safety-note">
+          </div>
+          <div class="result" id="result">
+            <h3 id="resultTitle">결과</h3>
+            <div class="result-meta" id="resultMeta"></div>
+            <div class="result-grid" id="resultGrid"></div>
+            <pre id="resultBody" class="result-body"></pre>
+          </div>
+
+          <section class="panel map-panel">
+            <div class="map-header">
+              <div>
+                <h2>배송 경로</h2>
+                <p class="description">지도에서 출발지와 도착지를 바로 지정할 수 있어요.</p>
+              </div>
+              <div class="map-tools" aria-label="지도 좌표 선택">
+                <button class="map-mode active" data-mode="pickup" onclick="setMapMode('pickup')">출발지 지정</button>
+                <button class="map-mode" data-mode="dropoff" onclick="setMapMode('dropoff')">도착지 지정</button>
+                <button class="map-mode" onclick="fitRoute()">전체 보기</button>
+              </div>
+            </div>
+            <div class="map-stage">
+              <div id="map" aria-label="카카오 배송 경로 지도"></div>
+              <div class="map-message" id="mapMessage">카카오 지도를 불러오는 중입니다.</div>
+            </div>
+            <div class="route-summary">
+              <span class="route-dot pickup"></span><b id="pickupRouteState">출발지 미설정</b>
+              <span>→</span>
+              <span class="route-dot dropoff"></span><b id="dropoffRouteState">도착지 미설정</b>
+              <span id="routeDistance">두 주소를 설정하면 실제 도로 거리를 계산합니다.</span>
+            </div>
+          </section>
+        </aside>
       </div>
 
-      <div class="quick-actions">
-        <button type="button" class="secondary" id="quoteButton" onclick="callPrice(this)">예상 시간·요금 확인</button>
-        <button type="button" class="primary" id="orderButton" onclick="createOrder(this)" disabled>확인하고 Sandbox 접수</button>
-      </div>
-      <div class="safety-note">
-      </div>
-      <div class="result" id="result">
-        <h3 id="resultTitle">결과</h3>
-        <div class="result-meta" id="resultMeta"></div>
-        <div class="result-grid" id="resultGrid"></div>
-        <pre id="resultBody" class="result-body"></pre>
-      </div>
-    </section>
+      <section class="payment-step-screen" id="paymentStepScreen" hidden>
+        <div class="checkout-head">
+          <div class="checkout-head-copy">
+            <span class="checkout-step-label">CHECKOUT · 2단계</span>
+            <h2>결제 방법을 선택해주세요</h2>
+            <p>견적과 주문 내용을 마지막으로 확인한 뒤 접수를 완료합니다.</p>
+          </div>
+          <button type="button" class="checkout-back" onclick="closePaymentStep()">← 입력 내용 수정</button>
+        </div>
 
-    <section class="panel map-panel">
-      <div class="map-header">
-        <div>
-          <span class="eyebrow">ROUTE</span>
-          <h2>배송 경로</h2>
-          <p class="description">지도에서 출발지와 도착지를 바로 지정할 수 있어요.</p>
+        <div class="checkout-layout">
+          <section class="checkout-summary" aria-labelledby="checkoutSummaryTitle">
+            <h3 id="checkoutSummaryTitle">최종 주문 내용</h3>
+            <dl class="checkout-summary-list">
+              <div class="checkout-summary-row">
+                <dt>배송 경로</dt>
+                <dd id="checkoutRoute">-</dd>
+              </div>
+              <div class="checkout-summary-row">
+                <dt>배송 상품</dt>
+                <dd id="checkoutService">-</dd>
+              </div>
+              <div class="checkout-summary-row">
+                <dt>물품</dt>
+                <dd id="checkoutProduct">-</dd>
+              </div>
+              <div class="checkout-summary-row">
+                <dt>예상 요금</dt>
+                <dd id="checkoutPrice">-</dd>
+              </div>
+              <div class="checkout-summary-row">
+                <dt>결제</dt>
+                <dd id="checkoutPaymentLabel">카드 선결제</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section class="payment-section">
+            <div class="section-heading">
+              <h3>결제 방법</h3>
+            </div>
+            <div class="payment-methods">
+              <label class="payment-card active">
+                <input type="radio" name="paymentType" value="CARD" checked>
+                <span><strong>카드 선결제</strong><small>접수 금액을 등록 카드로 결제</small></span>
+              </label>
+              <label class="payment-card">
+                <input type="radio" name="paymentType" value="CASH_ON_PICKUP">
+                <span><strong>출발지 현금</strong><small>픽업할 때 현장 결제</small></span>
+              </label>
+              <label class="payment-card">
+                <input type="radio" name="paymentType" value="CASH_ON_DROPOFF">
+                <span><strong>도착지 현금</strong><small>배송 완료 시 현장 결제</small></span>
+              </label>
+            </div>
+            <p class="payment-help" id="paymentHelp">
+              실제 서비스에서는 선택한 방식으로 결제한 뒤 접수됩니다. 현재는 Sandbox라 결제 없이 주문 흐름만 시험합니다.
+            </p>
+            <div class="checkout-actions">
+              <button type="button" class="secondary" onclick="closePaymentStep()">이전</button>
+              <button type="button" class="primary" id="finalOrderButton" onclick="createOrder(this)">Sandbox 주문 접수</button>
+            </div>
+          </section>
         </div>
-        <div class="map-tools" aria-label="지도 좌표 선택">
-          <button class="map-mode active" data-mode="pickup" onclick="setMapMode('pickup')">출발지 지정</button>
-          <button class="map-mode" data-mode="dropoff" onclick="setMapMode('dropoff')">도착지 지정</button>
-          <button class="map-mode" onclick="fitRoute()">전체 보기</button>
-        </div>
-      </div>
-      <div class="map-stage">
-        <div id="map" aria-label="카카오 배송 경로 지도"></div>
-        <div class="map-message" id="mapMessage">카카오 지도를 불러오는 중입니다.</div>
-      </div>
-      <div class="route-summary">
-        <span class="route-dot pickup"></span><b id="pickupRouteState">출발지 미설정</b>
-        <span>→</span>
-        <span class="route-dot dropoff"></span><b id="dropoffRouteState">도착지 미설정</b>
-        <span id="routeDistance">두 주소를 설정하면 실제 도로 거리를 계산합니다.</span>
-      </div>
+      </section>
     </section>
 
   </main>
@@ -2777,6 +3748,11 @@
   <script>
     const byId = (id) => document.getElementById(id);
 
+    function setChatOpen(open) {
+      byId("chatWidget").classList.toggle("hidden", !open);
+      document.body.classList.toggle("chat-open", open);
+    }
+
     function setActiveNav(name) {
       document.querySelectorAll(".movb-nav-item").forEach(button => {
         button.classList.toggle("active", button.dataset.nav === name);
@@ -2792,7 +3768,7 @@
     }
 
     function openChatWithPrompt(promptText) {
-      byId("chatWidget").classList.remove("hidden");
+      setChatOpen(true);
       setChatMode("ai");
       chatInputContext = "chat";
       const input = byId("chatInput");
@@ -2801,7 +3777,7 @@
     }
 
     function openSmartDelivery() {
-      byId("chatWidget").classList.add("hidden");
+      setChatOpen(false);
       setActiveNav("bundle");
       byId("quickRequest").scrollIntoView({behavior: "smooth", block: "start"});
       window.history.replaceState(null, "", "#smartDelivery");
@@ -2846,19 +3822,49 @@
       return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
     }
 
+    function localDateValue(date) {
+      const pad = value => String(value).padStart(2, "0");
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+    }
+
+    function dateFromLocalValue(value) {
+      const parts = String(value || "").split("-").map(Number);
+      if (parts.length !== 3 || parts.some(part => !Number.isFinite(part))) {
+        return new Date();
+      }
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    }
+
     function populatePickupTimes() {
       const select = byId("wishTime");
       const now = new Date();
-      const first = new Date(now);
-      first.setSeconds(0, 0);
-      first.setMinutes(Math.ceil((first.getMinutes() + 1) / 30) * 30);
-      const immediate = select.options[0];
-      select.replaceChildren(immediate);
-      for (
-        let time = first;
-        time.getDate() === now.getDate();
-        time = new Date(time.getTime() + 30 * 60 * 1000)
-      ) {
+      const dateInput = byId("wishDate");
+      const maximum = new Date(now);
+      maximum.setDate(maximum.getDate() + 7);
+      dateInput.min = localDateValue(now);
+      dateInput.max = localDateValue(maximum);
+      if (!dateInput.value) dateInput.value = localDateValue(now);
+
+      const selectedDay = dateFromLocalValue(dateInput.value);
+      const isToday = localDateValue(selectedDay) === localDateValue(now);
+      const first = new Date(selectedDay);
+      if (isToday) {
+        first.setHours(now.getHours(), now.getMinutes(), 0, 0);
+        first.setMinutes(Math.ceil((first.getMinutes() + 1) / 30) * 30);
+      } else {
+        first.setHours(9, 0, 0, 0);
+      }
+      const end = new Date(selectedDay);
+      end.setHours(22, 0, 0, 0);
+
+      select.replaceChildren();
+      if (isToday) {
+        const immediate = document.createElement("option");
+        immediate.value = "";
+        immediate.textContent = "바로 픽업";
+        select.append(immediate);
+      }
+      for (let time = first; time <= end; time = new Date(time.getTime() + 30 * 60 * 1000)) {
         const option = document.createElement("option");
         option.value = localDateTimeValue(time);
         option.textContent = new Intl.DateTimeFormat("ko-KR", {
@@ -2867,6 +3873,12 @@
           hour12: false,
         }).format(time);
         select.append(option);
+      }
+      if (!select.options.length) {
+        const unavailable = document.createElement("option");
+        unavailable.value = "";
+        unavailable.textContent = "오늘 예약 마감";
+        select.append(unavailable);
       }
       renderPickupTimeOptions();
     }
@@ -2891,7 +3903,7 @@
     function syncPickupTimeUi() {
       const select = byId("wishTime");
       const selectedOption = select.options[select.selectedIndex];
-      byId("wishTimeButtonLabel").textContent = selectedOption ? selectedOption.textContent : "오늘, 바로 픽업";
+      byId("wishTimeButtonLabel").textContent = selectedOption ? selectedOption.textContent : "시간 선택";
       byId("wishTimePanel").querySelectorAll(".time-select-option").forEach(row => {
         row.classList.toggle("active", row.dataset.value === select.value);
       });
@@ -2916,6 +3928,11 @@
     }
 
     byId("wishTimeButton").addEventListener("click", () => togglePickupTimePanel());
+    byId("wishDate").addEventListener("change", () => {
+      populatePickupTimes();
+      handleQuickFormChange();
+      updateDistance();
+    });
     document.addEventListener("click", event => {
       const wrapper = byId("wishTimeSelect");
       if (!wrapper.contains(event.target)) togglePickupTimePanel(false);
@@ -2989,7 +4006,7 @@
       byId("paymentHelp").textContent = cardOnly
         ? "경유지·왕복·스마트 딜리버리는 카드 선결제만 지원합니다. Sandbox에서는 실제 금액이 결제되지 않습니다."
         : "실제 서비스에서는 선택한 방식으로 결제한 뒤 접수됩니다. 현재는 Sandbox라 결제 없이 주문 흐름만 시험합니다.";
-      byId("reviewPayment").textContent = paymentTypeLabel(paymentTypeValue());
+      byId("checkoutPaymentLabel").textContent = paymentTypeLabel(paymentTypeValue());
     }
 
     function handlingUnitPrice(value) {
@@ -3069,6 +4086,9 @@
       byId("quickTitle").textContent = smart
         ? "스마트 딜리버리 접수"
         : "퀵 배송 접수";
+      byId("quickEyebrow").textContent = smart
+        ? "SMART DELIVERY"
+        : "QUICK DELIVERY";
       byId("quickDescription").textContent = smart
         ? "추가된 보내는 사람과 받는 사람의 배송을 한 경로로 묶어 견적을 비교합니다."
         : autoMatch
@@ -3076,7 +4096,7 @@
           : "필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.";
       byId("quickBadgeText").textContent = smart
         ? `스마트 딜리버리 · ${1 + smartPickupNodes().length}명 → ${1 + smartDropoffNodes().length}명`
-        : autoMatch ? "공동배송 자동 매칭" : "일반 퀵 접수";
+        : autoMatch ? "공동배송 자동 매칭" : "바로 접수 가능";
       const deliveryModeGuideTitle = byId("deliveryModeGuideTitle");
       if (deliveryModeGuideTitle) {
         deliveryModeGuideTitle.textContent = smart
@@ -3096,9 +4116,10 @@
       byId("quoteButton").textContent = smart
         ? "개별·묶음 견적 비교"
         : "예상 시간·요금 확인";
-      byId("orderButton").textContent = smart
+      byId("orderButton").textContent = "다음 · 결제 방법";
+      byId("finalOrderButton").textContent = smart
         ? "스마트 딜리버리 접수"
-        : autoMatch ? "공동배송 매칭 접수" : "일반 퀵 접수";
+        : autoMatch ? "공동배송 매칭 접수" : "Sandbox 주문 접수";
       updatePickupOwnerOptions();
       syncPaymentUi();
       if (smart) setActiveNav("bundle");
@@ -3331,11 +4352,11 @@
         handlingChoice("dropoffHandling"),
       ].filter(value => value !== "NONE").length;
       byId("reviewProduct").textContent = [
-        byId("productName").value.trim() || "입력 전",
+        byId("productName").value.trim(),
         handlingCount ? `운반 ${handlingCount}곳 신청` : "",
       ].filter(Boolean).join(" · ");
-      byId("reviewPayment").textContent = paymentTypeLabel(paymentTypeValue());
-
+      byId("reviewEmpty").hidden = quoteReady;
+      byId("reviewGrid").hidden = !quoteReady;
     }
 
     function resetQuoteState() {
@@ -3344,8 +4365,39 @@
       smartOrderKey = null;
       byId("quoteStatus").textContent = "요금 확인 전";
       byId("quoteStatus").classList.remove("ready");
-      byId("reviewPrice").textContent = "조회 전";
+      byId("reviewPrice").textContent = "";
+      byId("reviewEmpty").hidden = false;
+      byId("reviewGrid").hidden = true;
       byId("orderButton").disabled = true;
+    }
+
+    function openPaymentStep() {
+      if (!validateQuickForm()) return;
+      if (!quoteReady) {
+        showResult(
+          "요금 확인이 필요해요",
+          "결제 단계로 이동하기 전에 예상 시간과 요금을 먼저 확인해주세요.",
+          true
+        );
+        return;
+      }
+      syncQuickReview();
+      byId("checkoutRoute").textContent = byId("reviewRoute").textContent;
+      byId("checkoutService").textContent = byId("reviewService").textContent;
+      byId("checkoutProduct").textContent = byId("reviewProduct").textContent;
+      byId("checkoutPrice").textContent = byId("reviewPrice").textContent;
+      syncPaymentUi();
+      byId("paymentStepScreen").hidden = false;
+      byId("quickRequest").classList.add("payment-stage");
+      byId("paymentStepScreen").scrollIntoView({behavior: "smooth", block: "start"});
+    }
+
+    function closePaymentStep(shouldScroll = true) {
+      byId("quickRequest").classList.remove("payment-stage");
+      byId("paymentStepScreen").hidden = true;
+      if (shouldScroll) {
+        byId("quickRequest").scrollIntoView({behavior: "smooth", block: "start"});
+      }
     }
 
     function handleQuickFormChange() {
@@ -3503,9 +4555,32 @@
       byId("authError").classList.remove("visible");
     }
 
+    function positionAuthPopover() {
+      const modal = byId("authModal");
+      const button = byId("loginButton");
+      const header = document.querySelector(".movb-site-header");
+      if (!modal || !button) return;
+      const buttonRect = button.getBoundingClientRect();
+      const headerRect = header?.getBoundingClientRect();
+      const top = Math.max(buttonRect.bottom, headerRect?.bottom || 0) + 8;
+      const right = Math.max(
+        12,
+        document.documentElement.clientWidth - buttonRect.right
+      );
+      modal.style.setProperty("--auth-popover-top", `${Math.round(top)}px`);
+      modal.style.setProperty("--auth-popover-right", `${Math.round(right)}px`);
+    }
+
     function openAuthModal() {
+      const modal = byId("authModal");
+      if (!modal.classList.contains("hidden")) {
+        closeAuthModal();
+        return;
+      }
       updateAuthUi();
-      byId("authModal").classList.remove("hidden");
+      positionAuthPopover();
+      modal.classList.remove("hidden");
+      byId("loginButton").setAttribute("aria-expanded", "true");
       document.body.classList.add("auth-open");
       if (!currentUser) {
         setAuthMode(authMode);
@@ -3515,12 +4590,9 @@
 
     function closeAuthModal() {
       byId("authModal").classList.add("hidden");
+      byId("loginButton").setAttribute("aria-expanded", "false");
       document.body.classList.remove("auth-open");
       byId("authError").classList.remove("visible");
-    }
-
-    function closeAuthFromBackdrop(event) {
-      if (event.target === byId("authModal")) closeAuthModal();
     }
 
     async function submitAuth(event) {
@@ -3588,6 +4660,18 @@
         closeAuthModal();
       }
     });
+    document.addEventListener("pointerdown", event => {
+      const modal = byId("authModal");
+      if (modal.classList.contains("hidden")) return;
+      if (modal.contains(event.target) || byId("loginButton").contains(event.target)) return;
+      closeAuthModal();
+    });
+    window.addEventListener("resize", () => {
+      if (!byId("authModal").classList.contains("hidden")) positionAuthPopover();
+    });
+    window.addEventListener("scroll", () => {
+      if (!byId("authModal").classList.contains("hidden")) positionAuthPopover();
+    }, {passive: true});
 
     let deliveryMap = null;
     let pickupMarker = null;
@@ -3860,7 +4944,7 @@
         const pickupPosition = new kakao.maps.LatLng(pickup.latitude, pickup.longitude);
         deliveryMap = new kakao.maps.Map(byId("map"), {
           center: pickupPosition,
-          level: 6
+          level: 5
         });
         routeLine = new kakao.maps.Polyline({
           map: deliveryMap,
@@ -4348,6 +5432,7 @@
           byId("quoteStatus").classList.add("ready");
           quoteReady = true;
           byId("orderButton").disabled = false;
+          syncQuickReview();
           return;
         }
         const requestDraft = draft();
@@ -4439,6 +5524,7 @@
           });
           id = result.data.partnerOrderId || result.data.order?.partnerOrderId;
         }
+        closePaymentStep(false);
         showResult(
           isSmartDelivery()
             ? "스마트 딜리버리 접수 결과"
@@ -4569,7 +5655,7 @@
     let chatInputContext = "chat";
 
     function toggleChat() {
-      byId("chatWidget").classList.toggle("hidden");
+      setChatOpen(byId("chatWidget").classList.contains("hidden"));
     }
 
     const OLLAMA_SETTING_KEY = "movb_ollama_enabled";
@@ -4921,7 +6007,7 @@
     }
 
     function focusSmartPaste() {
-      byId("chatWidget").classList.remove("hidden");
+      setChatOpen(true);
       chatInputContext = "recipient_message";
       const input = byId("chatInput");
       input.placeholder = "받은 문자를 통째로 붙여넣으세요";
@@ -5004,7 +6090,7 @@
 
     async function readChatImage(file) {
       if (!file) return;
-      byId("chatWidget").classList.remove("hidden");
+      setChatOpen(true);
       const loading = appendLoadingBubble("ocr");
       loading.querySelector("span").textContent = "사진에서 문자 읽는 중";
       try {
@@ -5080,7 +6166,7 @@
     }
 
     async function createAddressRequestLink() {
-      byId("chatWidget").classList.remove("hidden");
+      setChatOpen(true);
       try {
         const result = await api("/api/address-requests", {
           method: "POST",
@@ -5183,13 +6269,125 @@
     });
     updateOllamaUi();
 
+    let liveOpsRefreshInFlight = false;
+
+    function setLiveMetric(id, value) {
+      const node = byId(id);
+      if (!node) return;
+      const next = String(value);
+      if (node.textContent === next) return;
+      node.textContent = next;
+      node.classList.remove("updated");
+      requestAnimationFrame(() => node.classList.add("updated"));
+    }
+
+    function liveOrderStatusLabel(status) {
+      const labels = {
+        CREATED: "접수",
+        REQUESTED: "접수",
+        MATCHING: "기사 배정 중",
+        ASSIGNED: "기사 배정",
+        PICKED_UP: "픽업 완료",
+        IN_TRANSIT: "배송 중",
+        COMPLETED: "배송 완료",
+        CANCELED: "취소",
+        MATCHING_FAILED: "배정 실패",
+        ABORTED: "접수 중단",
+        REQUEST_FAILED: "접수 실패",
+      };
+      const normalized = String(status || "").toUpperCase();
+      return labels[normalized] || "상태 확인";
+    }
+
+    async function refreshLiveOperations() {
+      if (liveOpsRefreshInFlight) return;
+      liveOpsRefreshInFlight = true;
+      try {
+        const [orderResult, matchResult] = await Promise.all([
+          api("/api/orders?limit=50"),
+          api("/api/delivery-matches?limit=30", {
+            headers: {"X-Client-Id": matchClientId}
+          }),
+        ]);
+        const orders = Array.isArray(orderResult.data) ? orderResult.data : [];
+        const matches = Array.isArray(matchResult.data) ? matchResult.data : [];
+        const terminal = new Set([
+          "COMPLETED", "CANCELED", "MATCHING_FAILED", "ABORTED", "REQUEST_FAILED"
+        ]);
+        const activeCount = orders.filter(
+          order => !terminal.has(String(order.status || "").toUpperCase())
+        ).length;
+        const waitingCount = matches.filter(
+          item => ["WAITING", "MATCHING"].includes(String(item.status || "").toUpperCase())
+        ).length;
+        const now = new Date();
+        const todayCount = orders.filter(order => {
+          const value = order.createdAt || order.updatedAt;
+          if (!value) return false;
+          const date = new Date(value);
+          return date.getFullYear() === now.getFullYear()
+            && date.getMonth() === now.getMonth()
+            && date.getDate() === now.getDate();
+        }).length;
+
+        byId("liveOps").classList.remove("delayed");
+        byId("liveServiceState").textContent = "지금 바로 접수할 수 있어요";
+        byId("liveUpdatedAt").textContent =
+          `${now.toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })} 갱신 · 15초 간격`;
+        const latestOrder = orders[0];
+        if (latestOrder) {
+          const latestAt = new Date(latestOrder.updatedAt || latestOrder.createdAt);
+          const serviceLabel =
+            latestOrder.serviceType === "SMART_DELIVERY" ? "스마트 딜리버리" : "일반 퀵배송";
+          byId("liveRecentRoute").textContent =
+            latestOrder.routeSummary || "최근 배송 경로를 확인하고 있어요";
+          byId("liveRecentMeta").textContent =
+            `${serviceLabel} · ${liveOrderStatusLabel(latestOrder.status)} · ${
+              Number.isNaN(latestAt.getTime())
+                ? "방금 업데이트"
+                : latestAt.toLocaleString("ko-KR", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+            }`;
+        } else {
+          byId("liveRecentRoute").textContent = "첫 배송 접수를 기다리고 있어요";
+          byId("liveRecentMeta").textContent = "접수하면 이곳에서 최근 배송 흐름을 바로 확인할 수 있어요";
+        }
+        setLiveMetric("liveActiveOrders", activeCount);
+        setLiveMetric("liveWaitingMatches", waitingCount);
+        setLiveMetric("liveTodayOrders", todayCount);
+      } catch {
+        byId("liveOps").classList.add("delayed");
+        byId("liveServiceState").textContent = "운영 정보를 다시 연결하고 있어요";
+        byId("liveUpdatedAt").textContent = "잠시 후 자동 재시도";
+        byId("liveRecentRoute").textContent = "배송 내역을 잠시 불러오지 못했어요";
+        byId("liveRecentMeta").textContent = "입력 중인 접수 내용은 그대로 유지됩니다";
+      } finally {
+        liveOpsRefreshInFlight = false;
+      }
+    }
+
     async function initialize() {
       window.setInterval(checkAddressRequests, 5000);
+      window.setInterval(() => {
+        if (document.visibilityState === "visible") refreshLiveOperations();
+      }, 15000);
       window.addEventListener("focus", checkAddressRequests);
+      window.addEventListener("focus", refreshLiveOperations);
       window.addEventListener("online", checkAddressRequests);
       document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") checkAddressRequests();
+        if (document.visibilityState === "visible") {
+          checkAddressRequests();
+          refreshLiveOperations();
+        }
       });
+      refreshLiveOperations();
       await loadCurrentUser();
       await checkAddressRequests();
       refreshOllamaStatus().catch(() => {
@@ -5281,7 +6479,6 @@
     document.querySelectorAll('input[name="paymentType"]').forEach(input => {
       input.addEventListener("change", () => {
         syncPaymentUi();
-        handleQuickFormChange();
       });
     });
     byId("primaryDropoffPickup").addEventListener("change", handleQuickFormChange);
@@ -5291,6 +6488,16 @@
     updateHandlingUi();
     syncPaymentUi();
     syncDeliveryMode();
+    if (new URLSearchParams(location.search).get("booking") === "scheduled") {
+      const reservedDate = new Date();
+      reservedDate.setDate(reservedDate.getDate() + 1);
+      byId("wishDate").value = localDateValue(reservedDate);
+      populatePickupTimes();
+      byId("quickBadgeText").textContent = "예약 픽업 선택 중";
+      window.setTimeout(() => {
+        byId("wishTimeField").scrollIntoView({behavior: "smooth", block: "center"});
+      }, 180);
+    }
     syncQuickReview();
     updateDistance();
     initialize();

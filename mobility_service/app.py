@@ -24,6 +24,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Redirect
 
 from .agent import DeliveryAgent
 from .bundle import multi_pickup_bundle_quote, prepare_bundle_order
+from .chat_cache import cached_chat_response
 from .client import KakaoApiError, KakaoMobilityClient
 from .config import Settings
 from .conversation_store import ConversationStore
@@ -924,9 +925,51 @@ def create_app(
         x_session_id: str | None = Header(default=None, alias="X-Session-Id"),
     ) -> ApiEnvelope:
         session_id = request.session_id or x_session_id or f"sess-{uuid4().hex}"
+        cached = cached_chat_response(request.message)
+        if cached is not None:
+            session = resolved_conversations.get_or_create(session_id)
+            resolved_conversations.append_turn(
+                session_id, "user", request.message
+            )
+            resolved_conversations.append_turn(
+                session_id, "assistant", cached.reply
+            )
+            return ApiEnvelope(
+                data={
+                    "sessionId": session_id,
+                    "reply": cached.reply,
+                    "stage": session["stage"],
+                    "slots": session["slots"],
+                    "quote": session["quote"],
+                    "order": None,
+                    "sources": [],
+                    "actions": [
+                        {
+                            "label": "스마트 딜리버리",
+                            "message": "스마트 딜리버리 접수 화면 열기",
+                            "target": "smartDelivery",
+                        },
+                        {
+                            "label": "배송 주문",
+                            "message": "퀵 배송 주문하고 싶어",
+                        },
+                        {
+                            "label": "배송 상태",
+                            "message": "배송 상태를 확인하고 싶어",
+                        },
+                    ],
+                    "changedSlots": {},
+                    "trace": [
+                        f"response_cache:{cached.match_type}:{cached.key}"
+                    ],
+                }
+            )
         if request.mode == "local":
             reply = await asyncio.to_thread(
-                local_model_reply, request.message, request.local_engine
+                local_model_reply,
+                request.message,
+                request.local_engine,
+                request.form_snapshot,
             )
             return ApiEnvelope(
                 data={

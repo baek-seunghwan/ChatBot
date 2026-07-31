@@ -22,45 +22,15 @@ SITE_HEADER_CSS = """
     line-height: 1.4;
   }
   .movb-brand {
-    display: flex;
+    display: block;
     flex: 0 0 auto;
-    align-items: center;
-    gap: 8px;
-    color: inherit;
+    color: #10254d;
     text-decoration: none;
   }
-  .movb-brand-mark {
-    display: grid;
-    width: 38px;
-    height: 38px;
-    place-items: center;
-    border-radius: 10px;
-    border: 1px solid #e7e9ef;
-    background: #ffffff;
-    overflow: hidden;
-  }
-  .movb-brand-mark svg { width: 100%; height: 100%; display: block; }
-  .movb-brand-copy {
-    display: grid;
-    gap: 0;
-    color: #17191f;
-    font-weight: 850;
-    line-height: 1.02;
-    letter-spacing: -.02em;
-  }
-  .movb-brand-copy span { font-size: 20px; }
-  .movb-brand-copy small {
-    color: #737986;
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-  }
-  .movb-brand-copy .movb-brand-tagline {
-    color: #9aa0ab;
-    font-size: 8px;
-    font-weight: 700;
-    letter-spacing: .10em;
+  .movb-brand-lockup {
+    display: block;
+    width: 108px;
+    height: 36px;
   }
   .movb-primary-nav {
     display: flex;
@@ -132,7 +102,10 @@ SITE_HEADER_CSS = """
     .movb-nav-item { flex: 0 0 auto; }
   }
   @media (max-width: 560px) {
-    .movb-brand-copy small { display: none; }
+    .movb-brand-lockup {
+      width: 96px;
+      height: 32px;
+    }
     .movb-nav-item {
       min-height: 36px;
       padding: 7px 10px;
@@ -149,33 +122,26 @@ def site_header(active: str = "bundle") -> str:
 
     return f"""
 <header class="movb-site-header">
-  <a class="movb-brand" href="/" aria-label="MOVB 홈">
-    <span class="movb-brand-mark" aria-label="MOVB 로고">
-      <svg viewBox="0 0 100 100" aria-hidden="true">
-        <rect x="0" y="0" width="100" height="100" rx="22" fill="#ffffff"/>
-        <path d="M31 69V31L50 51 69 31V69" fill="none" stroke="#10254d"
-          stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
-        <rect x="37" y="76" width="26" height="4" rx="2" fill="#ffcc00"/>
-      </svg>
-    </span>
-    <span class="movb-brand-copy">
-      <span>MOVB</span>
-      <small>Move Better,</small>
-      <small class="movb-brand-tagline">TOGETHER</small>
-    </span>
+  <a class="movb-brand" href="/" aria-label="MOVB · Move Better Together 홈">
+    <svg class="movb-brand-lockup" viewBox="0 0 300 100" aria-hidden="true">
+      <text x="0" y="72" textLength="300" lengthAdjust="spacingAndGlyphs"
+        fill="#10254d" font-family="Arial Black, Arial, sans-serif"
+        font-size="88" font-weight="900">MOVB</text>
+      <text x="0" y="98" textLength="300" lengthAdjust="spacingAndGlyphs"
+        fill="#7b8089" font-family="Arial, sans-serif"
+        font-size="21" font-weight="800">MOVE BETTER, TOGETHER</text>
+    </svg>
   </a>
   <nav class="movb-primary-nav" aria-label="주요 메뉴">
     <a class="movb-nav-item{active_class("about")}" data-nav="about"
       href="/about">브랜드 소개</a>
     <a class="movb-nav-item{active_class("bundle")}" data-nav="bundle"
-      href="/order#smartDelivery"
-      onclick="if (typeof openSmartDelivery === 'function') {{
-        event.preventDefault(); openSmartDelivery();
-      }}">스마트 딜리버리</a>
+      href="/order">퀵 접수하기</a>
     <a class="movb-nav-item{active_class("history")}" data-nav="history"
       href="/history">이용 내역</a>
   </nav>
   <a class="movb-login-button" id="loginButton" href="/order?login=1"
+    aria-haspopup="dialog" aria-controls="authModal" aria-expanded="false"
     onclick="if (typeof openAuthModal === 'function') {{
       event.preventDefault(); openAuthModal();
     }}">로그인</a>
