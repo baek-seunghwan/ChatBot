@@ -122,7 +122,161 @@ class MobilityStore:
 
                 CREATE INDEX IF NOT EXISTS idx_address_share_sender
                 ON address_share_requests(sender_session_id, created_at);
+
+                CREATE TABLE IF NOT EXISTS kakaopay_payments (
+                    payment_id TEXT PRIMARY KEY,
+                    tid TEXT UNIQUE,
+                    partner_order_id TEXT NOT NULL UNIQUE,
+                    partner_user_id TEXT NOT NULL,
+                    delivery_order_id TEXT NOT NULL UNIQUE,
+                    status TEXT NOT NULL,
+                    amount INTEGER NOT NULL,
+                    order_json TEXT NOT NULL,
+                    ready_json TEXT,
+                    approval_json TEXT,
+                    error TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_kakaopay_user_created
+                ON kakaopay_payments(partner_user_id, created_at);
                 """
+            )
+
+    def create_kakaopay_payment(
+        self,
+        *,
+        payment_id: str,
+        partner_order_id: str,
+        partner_user_id: str,
+        delivery_order_id: str,
+        amount: int,
+        order_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        now = utc_now()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO kakaopay_payments (
+                    payment_id, partner_order_id, partner_user_id,
+                    delivery_order_id, status, amount, order_json,
+                    created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'CREATED', ?, ?, ?, ?)
+                """,
+                (
+                    payment_id,
+                    partner_order_id,
+                    partner_user_id,
+                    delivery_order_id,
+                    amount,
+                    json.dumps(order_payload, ensure_ascii=False),
+                    now,
+                    now,
+                ),
+            )
+        payment = self.get_kakaopay_payment(payment_id)
+        if payment is None:
+            raise RuntimeError("카카오페이 결제 정보를 저장하지 못했습니다.")
+        return payment
+
+    def get_kakaopay_payment(self, payment_id: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT payment_id, tid, partner_order_id, partner_user_id,
+                       delivery_order_id, status, amount, order_json,
+                       ready_json, approval_json, error, created_at, updated_at
+                FROM kakaopay_payments
+                WHERE payment_id = ?
+                """,
+                (payment_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "paymentId": row["payment_id"],
+            "tid": row["tid"],
+            "partnerOrderId": row["partner_order_id"],
+            "partnerUserId": row["partner_user_id"],
+            "deliveryOrderId": row["delivery_order_id"],
+            "status": row["status"],
+            "amount": row["amount"],
+            "order": json.loads(row["order_json"]),
+            "ready": json.loads(row["ready_json"]) if row["ready_json"] else None,
+            "approval": (
+                json.loads(row["approval_json"])
+                if row["approval_json"]
+                else None
+            ),
+            "error": row["error"],
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+        }
+
+    def mark_kakaopay_ready(
+        self,
+        payment_id: str,
+        *,
+        tid: str,
+        response: dict[str, Any],
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE kakaopay_payments
+                SET tid = ?, status = 'READY', ready_json = ?, error = NULL,
+                    updated_at = ?
+                WHERE payment_id = ?
+                """,
+                (
+                    tid,
+                    json.dumps(response, ensure_ascii=False),
+                    utc_now(),
+                    payment_id,
+                ),
+            )
+
+    def claim_kakaopay_approval(self, payment_id: str) -> bool:
+        """Move READY to APPROVING once so duplicate callbacks cannot approve twice."""
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                UPDATE kakaopay_payments
+                SET status = 'APPROVING', updated_at = ?
+                WHERE payment_id = ? AND status = 'READY'
+                """,
+                (utc_now(), payment_id),
+            )
+        return cursor.rowcount == 1
+
+    def mark_kakaopay_status(
+        self,
+        payment_id: str,
+        status: str,
+        *,
+        response: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE kakaopay_payments
+                SET status = ?, approval_json = COALESCE(?, approval_json),
+                    error = ?, updated_at = ?
+                WHERE payment_id = ?
+                """,
+                (
+                    status,
+                    (
+                        json.dumps(response, ensure_ascii=False)
+                        if response is not None
+                        else None
+                    ),
+                    error[:1000] if error else None,
+                    utc_now(),
+                    payment_id,
+                ),
             )
 
     def create_address_share(

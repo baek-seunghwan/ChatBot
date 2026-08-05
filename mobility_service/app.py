@@ -30,6 +30,7 @@ from .config import Settings
 from .conversation_store import ConversationStore
 from .directions import KakaoDirectionsClient, RoutePlanner
 from .geocode import KakaoGeocodeClient
+from .kakaopay import KakaoPayClient, KakaoPayError
 from .knowledge import default_knowledge_base
 from .local_responder import local_model_reply, ollama_status, vllm_status
 from .matching import build_pooled_order, compatible_for_pooling
@@ -43,6 +44,7 @@ from .models import (
     CallbackBody,
     CreateDeliveryRequest,
     DeliveryDraft,
+    KakaoPayReadyRequest,
     LoginRequest,
     OcrImageRequest,
     RegisterRequest,
@@ -84,6 +86,7 @@ def create_app(
     conversations: ConversationStore | None = None,
     agent: DeliveryAgent | None = None,
     user_store: UserStore | None = None,
+    kakaopay_client: KakaoPayClient | None = None,
 ) -> FastAPI:
     resolved_settings = settings or Settings.from_env()
     resolved_store = store or MobilityStore(resolved_settings.database_path)
@@ -93,6 +96,7 @@ def create_app(
     resolved_routes = RoutePlanner(resolved_directions)
     resolved_conversations = conversations or ConversationStore(resolved_settings.database_path)
     resolved_users = user_store or UserStore(resolved_settings.database_path)
+    resolved_kakaopay = kakaopay_client or KakaoPayClient(resolved_settings)
     resolved_knowledge = default_knowledge_base()
     if resolved_settings.admin_configured:
         resolved_users.ensure_admin(
@@ -106,6 +110,7 @@ def create_app(
     owns_client = client is None
     owns_geocoder = geocoder is None
     owns_directions = directions is None
+    owns_kakaopay = kakaopay_client is None
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -116,6 +121,8 @@ def create_app(
             await resolved_geocoder.close()
         if owns_directions:
             await resolved_directions.close()
+        if owns_kakaopay:
+            await resolved_kakaopay.close()
 
     application = FastAPI(
         title="모브 (MOVB)",
@@ -136,6 +143,7 @@ def create_app(
     application.state.agent = resolved_agent
     application.state.knowledge = resolved_knowledge
     application.state.users = resolved_users
+    application.state.kakaopay = resolved_kakaopay
 
     def set_session_cookie(response: Response, request: Request, token: str) -> None:
         response.set_cookie(
@@ -170,6 +178,19 @@ def create_app(
     @application.exception_handler(KakaoApiError)
     async def kakao_api_error_handler(
         _: Request, exc: KakaoApiError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=502,
+            content={
+                "ok": False,
+                "message": str(exc),
+                "providerStatus": exc.status_code,
+            },
+        )
+
+    @application.exception_handler(KakaoPayError)
+    async def kakaopay_error_handler(
+        _: Request, exc: KakaoPayError
     ) -> JSONResponse:
         return JSONResponse(
             status_code=502,
@@ -364,6 +385,7 @@ def create_app(
             "mapConfigured": resolved_settings.map_configured,
             "directionsConfigured": resolved_settings.directions_configured,
             "adminConfigured": resolved_settings.admin_configured,
+            "kakaoPayConfigured": resolved_settings.kakaopay_configured,
             "knowledgeChunks": len(resolved_knowledge.chunks),
             "sandbox": True,
         }
@@ -376,6 +398,12 @@ def create_app(
                 "mapConfigured": resolved_settings.map_configured,
                 "geocodingConfigured": resolved_settings.geocoding_configured,
                 "directionsConfigured": resolved_settings.directions_configured,
+                "kakaoPayConfigured": resolved_settings.kakaopay_configured,
+                "kakaoPayEnvironment": (
+                    "development"
+                    if resolved_settings.kakaopay_cid == "TC0ONETIME"
+                    else "production"
+                ),
                 # JavaScript 키는 등록된 웹 도메인에서 사용하는 공개 식별자다.
                 # REST API 키와 Native App 키는 절대 클라이언트에 전달하지 않는다.
                 "kakaoJavascriptKey": (
@@ -529,6 +557,199 @@ def create_app(
     @application.post("/api/deliveries/price", response_model=ApiEnvelope)
     async def price(request: DeliveryDraft) -> ApiEnvelope:
         return ApiEnvelope(data=await resolved_client.price(request))
+
+    def payment_total(provider: Any, order_type: str) -> int:
+        if not isinstance(provider, dict):
+            raise KakaoPayError("배송 견적에서 결제 금액을 확인하지 못했습니다.")
+        direct = provider.get("totalPrice") or provider.get("totalFareAmount")
+        if isinstance(direct, (int, float)) and int(direct) > 0:
+            return int(direct)
+        rows = provider.get("lists")
+        if isinstance(rows, list):
+            selected = next(
+                (
+                    row
+                    for row in rows
+                    if isinstance(row, dict) and row.get("orderType") == order_type
+                ),
+                None,
+            )
+            if isinstance(selected, dict):
+                amount = selected.get("totalPrice") or selected.get("totalFareAmount")
+                if isinstance(amount, (int, float)) and int(amount) > 0:
+                    return int(amount)
+        raise KakaoPayError("배송 견적에서 결제 금액을 확인하지 못했습니다.")
+
+    def payment_redirect_base(request: Request) -> str:
+        return (
+            resolved_settings.kakaopay_redirect_base_url
+            or str(request.base_url).rstrip("/")
+        )
+
+    @application.post(
+        "/api/payments/kakaopay/ready",
+        response_model=ApiEnvelope,
+    )
+    async def kakaopay_ready(
+        payload: KakaoPayReadyRequest,
+        request: Request,
+        user: dict[str, Any] = Depends(require_current_user),
+    ) -> ApiEnvelope:
+        if not resolved_settings.kakaopay_configured:
+            raise HTTPException(
+                status_code=503,
+                detail="카카오페이 개발 키가 아직 설정되지 않았습니다.",
+            )
+        delivery_payload = payload.order.model_dump(
+            mode="json", by_alias=True, exclude_none=True
+        )
+        quote = await resolved_client.price(payload.order)
+        amount = payment_total(quote, payload.order.order_type.value)
+        token = uuid4().hex
+        payment_id = f"kp-{token[:24]}"
+        partner_order_id = f"movb-pay-{token[:20]}"
+        delivery_order_id = f"movb-{token[:20]}"
+        partner_user_id = str(user["id"])
+        resolved_store.create_kakaopay_payment(
+            payment_id=payment_id,
+            partner_order_id=partner_order_id,
+            partner_user_id=partner_user_id,
+            delivery_order_id=delivery_order_id,
+            amount=amount,
+            order_payload=delivery_payload,
+        )
+        callback_base = payment_redirect_base(request)
+        callback_path = f"/api/payments/kakaopay/{payment_id}"
+        try:
+            ready = await resolved_kakaopay.ready(
+                partner_order_id=partner_order_id,
+                partner_user_id=partner_user_id,
+                item_name=f"MOVB 배송 · {payload.order.product_name}",
+                quantity=1,
+                total_amount=amount,
+                approval_url=f"{callback_base}{callback_path}/success",
+                cancel_url=f"{callback_base}{callback_path}/cancel",
+                fail_url=f"{callback_base}{callback_path}/fail",
+            )
+            tid = ready.get("tid")
+            redirect_url = ready.get("next_redirect_pc_url")
+            if not isinstance(tid, str) or not isinstance(redirect_url, str):
+                raise KakaoPayError("카카오페이 결제 준비 응답이 올바르지 않습니다.")
+            resolved_store.mark_kakaopay_ready(
+                payment_id, tid=tid, response=ready
+            )
+        except Exception as exc:
+            resolved_store.mark_kakaopay_status(
+                payment_id, "READY_FAILED", error=str(exc)
+            )
+            raise
+        return ApiEnvelope(
+            data={
+                "paymentId": payment_id,
+                "amount": amount,
+                "nextRedirectPcUrl": redirect_url,
+                "nextRedirectMobileUrl": ready.get("next_redirect_mobile_url"),
+            },
+            message="카카오페이 결제창을 준비했습니다.",
+        )
+
+    def payment_result_redirect(
+        result: str,
+        *,
+        payment_id: str,
+        delivery_order_id: str | None = None,
+    ) -> RedirectResponse:
+        query = f"payment={result}&paymentId={payment_id}"
+        if delivery_order_id:
+            query += f"&orderId={delivery_order_id}"
+        return RedirectResponse(url=f"/order?{query}", status_code=303)
+
+    @application.get(
+        "/api/payments/kakaopay/{payment_id}/success",
+        response_model=None,
+        include_in_schema=False,
+    )
+    async def kakaopay_success(
+        payment_id: str,
+        pg_token: str = Query(min_length=1, max_length=500),
+    ) -> RedirectResponse:
+        payment = resolved_store.get_kakaopay_payment(payment_id)
+        if payment is None:
+            raise HTTPException(status_code=404, detail="결제 요청을 찾지 못했습니다.")
+        if payment["status"] == "COMPLETED":
+            return payment_result_redirect(
+                "success",
+                payment_id=payment_id,
+                delivery_order_id=payment["deliveryOrderId"],
+            )
+        if payment["status"] != "READY" or not payment.get("tid"):
+            return payment_result_redirect("fail", payment_id=payment_id)
+        if not resolved_store.claim_kakaopay_approval(payment_id):
+            latest = resolved_store.get_kakaopay_payment(payment_id)
+            if latest and latest["status"] == "COMPLETED":
+                return payment_result_redirect(
+                    "success",
+                    payment_id=payment_id,
+                    delivery_order_id=latest["deliveryOrderId"],
+                )
+            return payment_result_redirect("fail", payment_id=payment_id)
+        try:
+            approval = await resolved_kakaopay.approve(
+                tid=payment["tid"],
+                partner_order_id=payment["partnerOrderId"],
+                partner_user_id=payment["partnerUserId"],
+                pg_token=pg_token,
+            )
+            resolved_store.mark_kakaopay_status(
+                payment_id, "APPROVED", response=approval
+            )
+        except Exception as exc:
+            resolved_store.mark_kakaopay_status(
+                payment_id, "APPROVAL_FAILED", error=str(exc)
+            )
+            return payment_result_redirect("fail", payment_id=payment_id)
+
+        delivery_request = CreateDeliveryRequest.model_validate(payment["order"])
+        try:
+            await place_order(
+                resolved_client,
+                resolved_store,
+                delivery_request,
+                payment["deliveryOrderId"],
+            )
+        except Exception as exc:
+            resolved_store.mark_kakaopay_status(
+                payment_id, "DELIVERY_FAILED", response=approval, error=str(exc)
+            )
+            return payment_result_redirect("delivery-failed", payment_id=payment_id)
+        resolved_store.mark_kakaopay_status(
+            payment_id, "COMPLETED", response=approval
+        )
+        return payment_result_redirect(
+            "success",
+            payment_id=payment_id,
+            delivery_order_id=payment["deliveryOrderId"],
+        )
+
+    @application.get(
+        "/api/payments/kakaopay/{payment_id}/cancel",
+        response_model=None,
+        include_in_schema=False,
+    )
+    async def kakaopay_cancel(payment_id: str) -> RedirectResponse:
+        if resolved_store.get_kakaopay_payment(payment_id):
+            resolved_store.mark_kakaopay_status(payment_id, "CANCELED")
+        return payment_result_redirect("cancel", payment_id=payment_id)
+
+    @application.get(
+        "/api/payments/kakaopay/{payment_id}/fail",
+        response_model=None,
+        include_in_schema=False,
+    )
+    async def kakaopay_fail(payment_id: str) -> RedirectResponse:
+        if resolved_store.get_kakaopay_payment(payment_id):
+            resolved_store.mark_kakaopay_status(payment_id, "FAILED")
+        return payment_result_redirect("fail", payment_id=payment_id)
 
     @application.post("/api/orders", response_model=ApiEnvelope)
     async def create_order(

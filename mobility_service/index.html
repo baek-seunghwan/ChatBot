@@ -2169,7 +2169,7 @@
     }
     .payment-methods {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 8px;
     }
     .payment-card {
@@ -2187,6 +2187,10 @@
       border: 2px solid var(--navy);
       padding: 11px;
       background: #eef3fa;
+    }
+    .payment-card.kakaopay.active {
+      border-color: #e0b400;
+      background: #fff8cf;
     }
     .payment-card input { margin-top: 2px; }
     input[type="checkbox"],
@@ -2642,11 +2646,11 @@
       grid-column: auto;
       min-width: 0;
       margin: 0;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 22px;
+      border: 1px solid #e7eaf0;
+      border-radius: 14px;
+      padding: 24px;
       background: #fff;
-      box-shadow: none;
+      box-shadow: 0 6px 20px rgba(16, 37, 77, .035);
     }
     #quickRequest .address-section,
     #quickRequest .vehicle-section,
@@ -2659,10 +2663,10 @@
     }
     #quickRequest .section-title-row,
     #quickRequest .section-heading {
-      min-height: 32px;
-      margin-bottom: 14px;
-      border-bottom: 1px solid #eef0f2;
-      padding-bottom: 12px;
+      min-height: 28px;
+      margin-bottom: 18px;
+      border: 0;
+      padding: 0;
     }
     #quickRequest .section-heading h3,
     #quickRequest .section-title-row h3 {
@@ -2672,6 +2676,7 @@
     }
     #quickRequest .section-heading > small {
       color: #667085;
+      line-height: 1.5;
     }
     #quickRequest .section-number {
       display: inline-grid;
@@ -2720,7 +2725,7 @@
       background: #f8f9fb;
     }
     #quickRequest .choice-card-grid {
-      gap: 8px;
+      gap: 10px;
     }
     #quickRequest .vehicle-card-grid {
       grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -2729,35 +2734,55 @@
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
     #quickRequest .choice-card {
-      min-height: 88px;
-      border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 12px;
-      background: #fff;
+      min-height: 82px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 13px 14px;
+      background: #f6f8fb;
       box-shadow: none;
+      transition: border-color .16s ease, background .16s ease, transform .16s ease;
     }
     #quickRequest .choice-card:hover {
-      border-color: #aeb8c8;
-      background: #f8f9fb;
+      border-color: #d3dae5;
+      background: #f1f4f8;
+      transform: translateY(-1px);
     }
     #quickRequest .choice-card.active {
-      border: 1px solid #10254d;
-      padding: 12px;
-      background: #f7f9fc;
+      border: 1px solid #bdcadc;
+      padding: 13px 14px;
+      background: #eaf0f8;
       color: #10254d;
-      box-shadow: inset 4px 0 0 #ffcc00;
+      box-shadow: none;
+    }
+    #quickRequest .choice-card.active::after {
+      content: "✓";
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: grid;
+      width: 18px;
+      height: 18px;
+      place-items: center;
+      border-radius: 50%;
+      background: #10254d;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 900;
     }
     #quickRequest .choice-icon {
-      min-height: 22px;
+      min-height: 20px;
+      color: #30496e;
     }
     #quickRequest .choice-icon svg {
       width: 20px;
       height: 20px;
     }
     #quickRequest .choice-card strong {
+      padding-right: 18px;
       font-size: 12px;
     }
     #quickRequest .choice-card small {
+      color: #6d7788;
       font-size: 9.5px;
     }
     #quickRequest .pickup-time-field {
@@ -2770,11 +2795,152 @@
     #quickRequest .payment-help,
     #quickRequest .handling-price,
     #quickRequest .prohibited-notice {
-      border: 1px solid #e5e7eb;
-      border-left: 3px solid #ffcc00;
-      border-radius: 8px;
-      background: #fffdf3;
+      border: 0;
+      border-radius: 12px;
+      background: #f6f8fb;
       box-shadow: none;
+    }
+    #quickRequest .smart-mode-guide {
+      margin-top: 14px;
+      padding: 15px 16px;
+      color: #667085;
+      font-size: 11px;
+    }
+    #quickRequest .smart-mode-guide.active {
+      border: 0;
+      background: #edf3fa;
+      box-shadow: none;
+    }
+    #quickRequest .auto-match-option {
+      grid-template-columns: 40px minmax(0, 1fr);
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      border-top: 1px solid #e1e6ed;
+      padding-top: 13px;
+    }
+    #quickRequest .auto-match-option input[type="checkbox"] {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      margin: 0;
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      background: #cbd3df;
+      cursor: pointer;
+      transition: background .16s ease;
+    }
+    #quickRequest .auto-match-option input[type="checkbox"]::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 1px 4px rgba(16, 37, 77, .18);
+      transition: transform .16s ease;
+    }
+    #quickRequest .auto-match-option input[type="checkbox"]:checked {
+      background: #10254d;
+    }
+    #quickRequest .auto-match-option input[type="checkbox"]:checked::after {
+      transform: translateX(16px);
+    }
+    #quickRequest .auto-match-option strong {
+      margin: 0;
+      color: #10254d;
+      font-size: 12px;
+    }
+    #quickRequest .auto-match-option small {
+      display: block;
+      margin-top: 3px;
+      color: #737e90;
+      font-size: 10px;
+      line-height: 1.45;
+    }
+    #quickRequest .product-section textarea {
+      min-height: 96px;
+      border-radius: 10px;
+      padding: 13px 14px;
+    }
+    #quickRequest .product-options-grid {
+      gap: 16px;
+      margin-top: 16px;
+    }
+    #quickRequest .product-section .field-label,
+    #quickRequest .product-options-grid > label {
+      color: #3f4b5d;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    #quickRequest .product-section select,
+    #quickRequest .product-section input[type="text"] {
+      margin-top: 6px;
+      border-radius: 10px;
+    }
+    #quickRequest .product-section .field-hint {
+      color: #7b8493;
+      font-size: 9.5px;
+    }
+    #quickRequest .notice-check {
+      margin-top: 14px;
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #f6f8fb;
+      color: #445066;
+    }
+    #quickRequest .notice-check span {
+      font-size: 11px;
+      font-weight: 750;
+    }
+    #quickRequest .prohibited-notice {
+      position: relative;
+      margin-top: 10px;
+      padding: 0 0 0 17px;
+      background: transparent;
+      color: #7b8493;
+      font-size: 9.5px;
+    }
+    #quickRequest .prohibited-notice::before {
+      content: "i";
+      position: absolute;
+      top: 1px;
+      left: 0;
+      display: grid;
+      width: 12px;
+      height: 12px;
+      place-items: center;
+      border: 1px solid #aab2bf;
+      border-radius: 50%;
+      font-size: 8px;
+      font-weight: 900;
+    }
+    #quickRequest .policy-details summary {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      list-style: none;
+      color: #667085;
+      font-size: 10px;
+    }
+    #quickRequest .policy-details summary::-webkit-details-marker {
+      display: none;
+    }
+    #quickRequest .policy-details summary::before {
+      content: "i";
+      display: grid;
+      width: 15px;
+      height: 15px;
+      place-items: center;
+      border: 1px solid #c6ccd6;
+      border-radius: 50%;
+      color: #667085;
+      font-size: 9px;
+      font-weight: 900;
     }
     #quickRequest .payment-card {
       border: 1px solid #e5e7eb;
@@ -2790,21 +2956,63 @@
     #quickRequest .quick-review {
       margin-top: 0;
       border: 1px solid #e5e7eb;
-      border-radius: 8px;
+      border-radius: 14px;
       padding: 22px;
       background: #fff;
       color: #17191f;
-      box-shadow: none;
+      box-shadow: 0 10px 30px rgba(16, 37, 77, .05);
     }
     #quickRequest .review-empty {
+      display: flex;
+      align-items: center;
+      gap: 14px;
       margin: 0;
-      border: 1px dashed #cfd5df;
-      border-radius: 8px;
-      padding: 16px;
-      background: #f8f9fb;
+      border: 0;
+      border-radius: 12px;
+      padding: 18px;
+      background: linear-gradient(135deg, #f7f9fc 0%, #f2f5f9 100%);
       color: #667085;
-      font-size: 12px;
+    }
+    #quickRequest .review-empty-icon {
+      display: grid;
+      flex: 0 0 44px;
+      width: 44px;
+      height: 44px;
+      place-items: center;
+      border: 1px solid #dfe5ed;
+      border-radius: 12px;
+      background: #fff;
+      color: #10254d;
+      box-shadow: 0 5px 14px rgba(16, 37, 77, .06);
+    }
+    #quickRequest .review-empty-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-width: 1.8;
+    }
+    #quickRequest .review-empty-copy {
+      min-width: 0;
+    }
+    #quickRequest .review-empty-copy strong {
+      display: block;
+      color: #10254d;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    #quickRequest .review-empty-copy span {
+      display: block;
+      margin-top: 4px;
+      color: #697386;
+      font-size: 11px;
       line-height: 1.55;
+    }
+    #quickRequest .review-empty[hidden],
+    #quickRequest .review-route[hidden] {
+      display: none;
     }
     #quickRequest .quick-review .review-grid {
       grid-template-columns: 1fr;
@@ -2842,8 +3050,13 @@
       word-break: keep-all;
     }
     #quickRequest .quick-review-head {
-      border-bottom: 1px solid #eef0f2;
-      padding-bottom: 12px;
+      margin-bottom: 16px;
+      border: 0;
+      padding: 0;
+    }
+    #quickRequest .quick-review-head h3 {
+      font-size: 16px;
+      letter-spacing: -.02em;
     }
     #quickRequest .quick-review-head h3,
     #quickRequest .review-route,
@@ -2851,9 +3064,14 @@
       color: #10254d;
     }
     #quickRequest .review-route {
-      border: 1px solid #e5e7eb;
-      border-left: 3px solid #ffcc00;
-      background: #fffdf3;
+      margin: 0 0 10px;
+      border: 1px solid #e2e7ed;
+      border-radius: 10px;
+      padding: 13px 14px;
+      background: #f7f9fc;
+      font-size: 11px;
+      font-weight: 750;
+      line-height: 1.55;
     }
     #quickRequest .review-item {
       border: 1px solid #e5e7eb;
@@ -2863,9 +3081,31 @@
       color: #667085;
     }
     #quickRequest .quote-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       border: 1px solid #dfe3e8;
+      border-radius: 999px;
+      padding: 6px 9px;
       background: #f4f6f8;
       color: #445066;
+      font-size: 10px;
+      font-weight: 850;
+    }
+    #quickRequest .quote-status::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #9aa4b2;
+    }
+    #quickRequest .quote-status.ready {
+      border-color: #cfe7d8;
+      background: #edf8f1;
+      color: #176b3a;
+    }
+    #quickRequest .quote-status.ready::before {
+      background: #28a45d;
     }
     #quickRequest .quick-actions {
       grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
@@ -2927,9 +3167,10 @@
     }
     #quickRequest .payment-step-screen {
       border: 1px solid #e5e7eb;
-      border-radius: 10px;
-      padding: 30px;
-      background: #fff;
+      border-radius: 18px;
+      padding: 34px;
+      background: linear-gradient(180deg, #fff 0%, #fbfcfe 100%);
+      box-shadow: 0 18px 50px rgba(16, 37, 77, .07);
     }
     #quickRequest .checkout-head {
       display: flex;
@@ -2969,22 +3210,36 @@
     }
     #quickRequest .checkout-layout {
       display: grid;
-      grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
-      align-items: start;
-      gap: 18px;
-      margin-top: 22px;
+      grid-template-columns: minmax(290px, .78fr) minmax(500px, 1.22fr);
+      align-items: stretch;
+      gap: 20px;
+      margin-top: 26px;
     }
     #quickRequest .checkout-summary,
     #quickRequest .payment-step-screen .payment-section {
       border: 1px solid #e5e7eb;
-      border-radius: 8px;
-      padding: 22px;
+      border-radius: 14px;
+      padding: 24px;
       background: #fff;
     }
+    #quickRequest .checkout-summary {
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 8px 24px rgba(16, 37, 77, .04);
+    }
+    #quickRequest .checkout-panel-label {
+      display: block;
+      margin-bottom: 7px;
+      color: #8a94a6;
+      font-size: 9px;
+      font-weight: 900;
+      letter-spacing: .14em;
+    }
     #quickRequest .checkout-summary h3 {
-      margin: 0 0 14px;
+      margin: 0 0 18px;
       color: #10254d;
-      font-size: 16px;
+      font-size: 18px;
+      letter-spacing: -.025em;
     }
     #quickRequest .checkout-summary-list {
       display: grid;
@@ -2992,10 +3247,10 @@
     }
     #quickRequest .checkout-summary-row {
       display: grid;
-      grid-template-columns: 90px minmax(0, 1fr);
+      grid-template-columns: 78px minmax(0, 1fr);
       gap: 14px;
       border-top: 1px solid #eef0f2;
-      padding: 13px 0;
+      padding: 14px 0;
     }
     #quickRequest .checkout-summary-row dt {
       color: #667085;
@@ -3010,18 +3265,185 @@
       line-height: 1.5;
       text-align: right;
     }
+    #quickRequest .checkout-summary-row.fare-row {
+      align-items: center;
+      margin: 2px -12px 0;
+      border: 0;
+      border-radius: 10px;
+      padding: 15px 12px;
+      background: #f3f6fa;
+    }
+    #quickRequest .checkout-summary-row.fare-row dd {
+      font-size: 18px;
+      letter-spacing: -.02em;
+    }
     #quickRequest .payment-step-screen .payment-section {
+      display: flex;
+      flex-direction: column;
+      grid-column: auto;
       margin: 0;
+      box-shadow: 0 8px 24px rgba(16, 37, 77, .04);
+    }
+    #quickRequest .payment-step-screen .payment-section .section-heading {
+      margin-bottom: 16px;
+      border: 0;
+      padding: 0;
+    }
+    #quickRequest .payment-step-screen .payment-section .section-heading h3 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -.025em;
+    }
+    #quickRequest .payment-methods {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    #quickRequest .payment-card {
+      position: relative;
+      align-items: center;
+      min-height: 76px;
+      border: 1px solid #e2e6ec;
+      border-radius: 12px;
+      padding: 14px;
+      background: #fff;
+      transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+    }
+    #quickRequest .payment-card:hover:not(.disabled) {
+      border-color: #aeb8c7;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(16, 37, 77, .07);
+    }
+    #quickRequest .payment-card input {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #quickRequest .payment-card.active {
+      border: 1px solid #10254d;
+      padding: 14px;
+      background: #f7f9fc;
+      box-shadow: 0 0 0 1px #10254d, 0 8px 20px rgba(16, 37, 77, .08);
+    }
+    #quickRequest .payment-card.kakaopay {
+      grid-column: 1 / -1;
+      min-height: 94px;
+      border-color: #eee2a2;
+      padding: 18px;
+      background: linear-gradient(135deg, #fffdf2 0%, #fff8d2 100%);
+    }
+    #quickRequest .payment-card.kakaopay.active {
+      border: 1px solid #d8ad00;
+      padding: 18px;
+      background: linear-gradient(135deg, #fffbee 0%, #fff1a7 100%);
+      box-shadow: 0 0 0 1px #d8ad00, 0 10px 24px rgba(224, 180, 0, .14);
+    }
+    #quickRequest .payment-brand-mark {
+      display: grid;
+      flex: 0 0 46px;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border-radius: 12px;
+      background: #ffdf00;
+      color: #17191f;
+      font-size: 15px;
+      font-weight: 950;
+      letter-spacing: -.05em;
+      text-transform: lowercase;
+    }
+    #quickRequest .payment-copy {
+      min-width: 0;
+      flex: 1;
+    }
+    #quickRequest .payment-card strong {
+      font-size: 13px;
+    }
+    #quickRequest .payment-card.kakaopay strong {
+      font-size: 16px;
+      letter-spacing: -.02em;
+    }
+    #quickRequest .payment-card small {
+      margin-top: 4px;
+      font-size: 10px;
+    }
+    #quickRequest .payment-check {
+      display: grid;
+      flex: 0 0 22px;
+      width: 22px;
+      height: 22px;
+      place-items: center;
+      border: 1px solid #cbd2dc;
+      border-radius: 50%;
+      background: #fff;
+      color: transparent;
+      font-size: 11px;
+      font-weight: 900;
+    }
+    #quickRequest .payment-card.active .payment-check {
+      border-color: #10254d;
+      background: #10254d;
+      color: #fff;
+    }
+    #quickRequest .payment-card.kakaopay.active .payment-check {
+      border-color: #17191f;
+      background: #17191f;
+    }
+    #quickRequest .other-payment-label {
+      grid-column: 1 / -1;
+      margin: 4px 0 -1px;
+      color: #8a94a6;
+      font-size: 10px;
+      font-weight: 850;
+    }
+    #quickRequest .payment-step-screen .payment-help {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 14px;
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 12px;
+      background: #f5f7fa;
+      color: #5e6878;
+      font-size: 10.5px;
+    }
+    #quickRequest .payment-step-screen .payment-help::before {
+      content: "✓";
+      display: grid;
+      flex: 0 0 18px;
+      width: 18px;
+      height: 18px;
+      place-items: center;
+      border-radius: 50%;
+      background: #e4eaf2;
+      color: #10254d;
+      font-size: 9px;
+      font-weight: 950;
     }
     #quickRequest .checkout-actions {
       display: grid;
       grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr);
       gap: 10px;
-      margin-top: 18px;
+      margin-top: auto;
+      padding-top: 18px;
     }
     #quickRequest .checkout-actions button {
       min-height: 50px;
-      border-radius: 7px;
+      border-radius: 10px;
+      font-weight: 900;
+    }
+    #quickRequest .checkout-actions #finalOrderButton.kakaopay-cta {
+      border-color: #f2c900;
+      background: #ffdf00;
+      color: #17191f;
+      box-shadow: 0 8px 20px rgba(224, 180, 0, .18);
+    }
+    #quickRequest .checkout-actions #finalOrderButton.kakaopay-cta:hover {
+      border-color: #e5bc00;
+      background: #f5d600;
     }
     @media (min-width: 1200px) {
       body.chat-open .sandbox,
@@ -3187,6 +3609,13 @@
       }
       #quickRequest .checkout-actions {
         grid-template-columns: 1fr;
+      }
+      #quickRequest .payment-methods {
+        grid-template-columns: 1fr;
+      }
+      #quickRequest .payment-card.kakaopay,
+      #quickRequest .other-payment-label {
+        grid-column: 1;
       }
       .map-panel .map-header {
         padding: 18px;
@@ -3436,7 +3865,7 @@
               <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3 6 13h5l-1 8 8-11h-5l1-7z"/></svg></span><strong>급송</strong><small>가장 빠른 배송</small>
             </button>
             <button type="button" class="choice-card smart-choice" data-order-type="SMART">
-              <span class="new-badge">NEW</span><span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span><strong>스마트 딜리버리</strong><small>다른 배송과 자동 매칭</small>
+              <span class="choice-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span><strong>스마트 딜리버리</strong><small>비슷한 경로와 함께 배송</small>
             </button>
           </div>
           <div class="pickup-time-field" id="wishTimeField">
@@ -3467,8 +3896,9 @@
             <label class="auto-match-option" id="autoMatchOption" hidden>
               <input type="checkbox" id="autoMatch">
               <span>
-                <strong>다른 사용자의 배송과 자동으로 묶기</strong>
-                <small id="autoMatchHint">최대 15분 동안 방향과 조건이 비슷한 다른 컴퓨터의 주문을 찾습니다.</small>
+                <span class="visually-hidden">다른 사용자의 배송과 자동으로 묶기</span>
+                <strong>비슷한 경로의 주문과 함께 배송</strong>
+                <small id="autoMatchHint">최대 15분간 함께 배송할 주문을 자동으로 찾아요.</small>
               </span>
             </label>
             <label class="auto-match-option" id="contactlessOption" hidden>
@@ -3485,7 +3915,7 @@
           <div class="section-title-row">
             <h3><span class="section-number">4</span>물품 정보</h3>
             <details class="policy-details">
-              <summary>유의사항</summary>
+              <summary>배송 가능 기준</summary>
               <div class="policy-content">
                 <strong>기본 기준</strong>
                 <p>오토바이·소형차는 세 변의 합 140cm 이하, 한 변 100cm 미만, 20kg 이하를 기준으로 합니다. 다마스·라보·1톤은 차량별 적재 크기와 무게가 다릅니다.</p>
@@ -3497,11 +3927,11 @@
               </div>
             </details>
           </div>
-          <label><span class="field-label">상세한 물품 정보 <span class="required-mark">필수</span></span>
-            <textarea id="productName" required maxlength="100" placeholder="예: 4인용 소파, 책상, 모니터 등"></textarea>
+          <label><span class="field-label">물품 정보 <span class="required-mark">필수</span></span>
+            <textarea id="productName" required maxlength="100" placeholder="물품 종류와 수량을 입력해주세요"></textarea>
           </label>
           <div class="product-options-grid">
-            <label><span class="field-label">전체 물품 크기 <span class="required-mark">필수</span></span>
+            <label><span class="field-label">물품 크기 <span class="required-mark">필수</span></span>
               <select id="productSize">
                 <option value="XS">XS · 가로+세로+높이 80cm 이하 · 2kg 이하</option>
                 <option value="S">S · 가로+세로+높이 100cm 이하 · 5kg 이하</option>
@@ -3510,16 +3940,16 @@
               </select>
               <small class="field-hint product-size-guide">포장한 물품의 가로·세로·높이를 더하고 전체 무게를 재서 선택해 주세요. L은 적재 가능한 화물 차량을 함께 선택해야 합니다.</small>
             </label>
-            <label>전체 물품 가격
-              <input id="declaredValue" type="text" inputmode="numeric" autocomplete="off" placeholder="예: 2,000,000">
+            <label>물품 가격
+              <input id="declaredValue" type="text" inputmode="numeric" autocomplete="off" placeholder="0원">
               <small class="field-hint">물품가액은 보험·보상 가능 여부 확인에 사용됩니다.</small>
             </label>
           </div>
           <label class="notice-check">
             <input type="checkbox" id="highValueNotice">
-            <span>전체 물품 가격의 합이 50만 원보다 비싸요</span>
+            <span>물품 가격이 50만 원을 초과해요</span>
           </label>
-          <p class="prohibited-notice"><b>취급불가 품목</b>(약품류, 현금류, 생물, 신분증 등)은 배송이 불가하며 적재물 책임 보험이 적용되지 않습니다.</p>
+          <p class="prohibited-notice">현금·약품·생물·신분증 등은 배송할 수 없어요.</p>
         </section>
 
         <section class="form-section handling-section" id="handlingSection">
@@ -3563,10 +3993,16 @@
           <h3>접수 내용 확인</h3>
           <span class="quote-status" id="quoteStatus">요금 확인 전</span>
         </div>
-        <p class="review-route" id="reviewRoute"><strong>출발지와 도착지를 입력해주세요.</strong></p>
-        <p class="review-empty" id="reviewEmpty">
-          배송 정보를 입력하고 예상 시간·요금을 확인하면 최종 주문 내용이 여기에 표시됩니다.
-        </p>
+        <p class="review-route" id="reviewRoute" hidden><strong>출발지와 도착지를 입력해주세요.</strong></p>
+        <div class="review-empty" id="reviewEmpty">
+          <span class="review-empty-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18h2.75a2.75 2.75 0 0 0 0-5.5h1.5a2.75 2.75 0 0 0 0-5.5h2.75"></path></svg>
+          </span>
+          <span class="review-empty-copy">
+            <strong>배송 정보를 입력해주세요</strong>
+            <span>출발지와 도착지를 입력하면 예상 시간과 요금을 바로 확인할 수 있어요.</span>
+          </span>
+        </div>
         <div class="review-grid" id="reviewGrid" hidden>
           <div class="review-item"><span>배송 상품</span><strong id="reviewService">퀵</strong></div>
           <div class="review-item"><span>물품</span><strong id="reviewProduct"></strong></div>
@@ -3625,6 +4061,7 @@
 
         <div class="checkout-layout">
           <section class="checkout-summary" aria-labelledby="checkoutSummaryTitle">
+            <span class="checkout-panel-label">ORDER SUMMARY</span>
             <h3 id="checkoutSummaryTitle">최종 주문 내용</h3>
             <dl class="checkout-summary-list">
               <div class="checkout-summary-row">
@@ -3639,7 +4076,7 @@
                 <dt>물품</dt>
                 <dd id="checkoutProduct">-</dd>
               </div>
-              <div class="checkout-summary-row">
+              <div class="checkout-summary-row fare-row">
                 <dt>예상 요금</dt>
                 <dd id="checkoutPrice">-</dd>
               </div>
@@ -3652,24 +4089,37 @@
 
           <section class="payment-section">
             <div class="section-heading">
-              <h3>결제 방법</h3>
+              <div>
+                <span class="checkout-panel-label">PAYMENT METHOD</span>
+                <h3>결제 방법</h3>
+              </div>
             </div>
             <div class="payment-methods">
+              <label class="payment-card kakaopay">
+                <input type="radio" name="paymentType" value="KAKAOPAY">
+                <span class="payment-brand-mark">pay</span>
+                <span class="payment-copy"><strong>카카오페이</strong><small>빠르고 간편하게 결제할 수 있어요</small></span>
+                <span class="payment-check">✓</span>
+              </label>
+              <span class="other-payment-label">다른 결제수단</span>
               <label class="payment-card active">
                 <input type="radio" name="paymentType" value="CARD" checked>
-                <span><strong>카드 선결제</strong><small>접수 금액을 등록 카드로 결제</small></span>
+                <span class="payment-copy"><strong>테스트 카드</strong><small>실제 결제 없이 주문 테스트</small></span>
+                <span class="payment-check">✓</span>
               </label>
               <label class="payment-card">
                 <input type="radio" name="paymentType" value="CASH_ON_PICKUP">
-                <span><strong>출발지 현금</strong><small>픽업할 때 현장 결제</small></span>
+                <span class="payment-copy"><strong>출발지 결제</strong><small>픽업 시 현금 결제</small></span>
+                <span class="payment-check">✓</span>
               </label>
               <label class="payment-card">
                 <input type="radio" name="paymentType" value="CASH_ON_DROPOFF">
-                <span><strong>도착지 현금</strong><small>배송 완료 시 현장 결제</small></span>
+                <span class="payment-copy"><strong>도착지 결제</strong><small>배송 완료 시 현금 결제</small></span>
+                <span class="payment-check">✓</span>
               </label>
             </div>
             <p class="payment-help" id="paymentHelp">
-              실제 서비스에서는 선택한 방식으로 결제한 뒤 접수됩니다. 현재는 Sandbox라 결제 없이 주문 흐름만 시험합니다.
+              카카오페이는 서버에서 결제 금액을 다시 확인한 뒤 결제창을 엽니다.
             </p>
             <div class="checkout-actions">
               <button type="button" class="secondary" onclick="closePaymentStep()">이전</button>
@@ -3978,9 +4428,14 @@
       return document.querySelector('input[name="paymentType"]:checked')?.value || "CARD";
     }
 
+    function deliveryPaymentType() {
+      return paymentTypeValue() === "KAKAOPAY" ? "CARD" : paymentTypeValue();
+    }
+
     function paymentTypeLabel(value) {
       return {
-        CARD: "카드 선결제",
+        KAKAOPAY: "카카오페이",
+        CARD: "Sandbox 카드",
         CASH_ON_PICKUP: "출발지 현금",
         CASH_ON_DROPOFF: "도착지 현금",
       }[value] || value;
@@ -3988,12 +4443,19 @@
 
     function syncPaymentUi() {
       const cardOnly = isSmartDelivery() || byId("roundTrip").checked;
+      const kakaoPayInput = document.querySelector('input[name="paymentType"][value="KAKAOPAY"]');
+      const kakaoPayUnavailable = !kakaoPayConfigured || isSmartDelivery() || byId("autoMatch").checked;
       const radios = document.querySelectorAll('input[name="paymentType"]');
-      if (cardOnly) {
+      if (cardOnly && paymentTypeValue() !== "KAKAOPAY") {
+        document.querySelector('input[name="paymentType"][value="CARD"]').checked = true;
+      }
+      if (paymentTypeValue() === "KAKAOPAY" && kakaoPayUnavailable) {
         document.querySelector('input[name="paymentType"][value="CARD"]').checked = true;
       }
       radios.forEach(input => {
-        input.disabled = cardOnly && input.value !== "CARD";
+        input.disabled = input === kakaoPayInput
+          ? kakaoPayUnavailable
+          : cardOnly && input.value !== "CARD" && input.value !== "KAKAOPAY";
         input.closest(".payment-card").classList.toggle(
           "disabled",
           input.disabled
@@ -4003,10 +4465,21 @@
           input.checked
         );
       });
-      byId("paymentHelp").textContent = cardOnly
-        ? "경유지·왕복·스마트 딜리버리는 카드 선결제만 지원합니다. Sandbox에서는 실제 금액이 결제되지 않습니다."
-        : "실제 서비스에서는 선택한 방식으로 결제한 뒤 접수됩니다. 현재는 Sandbox라 결제 없이 주문 흐름만 시험합니다.";
+      const method = paymentTypeValue();
+      byId("paymentHelp").textContent = !kakaoPayConfigured
+        ? "카카오페이 개발 키를 설정하면 테스트 결제를 사용할 수 있습니다. 현재는 Sandbox 결제만 가능합니다."
+        : isSmartDelivery() || byId("autoMatch").checked
+          ? "카카오페이 연동은 현재 단일 배송 접수에서 사용할 수 있습니다."
+          : method === "KAKAOPAY"
+            ? "결제 금액은 서버가 배송 견적 API로 다시 검증합니다. 인증이 끝난 뒤에만 배송 주문을 접수합니다."
+            : cardOnly
+              ? "경유지·왕복 배송은 카드 결제만 지원합니다. Sandbox 카드는 실제 금액이 결제되지 않습니다."
+              : "Sandbox 카드는 실제 결제 없이 주문 흐름만 시험합니다.";
       byId("checkoutPaymentLabel").textContent = paymentTypeLabel(paymentTypeValue());
+      byId("finalOrderButton").textContent = method === "KAKAOPAY"
+        ? "카카오페이로 결제"
+        : "Sandbox 주문 접수";
+      byId("finalOrderButton").classList.toggle("kakaopay-cta", method === "KAKAOPAY");
     }
 
     function handlingUnitPrice(value) {
@@ -4081,7 +4554,7 @@
       }
       byId("roundTrip").disabled = !roundTripEligible;
       byId("autoMatchHint").textContent = matchEligible
-        ? "최대 15분 동안 다른 컴퓨터에서 접수된 주문 중 출발지·도착 방향과 배송 조건이 비슷한 주문을 찾습니다."
+        ? "최대 15분간 함께 배송할 주문을 자동으로 찾아요."
         : "일반 퀵과 퀵 급송에서만 다른 사용자 주문과 자동으로 묶을 수 있습니다.";
       byId("quickTitle").textContent = smart
         ? "스마트 딜리버리 접수"
@@ -4104,8 +4577,8 @@
           : "스마트 딜리버리를 구성하는 두 가지 방법";
       }
       byId("deliveryModeGuideText").textContent = smart
-        ? "추가한 사람을 포함해 개별 배송 합계와 묶음 경로의 요금을 비교합니다."
-        : "보내는 사람·받는 사람을 직접 추가하거나, 서버가 다른 사용자의 비슷한 주문을 찾도록 자동 매칭을 사용할 수 있습니다.";
+        ? "여러 배송지를 하나의 경로로 묶어 견적을 비교합니다."
+        : "비슷한 경로의 주문과 함께 배송하면 요금을 절약할 수 있어요.";
       byId("smartModeGuide").classList.toggle("active", smart);
       document.querySelectorAll("[data-order-type]").forEach(card => {
         const active = smart || autoMatch
@@ -4355,6 +4828,7 @@
         byId("productName").value.trim(),
         handlingCount ? `운반 ${handlingCount}곳 신청` : "",
       ].filter(Boolean).join(" · ");
+      byId("reviewRoute").hidden = !quoteReady;
       byId("reviewEmpty").hidden = quoteReady;
       byId("reviewGrid").hidden = !quoteReady;
     }
@@ -4517,6 +4991,7 @@
     }
 
     let currentUser = null;
+    let kakaoPayConfigured = false;
     let authMode = "login";
 
     function updateAuthUi() {
@@ -4998,7 +5473,7 @@
             longitude: dropoff.longitude
           }
         },
-        paymentType: paymentTypeValue(),
+        paymentType: deliveryPaymentType(),
         waypoints: []
       };
       const fleet = byId("fleet").value;
@@ -5478,6 +5953,18 @@
       if (!currentUser) {
         showResult("로그인 필요", "주문을 접수하려면 먼저 로그인해주세요.", true);
         openAuthModal();
+        return;
+      }
+      if (paymentTypeValue() === "KAKAOPAY") {
+        await withButton(button, async () => {
+          const result = await api("/api/payments/kakaopay/ready", {
+            method: "POST",
+            body: JSON.stringify({order: draft()}),
+          });
+          const redirectUrl = result.data?.nextRedirectPcUrl;
+          if (!redirectUrl) throw new Error("카카오페이 결제 주소를 받지 못했습니다.");
+          window.location.assign(redirectUrl);
+        });
         return;
       }
       if (!confirm(
@@ -6411,6 +6898,8 @@
       }
       try {
         const config = await api("/api/config");
+        kakaoPayConfigured = Boolean(config.data.kakaoPayConfigured);
+        syncPaymentUi();
         byId("serviceStatus").innerHTML = config.data.configured
           ? '카카오 연동 <b>설정됨</b>'
           : '카카오 연동 <span class="error">미설정</span>';
@@ -6418,6 +6907,20 @@
       } catch {
         byId("serviceStatus").textContent = "설정 확인 실패";
         byId("mapMessage").textContent = "지도 설정을 확인하지 못했습니다.";
+      }
+      const paymentResult = query.get("payment");
+      if (paymentResult === "success") {
+        showResult(
+          "카카오페이 결제 및 접수 완료",
+          `결제가 승인되고 배송 주문이 접수되었습니다. 주문번호: ${query.get("orderId") || "확인 중"}`
+        );
+        await loadOrders();
+      } else if (paymentResult === "cancel") {
+        showResult("카카오페이 결제 취소", "결제가 취소되어 배송 주문을 접수하지 않았습니다.", true);
+      } else if (paymentResult === "delivery-failed") {
+        showResult("배송 접수 확인 필요", "결제는 승인됐지만 배송 접수가 완료되지 않았습니다. 운영자 확인과 결제 취소 처리가 필요합니다.", true);
+      } else if (paymentResult === "fail") {
+        showResult("카카오페이 결제 실패", "결제가 승인되지 않아 배송 주문을 접수하지 않았습니다.", true);
       }
     }
     const quickFormFields = [

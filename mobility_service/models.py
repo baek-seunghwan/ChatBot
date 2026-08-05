@@ -156,6 +156,10 @@ class ApiEnvelope(CamelModel):
     message: str | None = None
 
 
+class KakaoPayReadyRequest(CamelModel):
+    order: CreateDeliveryRequest
+
+
 class AgentChatRequest(CamelModel):
     session_id: str | None = Field(default=None, alias="sessionId")
     message: str = Field(min_length=1, max_length=5000)

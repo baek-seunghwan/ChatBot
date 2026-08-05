@@ -51,6 +51,10 @@ class Settings:
     admin_username: str = ""
     admin_password: str = ""
     request_timeout_seconds: float = 10.0
+    kakaopay_secret_key: str = ""
+    kakaopay_cid: str = "TC0ONETIME"
+    kakaopay_base_url: str = "https://open-api.kakaopay.com"
+    kakaopay_redirect_base_url: str = ""
 
     @property
     def configured(self) -> bool:
@@ -71,6 +75,10 @@ class Settings:
     @property
     def admin_configured(self) -> bool:
         return bool(self.admin_username.strip() and self.admin_password)
+
+    @property
+    def kakaopay_configured(self) -> bool:
+        return bool(self.kakaopay_secret_key.strip() and self.kakaopay_cid.strip())
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -112,4 +120,15 @@ class Settings:
             request_timeout_seconds=float(
                 os.getenv("KAKAO_MOBILITY_TIMEOUT_SECONDS", "10")
             ),
+            kakaopay_secret_key=(
+                os.getenv("KAKAOPAY_SECRET_KEY_DEV")
+                or os.getenv("KAKAOPAY_SECRET_KEY", "")
+            ).strip(),
+            kakaopay_cid=os.getenv("KAKAOPAY_CID", "TC0ONETIME").strip(),
+            kakaopay_base_url=os.getenv(
+                "KAKAOPAY_BASE_URL", "https://open-api.kakaopay.com"
+            ).rstrip("/"),
+            kakaopay_redirect_base_url=os.getenv(
+                "KAKAOPAY_REDIRECT_BASE_URL", ""
+            ).rstrip("/"),
         )
