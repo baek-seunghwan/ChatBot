@@ -215,6 +215,22 @@ KAKAO_DIRECTIONS_BASE_URL=https://apis-navi.kakaomobility.com
 `KAKAO_MOBILITY_API_KEY`·`KAKAO_MOBILITY_VENDOR_ID`는 퀵·도보 배송 Sandbox
 주문과 상태 API에 사용합니다. 인증 체계가 다르므로 서로 바꿔 넣지 않습니다.
 
+KakaoPay 단건결제 개발 환경:
+
+```dotenv
+KAKAOPAY_SECRET_KEY_DEV=재발급한_개발용_시크릿키
+KAKAOPAY_CID=TC0ONETIME
+KAKAOPAY_BASE_URL=https://open-api.kakaopay.com
+KAKAOPAY_REDIRECT_BASE_URL=https://공개된-개발주소.example
+```
+
+카카오페이 비밀 키는 브라우저 코드에 넣지 않고 서버의 `.env`에서만 읽습니다.
+서버는 배송 견적을 다시 확인한 뒤 결제를 준비하고, 카카오페이가 전달한
+`pg_token`으로 결제를 승인한 뒤에만 배송 Sandbox 주문을 생성합니다. 휴대폰
+카카오톡으로 테스트할 때는 Redirect 주소가 휴대폰에서도 접근 가능한 공개 HTTPS
+주소여야 합니다. 직접 구현하는 연습 과정은
+[`docs/KAKAOPAY_BACKEND_PRACTICE.md`](docs/KAKAOPAY_BACKEND_PRACTICE.md)에 있습니다.
+
 구현 기준은 [카카오모빌리티 길찾기 API](https://developers.kakaomobility.com/guide/navi-api/start),
 [퀵·도보 배송 API](https://logistics-developers.kakaomobility.com/document/post-orders),
 [Step 상태 조회](https://logistics-developers.kakaomobility.com/document/get-step),
@@ -355,7 +371,8 @@ LangChain, LangGraph와 Agent가 각각 왜 필요한지를 비교·검증하는
 
 ## 현재 한계
 
-- Kakao Mobility Sandbox이므로 실제 기사 배정과 결제가 발생하지 않습니다.
+- Kakao Mobility는 Sandbox이므로 실제 기사 배정은 발생하지 않습니다. 카카오페이는
+  개발용 Secret key와 테스트 CID를 사용한 테스트 결제만 연결되어 있습니다.
 - 다중 보내는 사람은 첫 픽업 이후의 픽업지를 카카오 주문의 `waypoints`로
   표현합니다. 공식 API는 연락처를 포함한 경유지를 최대 10개 지원하지만 경유지의
   픽업·배송 종류를 별도 필드로 구분하지 않으므로, 운영 적용 전 Sandbox 기사

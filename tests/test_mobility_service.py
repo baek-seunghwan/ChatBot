@@ -19,6 +19,7 @@ from mobility_service.auth import build_authorization
 from mobility_service.chat_cache import GREETING_REPLY
 from mobility_service.client import KakaoMobilityClient
 from mobility_service.config import Settings
+from mobility_service.kakaopay import KakaoPayClient
 from mobility_service.models import DeliveryDraft
 from mobility_service.my_model import load_qa_index, own_model_reply
 from mobility_service.providers import LLMRouter
@@ -36,6 +37,7 @@ def settings(
     rest_key: str = "",
     admin_username: str = "",
     admin_password: str = "",
+    kakaopay_secret_key: str = "",
 ) -> Settings:
     return Settings(
         api_key="test-api-key",
@@ -47,6 +49,7 @@ def settings(
         kakao_rest_api_key=rest_key,
         admin_username=admin_username,
         admin_password=admin_password,
+        kakaopay_secret_key=kakaopay_secret_key,
     )
 
 
@@ -122,6 +125,48 @@ class KakaoClientTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["orderType"], "QUICK")
         self.assertEqual(payload["pickup"]["location"]["latitude"], 37.3946095)
         self.assertNotIn("contact", payload["pickup"])
+
+
+class KakaoPayClientTests(unittest.IsolatedAsyncioTestCase):
+    async def test_dev_secret_stays_in_server_authorization_header(self) -> None:
+        requests: list[httpx.Request] = []
+
+        async def handler(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(
+                200,
+                json={
+                    "tid": "T1234567890123456789",
+                    "next_redirect_pc_url": "https://pay.example/redirect",
+                },
+            )
+
+        with tempfile.TemporaryDirectory() as temp:
+            client = KakaoPayClient(
+                settings(Path(temp), kakaopay_secret_key="fresh-dev-key"),
+                transport=httpx.MockTransport(handler),
+            )
+            await client.ready(
+                partner_order_id="payment-order-1",
+                partner_user_id="user-1",
+                item_name="MOVB 배송",
+                quantity=1,
+                total_amount=12000,
+                approval_url="https://service.example/success",
+                cancel_url="https://service.example/cancel",
+                fail_url="https://service.example/fail",
+            )
+            await client.close()
+
+        self.assertEqual(
+            requests[0].headers["Authorization"],
+            "SECRET_KEY fresh-dev-key",
+        )
+        self.assertEqual(
+            requests[0].url.path,
+            "/online/v1/payment/ready",
+        )
+        self.assertEqual(json.loads(requests[0].content)["total_amount"], 12000)
 
 
 class VllmProviderTests(unittest.TestCase):
@@ -218,6 +263,100 @@ class FakeKakaoClient:
             (partner_order_id, order_status, cancel_by)
         )
         return {"changed": True}
+
+
+class FakeKakaoPayClient:
+    def __init__(self) -> None:
+        self.ready_calls: list[dict[str, Any]] = []
+        self.approve_calls: list[dict[str, Any]] = []
+
+    async def ready(self, **payload: Any) -> dict[str, Any]:
+        self.ready_calls.append(payload)
+        return {
+            "tid": "T1234567890123456789",
+            "next_redirect_pc_url": "https://mockup-pg-web.kakao.com/pay",
+            "next_redirect_mobile_url": "https://mockup-pg-web.kakao.com/mobile",
+        }
+
+    async def approve(self, **payload: Any) -> dict[str, Any]:
+        self.approve_calls.append(payload)
+        return {
+            "aid": "A1234567890123456789",
+            "tid": payload["tid"],
+            "amount": {"total": 12000},
+        }
+
+
+class KakaoPayFlowTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temporary = tempfile.TemporaryDirectory()
+        root = Path(self.temporary.name)
+        self.mobility = FakeKakaoClient()
+        self.kakaopay = FakeKakaoPayClient()
+        self.store = MobilityStore(root / "mobility.db")
+        app = create_app(
+            settings=settings(root, kakaopay_secret_key="fresh-dev-key"),
+            client=self.mobility,  # type: ignore[arg-type]
+            kakaopay_client=self.kakaopay,  # type: ignore[arg-type]
+            store=self.store,
+        )
+        self.client = TestClient(app)
+        registered = self.client.post(
+            "/api/auth/register",
+            json={
+                "name": "결제연습",
+                "email": "payment@example.com",
+                "password": "practice-password-123",
+            },
+        )
+        self.assertEqual(registered.status_code, 201)
+
+    def tearDown(self) -> None:
+        self.client.close()
+        self.temporary.cleanup()
+
+    def test_ready_approves_payment_then_creates_delivery(self) -> None:
+        ready = self.client.post(
+            "/api/payments/kakaopay/ready",
+            json={"order": sample_order()},
+        )
+
+        self.assertEqual(ready.status_code, 200)
+        data = ready.json()["data"]
+        self.assertEqual(data["amount"], 12000)
+        self.assertEqual(
+            data["nextRedirectPcUrl"],
+            "https://mockup-pg-web.kakao.com/pay",
+        )
+        self.assertEqual(self.kakaopay.ready_calls[0]["total_amount"], 12000)
+        self.assertIn(
+            f"/{data['paymentId']}/success",
+            self.kakaopay.ready_calls[0]["approval_url"],
+        )
+
+        approved = self.client.get(
+            f"/api/payments/kakaopay/{data['paymentId']}/success",
+            params={"pg_token": "test-pg-token"},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(approved.status_code, 303)
+        self.assertIn("payment=success", approved.headers["location"])
+        self.assertEqual(self.kakaopay.approve_calls[0]["pg_token"], "test-pg-token")
+        self.assertEqual(self.mobility.create_calls, 1)
+        payment = self.store.get_kakaopay_payment(data["paymentId"])
+        self.assertIsNotNone(payment)
+        self.assertEqual(payment["status"], "COMPLETED")
+
+        duplicate = self.client.get(
+            f"/api/payments/kakaopay/{data['paymentId']}/success",
+            params={"pg_token": "same-token-again"},
+            follow_redirects=False,
+        )
+        self.assertEqual(duplicate.status_code, 303)
+        self.assertIn("payment=success", duplicate.headers["location"])
+        self.assertEqual(len(self.kakaopay.approve_calls), 1)
+        self.assertEqual(self.mobility.create_calls, 1)
 
 
 class MobilityApiTests(unittest.TestCase):
