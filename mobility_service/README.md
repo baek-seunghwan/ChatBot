@@ -167,7 +167,5 @@ uv run python scripts/crawl_movb_site.py --base-url https://movb.onrender.com
 ## 참고 문서
 
 - [프로젝트 개요](../README.md)
-- [KakaoPay 백엔드 실습](../docs/KAKAOPAY_BACKEND_PRACTICE.md)
-- [vLLM 배포 가이드](../docs/vllm-ec2.md)
 - [Kakao Mobility 길찾기 API](https://developers.kakaomobility.com/guide/navi-api/start)
 - [Kakao Mobility 배송 API](https://logistics-developers.kakaomobility.com/document/post-orders)

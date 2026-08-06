@@ -155,8 +155,6 @@ GPU 환경에서 vLLM을 함께 실행하려면 다음 Compose 구성을 사용�
 docker compose -f docker-compose.yml -f docker-compose.vllm.yml up -d
 ```
 
-vLLM의 모델, GPU, 보안 설정은 [docs/vllm-ec2.md](docs/vllm-ec2.md)를 참고하세요.
-
 ## 프로젝트 구조
 
 ```text
@@ -176,7 +174,6 @@ scripts/
 ├── crawl_movb_site.py      # 공개 문구 수집
 └── evaluate_mobility_knowledge.py
 tests/                      # API, Agent, RAG, 주문 흐름 검증
-docs/                       # 결제·vLLM 운영 문서
 ```
 
 ## 설계 원칙과 제약
@@ -189,7 +186,5 @@ docs/                       # 결제·vLLM 운영 문서
 ## 참고 문서
 
 - [서비스 구현·연동 세부](mobility_service/README.md)
-- [KakaoPay 백엔드 실습](docs/KAKAOPAY_BACKEND_PRACTICE.md)
-- [vLLM 배포 가이드](docs/vllm-ec2.md)
 - [Kakao Mobility 길찾기 API](https://developers.kakaomobility.com/guide/navi-api/start)
 - [Kakao Mobility 배송 API](https://logistics-developers.kakaomobility.com/document/post-orders)
