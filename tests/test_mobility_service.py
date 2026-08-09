@@ -489,14 +489,14 @@ class MobilityApiTests(unittest.TestCase):
         )
         self.assertIn('href="/history"', history.text)
 
-    def test_home_has_ollama_toggle_for_local_chat(self) -> None:
+    def test_home_uses_single_ai_chat_without_local_toggle(self) -> None:
         home = self.client.get("/order")
 
         self.assertEqual(home.status_code, 200)
-        self.assertIn('id="ollamaSwitch"', home.text)
-        self.assertIn('role="switch"', home.text)
-        self.assertIn("function selectedLocalEngine()", home.text)
-        self.assertIn('return "vllm"', home.text)
+        self.assertNotIn('id="ollamaSwitch"', home.text)
+        self.assertNotIn('class="chat-mode-toggle"', home.text)
+        self.assertNotIn("function selectedLocalEngine()", home.text)
+        self.assertIn('mode: "ai"', home.text)
 
     def test_chat_can_apply_message_photo_and_shared_address_to_form(self) -> None:
         home = self.client.get("/order")
@@ -509,7 +509,8 @@ class MobilityApiTests(unittest.TestCase):
         self.assertIn("function applyAgentSlots", home.text)
         self.assertIn("/api/smart-input/ocr", home.text)
         self.assertIn("/api/address-requests", home.text)
-        self.assertIn('localEngine: selectedLocalEngine()', home.text)
+        self.assertIn('mode: "ai"', home.text)
+        self.assertNotIn('localEngine: selectedLocalEngine()', home.text)
         self.assertIn('sessionStorage.getItem("moveops_session_id")', home.text)
         self.assertIn('item.status === "COMPLETED" && !item.appliedAt', home.text)
 
