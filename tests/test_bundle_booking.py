@@ -146,6 +146,14 @@ class BundleBookingTests(unittest.TestCase):
             response.text.index('id="paymentStepScreen"'),
             section_positions[-1],
         )
+        self.assertGreater(
+            response.text.index('class="result result-prominent"'),
+            response.text.index('class="order-entry-layout"'),
+        )
+        self.assertLess(
+            response.text.index('class="result result-prominent"'),
+            response.text.index('id="paymentStepScreen"'),
+        )
         self.assertIn('id="quoteButton"', response.text)
         self.assertIn('id="orderButton"', response.text)
         self.assertIn("/api/smart-delivery/quote", response.text)
