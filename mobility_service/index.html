@@ -3655,8 +3655,8 @@
     }
     #quickRequest .payment-card:hover:not(.disabled) {
       border-color: #aeb8c7;
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(16, 37, 77, .07);
+      transform: none;
+      box-shadow: none;
     }
     #quickRequest .payment-card input {
       position: absolute;
@@ -3674,30 +3674,32 @@
     }
     #quickRequest .payment-card.kakaopay {
       grid-column: 1 / -1;
-      min-height: 76px;
-      border-color: #eee2a2;
-      padding: 18px;
-      background: linear-gradient(135deg, #fffdf2 0%, #fff8d2 100%);
+      min-height: 68px;
+      border-color: #e2e6ec;
+      padding: 14px;
+      background: #fff;
     }
     #quickRequest .payment-card.kakaopay.active {
-      border: 1px solid #d8ad00;
-      padding: 18px;
-      background: linear-gradient(135deg, #fffbee 0%, #fff1a7 100%);
-      box-shadow: 0 0 0 1px #d8ad00, 0 10px 24px rgba(224, 180, 0, .14);
+      border: 1px solid #10254d;
+      padding: 14px;
+      background: #fff;
+      box-shadow: 0 0 0 1px #10254d;
     }
     #quickRequest .payment-brand-mark {
-      width: 72px;
-      height: 42px;
-      flex: 0 0 72px;
+      display: grid;
+      width: 64px;
+      height: 32px;
+      flex: 0 0 64px;
       overflow: hidden;
-      border-radius: 8px;
-      background: #ffeb00;
+      place-items: center;
+      border-radius: 6px;
+      background: #fff;
     }
     #quickRequest .payment-brand-mark img {
       display: block;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
       object-position: center;
     }
     #quickRequest .payment-copy {
@@ -3708,7 +3710,7 @@
       font-size: 13px;
     }
     #quickRequest .payment-card.kakaopay strong {
-      font-size: 16px;
+      font-size: 14px;
       letter-spacing: -.02em;
     }
     #quickRequest .payment-card small {
@@ -3734,8 +3736,8 @@
       color: #fff;
     }
     #quickRequest .payment-card.kakaopay.active .payment-check {
-      border-color: #17191f;
-      background: #17191f;
+      border-color: #10254d;
+      background: #10254d;
     }
     #quickRequest .other-payment-label {
       grid-column: 1 / -1;
@@ -4299,6 +4301,7 @@
           <div class="product-options-grid">
             <label><span class="field-label">물품 크기 <span class="required-mark">필수</span></span>
               <select id="productSize">
+                <option value="" selected disabled>물품 크기를 선택해주세요</option>
                 <option value="XS">XS · 가로+세로+높이 80cm 이하 · 2kg 이하</option>
                 <option value="S">S · 가로+세로+높이 100cm 이하 · 5kg 이하</option>
                 <option value="M">M · 가로+세로+높이 140cm 이하 · 20kg 이하</option>
@@ -4730,10 +4733,6 @@
     });
 
     function selectFleet(value) {
-      const largeFleets = new Set(["DAMAS", "LABO", "TON"]);
-      if (largeFleets.has(value) && byId("productSize").value !== "L") {
-        byId("productSize").value = "L";
-      }
       byId("fleet").value = value;
       document.querySelectorAll("[data-fleet]").forEach(card => {
         card.classList.toggle("active", card.dataset.fleet === value);
@@ -5256,7 +5255,8 @@
         ["dropoffAddress", "도착지 주소를 검색해주세요."],
         ["dropoffName", "받는 분 이름을 입력해주세요."],
         ["dropoffPhone", "받는 분 연락처를 입력해주세요."],
-        ["productName", "보내는 물품을 입력해주세요."]
+        ["productName", "보내는 물품을 입력해주세요."],
+        ["productSize", "물품 크기를 선택해주세요."]
       ];
       for (const [id, message] of required) {
         const input = byId(id);
@@ -5329,11 +5329,20 @@
       if (
         byId("productSize").value === "L"
         && byId("orderType").value !== "DOBO"
-        && !byId("fleet").value
+        && !["DAMAS", "LABO", "TON"].includes(byId("fleet").value)
       ) {
         byId("fleet").classList.add("field-error");
         byId("fleet").focus();
         showResult("차량 선택이 필요해요", "대형(L) 물품은 다마스·라보·1톤 중 차량을 선택해주세요.", true);
+        return false;
+      }
+      if (
+        ["DAMAS", "LABO", "TON"].includes(byId("fleet").value)
+        && byId("productSize").value !== "L"
+      ) {
+        byId("productSize").classList.add("field-error");
+        byId("productSize").focus();
+        showResult("물품 크기를 확인해주세요", "다마스·라보·1톤은 대형(L) 물품 배송에 이용할 수 있어요.", true);
         return false;
       }
       const sandboxPhone = /^010-1000-\d{4}$/;
@@ -5929,7 +5938,9 @@
         const detail = body.message || body.detail || `HTTP ${response.status}`;
         const detailText = typeof detail === "string"
           ? detail
-          : JSON.stringify(detail);
+          : Array.isArray(detail)
+            ? detail.map(item => item?.msg || "입력값을 확인해주세요.").join(" ")
+            : JSON.stringify(detail);
         if (
           (response.status === 400 || body.providerStatus === 400)
           && path === "/api/orders"
