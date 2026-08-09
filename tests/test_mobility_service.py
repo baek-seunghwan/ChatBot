@@ -603,7 +603,7 @@ class MobilityApiTests(unittest.TestCase):
         logo = self.client.get("/assets/kakaopay-logo.png")
 
         self.assertEqual(home.status_code, 200)
-        self.assertIn('src="/assets/kakaopay-logo.png?v=20260810"', home.text)
+        self.assertIn('src="/assets/kakaopay-logo.png?v=20260810b"', home.text)
         self.assertEqual(logo.status_code, 200)
         self.assertEqual(logo.headers["content-type"], "image/png")
         self.assertGreater(len(logo.content), 1_000)

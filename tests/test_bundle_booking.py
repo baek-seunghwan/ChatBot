@@ -169,7 +169,7 @@ class BundleBookingTests(unittest.TestCase):
         self.assertIn('byId("quickRequest").classList.add("match-stage")', response.text)
         self.assertNotIn("ORDER SUMMARY", response.text)
         self.assertNotIn("PAYMENT METHOD", response.text)
-        self.assertIn('src="/assets/kakaopay-logo.png?v=20260810"', response.text)
+        self.assertIn('src="/assets/kakaopay-logo.png?v=20260810b"', response.text)
         self.assertNotIn("priceRanks", response.text)
         self.assertIn('value="" selected disabled>물품 크기를 선택해주세요', response.text)
         self.assertNotIn('byId("productSize").value = "L";', response.text)
