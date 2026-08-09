@@ -3530,6 +3530,13 @@
     #quickRequest.payment-stage #result {
       display: none;
     }
+    #quickRequest.match-stage .quick-heading,
+    #quickRequest.match-stage .live-ops,
+    #quickRequest.match-stage .order-entry-layout,
+    #quickRequest.match-stage .payment-step-screen {
+      display: none;
+    }
+    #quickRequest.match-stage #result { margin-top: 0; }
     #quickRequest .payment-step-screen {
       width: min(100%, 900px);
       margin: 18px auto 0;
@@ -4054,7 +4061,6 @@
     <section class="panel" id="quickRequest">
       <div class="quick-heading">
         <div>
-          <span class="quick-eyebrow" id="quickEyebrow">QUICK DELIVERY</span>
           <h1 id="quickTitle">퀵 배송 접수</h1>
           <p class="description" id="quickDescription">필요한 정보만 입력하면 배송 예상 시간과 요금을 바로 확인할 수 있어요.</p>
         </div>
@@ -4324,7 +4330,6 @@
         <section class="form-section handling-section" id="handlingSection">
           <div class="section-heading">
             <h3><span class="section-number">5</span>물품 운반 신청</h3>
-            <small>다마스·라보·1톤 이용 시 기사님이 물품 픽업과 상·하차를 도와드리는 옵션입니다.</small>
           </div>
           <div class="handling-grid">
             <fieldset>
@@ -4386,7 +4391,6 @@
             <div class="map-header">
               <div>
                 <h2>배송 경로</h2>
-                <p class="description">지도에서 출발지와 도착지를 바로 지정할 수 있어요.</p>
               </div>
               <div class="map-tools" aria-label="지도 좌표 선택">
                 <button class="map-mode active" data-mode="pickup" onclick="setMapMode('pickup')">출발지 지정</button>
@@ -4874,7 +4878,7 @@
         ? total
           ? `선택한 운반 신청 예상 추가요금 ${won(total)} · 상차와 하차는 각각 계산됩니다.`
           : "운반을 신청하면 선택한 차량 기준 예상 추가요금을 안내해 드려요."
-        : "물품 크기 L과 다마스·라보·1톤을 선택하면 출발지·도착지 운반 옵션이 열립니다.";
+        : "대형 화물 차량을 선택하면 이용할 수 있어요.";
     }
 
     function composeDriverNote(kind) {
@@ -4924,9 +4928,6 @@
       byId("quickTitle").textContent = smart
         ? "스마트 딜리버리 접수"
         : "퀵 배송 접수";
-      byId("quickEyebrow").textContent = smart
-        ? "SMART DELIVERY"
-        : "QUICK DELIVERY";
       byId("quickDescription").textContent = smart
         ? "추가된 보내는 사람과 받는 사람의 배송을 한 경로로 묶어 견적을 비교합니다."
         : autoMatch
@@ -5967,6 +5968,7 @@
       const meta = byId("resultMeta");
       const grid = byId("resultGrid");
       const body = byId("resultBody");
+      byId("quickRequest").classList.remove("match-stage");
       byId("result").classList.remove("match-payment-result");
       byId("resultTitle").textContent = title;
       meta.innerHTML = "";
@@ -7155,6 +7157,7 @@
       const meta = byId("resultMeta");
       const grid = byId("resultGrid");
       const body = byId("resultBody");
+      byId("quickRequest").classList.add("match-stage");
       byId("result").classList.remove("match-payment-result");
       byId("resultTitle").textContent = "스마트 딜리버리 매칭 대기";
       meta.innerHTML = '<span class="result-chip">최대 15분</span>';
@@ -7210,6 +7213,7 @@
       const meta = byId("resultMeta");
       const grid = byId("resultGrid");
       const body = byId("resultBody");
+      byId("quickRequest").classList.add("match-stage");
       byId("resultTitle").textContent = "배송이 함께 묶였어요";
       meta.innerHTML = matching.demoMatch
         ? '<span class="result-chip">체험용 매칭</span>'
