@@ -75,6 +75,7 @@ from .web import (
 
 SESSION_COOKIE_NAME = "movb_session"
 BRAND_HERO_PATH = Path(__file__).with_name("assets") / "movb-brand-hero.webp"
+KAKAOPAY_LOGO_PATH = Path(__file__).with_name("assets") / "kakaopay-logo.png"
 
 
 def create_app(
@@ -257,6 +258,18 @@ def create_app(
         return FileResponse(
             BRAND_HERO_PATH,
             media_type="image/webp",
+            headers={"Cache-Control": "public, max-age=604800"},
+        )
+
+    @application.get(
+        "/assets/kakaopay-logo.png",
+        response_class=FileResponse,
+        include_in_schema=False,
+    )
+    async def kakaopay_logo_image() -> FileResponse:
+        return FileResponse(
+            KAKAOPAY_LOGO_PATH,
+            media_type="image/png",
             headers={"Cache-Control": "public, max-age=604800"},
         )
 

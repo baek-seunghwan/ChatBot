@@ -595,6 +595,16 @@ class MobilityApiTests(unittest.TestCase):
         self.assertEqual(hero.headers["content-type"], "image/webp")
         self.assertGreater(len(hero.content), 100_000)
 
+    def test_checkout_uses_kakaopay_brand_image(self) -> None:
+        home = self.client.get("/order")
+        logo = self.client.get("/assets/kakaopay-logo.png")
+
+        self.assertEqual(home.status_code, 200)
+        self.assertIn('src="/assets/kakaopay-logo.png"', home.text)
+        self.assertEqual(logo.status_code, 200)
+        self.assertEqual(logo.headers["content-type"], "image/png")
+        self.assertGreater(len(logo.content), 1_000)
+
     def test_smart_delivery_is_integrated_into_home(self) -> None:
         home = self.client.get("/order")
         legacy = self.client.get("/bundle", follow_redirects=False)
