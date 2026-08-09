@@ -158,6 +158,8 @@ class FleetAndLogisticsClientTests(unittest.IsolatedAsyncioTestCase):
             bodies[0]["fleetOption"],
             {"fleet": "DAMAS", "type": "REQUIRED"},
         )
+        self.assertEqual(bodies[0]["pickup"]["loadingMethod"], "TOGETHER")
+        self.assertEqual(bodies[0]["dropoff"]["loadingMethod"], "PICKER")
         self.assertEqual(bodies[1]["fleetOption"]["fleet"], "DAMAS")
         self.assertEqual(bodies[1]["productInfo"]["trayCount"], 1)
         self.assertEqual(

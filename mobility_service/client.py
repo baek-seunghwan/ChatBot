@@ -104,6 +104,19 @@ class KakaoMobilityClient:
     def _stop(stop) -> dict[str, Any]:
         return stop.model_dump(mode="json", by_alias=True, exclude_none=True)
 
+    @classmethod
+    def _price_stop(cls, stop) -> dict[str, Any]:
+        """Serialize a stop with fields accepted by the price endpoint.
+
+        Kakao requires ``loadingMethod`` on both pickup and dropoff when the
+        product size is L.  Sending only the location makes DAMAS/LABO/TON
+        price requests fail with provider code -70003.
+        """
+        payload: dict[str, Any] = {"location": cls._location(stop)}
+        if stop.loading_method is not None:
+            payload["loadingMethod"] = stop.loading_method.value
+        return payload
+
     async def estimate(self, draft: DeliveryDraft) -> Any:
         payload: dict[str, Any] = {
             "pickup": self._location(draft.pickup),
@@ -122,13 +135,11 @@ class KakaoMobilityClient:
         payload: dict[str, Any] = {
             "orderType": draft.order_type.value,
             "productSize": draft.product_size.value,
-            "pickup": {"location": self._location(draft.pickup)},
-            "dropoff": {"location": self._location(draft.dropoff)},
+            "pickup": self._price_stop(draft.pickup),
+            "dropoff": self._price_stop(draft.dropoff),
         }
         if draft.waypoints:
-            payload["waypoints"] = [
-                {"location": self._location(item)} for item in draft.waypoints
-            ]
+            payload["waypoints"] = [self._price_stop(item) for item in draft.waypoints]
         if draft.wish_time:
             payload["pickup"]["wishTime"] = draft.wish_time
         if draft.fleet_option:
