@@ -2306,6 +2306,42 @@
       font-weight: 850;
     }
     .match-waiting-actions .primary { border-color: var(--yellow); background: var(--yellow); color: var(--navy); }
+    .fare-quick-choices {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(190px, .7fr) minmax(0, 1.3fr);
+      align-items: center;
+      gap: 14px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      border-radius: 10px;
+      padding: 14px;
+      background: rgba(255, 255, 255, .07);
+    }
+    .fare-quick-choices header { display: grid; gap: 4px; color: #fff; }
+    .fare-quick-choices header strong { font-size: 14px; }
+    .fare-quick-choices header small { color: rgba(255, 255, 255, .62); font-size: 10px; line-height: 1.45; }
+    .fare-quick-choices > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .fare-quick-choices button {
+      display: flex;
+      min-height: 68px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid #dfe3ea;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--ink);
+      text-align: left;
+      box-shadow: none;
+    }
+    .fare-quick-choices button:hover { transform: none; border-color: var(--yellow); background: #fffbea; box-shadow: none; }
+    .fare-quick-choices button > span { display: grid; gap: 3px; }
+    .fare-quick-choices button > span:last-child { justify-items: end; white-space: nowrap; }
+    .fare-quick-choices em { color: #9b7600; font-size: 9px; font-style: normal; font-weight: 900; }
+    .fare-quick-choices strong { color: var(--navy); font-size: 12px; }
+    .fare-quick-choices small { color: var(--muted); font-size: 9px; }
+    .fare-quick-choices b { color: var(--ink); font-size: 13px; }
     .fare-alternatives {
       grid-column: 1 / -1;
       overflow: hidden;
@@ -2729,6 +2765,8 @@
         border-bottom: 1px solid #e7eaf0;
       }
       .fare-group-option:last-child { border-bottom: 0; }
+      .fare-quick-choices { grid-template-columns: 1fr; }
+      .fare-quick-choices > div { grid-template-columns: 1fr; }
       .fare-current-metrics { grid-template-columns: 1fr; }
       .fare-current-metrics > span + span,
       .fare-current-metrics > div + div {
@@ -4711,6 +4749,10 @@
     });
 
     function selectFleet(value) {
+      const largeFleets = new Set(["DAMAS", "LABO", "TON"]);
+      if (largeFleets.has(value) && byId("productSize").value !== "L") {
+        byId("productSize").value = "L";
+      }
       byId("fleet").value = value;
       document.querySelectorAll("[data-fleet]").forEach(card => {
         card.classList.toggle("active", card.dataset.fleet === value);
@@ -5310,7 +5352,7 @@
       ) {
         byId("fleet").classList.add("field-error");
         byId("fleet").focus();
-        showResult("차량 선택이 필요해요", "대형(L) 퀵 배송은 오토바이·다마스·라보·1톤 중 차량을 선택해주세요.", true);
+        showResult("차량 선택이 필요해요", "대형(L) 물품은 다마스·라보·1톤 중 차량을 선택해주세요.", true);
         return false;
       }
       const sandboxPhone = /^010-1000-\d{4}$/;
@@ -5916,6 +5958,14 @@
             "카카오 Sandbox가 접수 정보를 거절했습니다. 주소 검색으로 출발지·도착지를 다시 선택하고, 010-1000-XXXX 테스트 연락처와 물품 정보를 확인한 뒤 다시 시도해주세요."
           );
         }
+        if (
+          body.providerStatus === 400
+          && path === "/api/deliveries/price"
+        ) {
+          throw new Error(
+            "선택한 차량과 물품 크기 조합으로는 견적을 낼 수 없습니다. 다마스·라보·1톤은 물품 크기 L로 다시 확인해주세요."
+          );
+        }
         throw new Error(detailText);
       }
       return body;
@@ -5958,10 +6008,6 @@
         }[item.orderType] || "배송 옵션");
         const fleetOrder = ["MOTORCYCLE", "PASSENGER_CAR", "DAMAS", "LABO", "TON", "-"];
         const orderTypeOrder = ["QUICK_ECONOMY", "QUICK", "QUICK_EXPRESS", "DOBO"];
-        const rankedItems = value.items.slice().sort((first, second) => (
-          Number(numericDigits(first.fareText)) - Number(numericDigits(second.fareText))
-        ));
-        const priceRanks = new Map(rankedItems.map((item, index) => [item, index + 1]));
         const groupedItems = fleetOrder
           .map(fleet => ({
             fleet,
@@ -5991,7 +6037,6 @@
             </header>
             <div class="fare-group-options">
               ${group.items.map(item => {
-                const rank = priceRanks.get(item);
                 return `
                   <button type="button" class="fare-group-option${item.selected ? " selected" : ""}"
                     data-fare-order="${item.orderType}" data-fare-fleet="${item.fleet}"
@@ -6002,7 +6047,7 @@
                         <strong>${speedLabel(item)}</strong>
                         <small>${speedDescription(item)}</small>
                       </span>
-                      <span class="fare-rank${rank === 1 ? " best" : ""}">${item.selected ? `선택됨 · ${rank === 1 ? "최저가" : `가격 ${rank}위`}` : rank === 1 ? "최저가" : `가격 ${rank}위`}</span>
+                      ${item.selected ? '<span class="fare-rank best">현재 선택</span>' : ""}
                     </span>
                     <span class="fare-group-option-bottom">
                       <span class="fare-time">${item.timeText}</span>
@@ -6021,11 +6066,23 @@
           `).join("");
         } else {
           const current = value.items.find(item => item.selected) || value.items[0];
+          const cheapest = value.items.slice().sort((first, second) => (
+            Number(first.fareAmount ?? numericDigits(first.fareText))
+            - Number(second.fareAmount ?? numericDigits(second.fareText))
+          ))[0];
+          const fastest = value.items
+            .filter(item => Number.isFinite(Number(item.timeSeconds)))
+            .sort((first, second) => Number(first.timeSeconds) - Number(second.timeSeconds))[0];
+          const quickChoices = [];
+          for (const [item, label] of [[cheapest, "가장 저렴"], [fastest, "가장 빠름"]]) {
+            if (!item || item === current || quickChoices.some(choice => choice.item === item)) continue;
+            quickChoices.push({item, label});
+          }
           grid.innerHTML = `
             <article class="fare-current-summary">
               <div class="fare-current-top">
                 <div class="fare-current-service">
-                  <small>현재 선택 · ${current.fleetLabel}</small>
+                  <small>${value.autoRecommended ? "MOVB 추천" : "현재 선택"} · ${current.fleetLabel}</small>
                   <strong>${speedLabel(current)} 배송</strong>
                   <span class="fare-vehicle">${current.fleetLabel}</span>
                 </div>
@@ -6036,14 +6093,29 @@
                 <span><small>할인</small><b>${current.discountText}</b></span>
               </div>
             </article>
+            ${quickChoices.length ? `
+              <section class="fare-quick-choices" aria-label="다른 추천 배송">
+                <header>
+                  <strong>다른 기준으로 찾으시나요?</strong>
+                  <small>전체 목록 대신 의미 있는 선택지만 먼저 보여드려요.</small>
+                </header>
+                <div>
+                  ${quickChoices.map(({item, label}) => `
+                    <button type="button" data-fare-order="${item.orderType}" data-fare-fleet="${item.fleet}">
+                      <span><em>${label}</em><strong>${item.fleetLabel} · ${speedLabel(item)}</strong></span>
+                      <span><small>${item.timeText}</small><b>${item.fareText}</b></span>
+                    </button>
+                  `).join("")}
+                </div>
+              </section>` : ""}
             ${value.items.length > 1 ? `
-              <details class="fare-alternatives" open>
+              <details class="fare-alternatives">
                 <summary>
                   <span class="fare-selector-heading">
-                    <strong>배송 수단별 비교</strong>
-                    <small>같은 차량끼리 묶어서 배송 속도와 가격을 비교하세요</small>
+                    <strong>전체 배송 옵션 보기</strong>
+                    <small>차량과 배송 속도를 직접 선택할 때만 펼쳐보세요</small>
                   </span>
-                  <em class="fare-option-count">${groupedItems.length}개 차량 · ${value.items.length}개 옵션</em>
+                  <em class="fare-option-count">${groupedItems.length}개 차량</em>
                 </summary>
                 <div class="fare-option-groups">${groupedFareOptions()}</div>
               </details>
@@ -6166,6 +6238,7 @@
         if (!Number.isFinite(selectedPrice)) return JSON.stringify(priceData, null, 2);
         return {
           mode: "cards",
+          autoRecommended: !selectedFleet,
           requestId: priceData?.requestId || "-",
           highlightText: `현재 견적 ${won(selectedPrice)}`,
           items: [{
@@ -6174,7 +6247,9 @@
             orderTypeLabel: orderTypeLabel(selectedOrderType),
             fleetLabel: selectedFleet ? fleetLabel(selectedFleet) : "차량 자동 추천",
             timeText: "-",
+            timeSeconds: null,
             fareText: won(selectedPrice),
+            fareAmount: selectedPrice,
             discountText: won(0),
             selected: true
           }]
@@ -6194,6 +6269,7 @@
 
       return {
         mode: "cards",
+        autoRecommended: !selectedFleet,
         requestId: priceData?.requestId || estimateData?.requestId || "-",
         highlightText: Number.isFinite(selectedPrice)
           ? `현재 견적 ${won(selectedPrice)}`
@@ -6207,7 +6283,9 @@
             orderTypeLabel: orderTypeLabel(item.orderType),
             fleetLabel: fleetLabel(item.fleetOption?.fleet || item.fleet),
             timeText: item.estimatedTime ? secondsToKorean(item.estimatedTime) : "-",
+            timeSeconds: Number(item.estimatedTime) || null,
             fareText: won(item.totalFareAmount),
+            fareAmount: Number(item.totalFareAmount) || 0,
             discountText: won(item.discountAmount),
             selected: item === selectedRow
           }))

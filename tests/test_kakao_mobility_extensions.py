@@ -204,6 +204,28 @@ class FleetAndLogisticsClientTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(ValidationError):
             DeliveryDraft.model_validate(payload)
 
+    def test_large_vehicle_rejects_small_product_before_provider_request(self) -> None:
+        payload = sample_order()
+        payload["fleetOption"] = {"fleet": "TON", "type": "REQUIRED"}
+        with self.assertRaisesRegex(
+            ValidationError,
+            "다마스·라보·1톤 차량은 물품 크기 L",
+        ):
+            DeliveryDraft.model_validate(payload)
+
+    def test_large_product_rejects_motorcycle(self) -> None:
+        payload = sample_order()
+        payload["productSize"] = "L"
+        payload["fleetOption"] = {
+            "fleet": "MOTORCYCLE",
+            "type": "REQUIRED",
+        }
+        with self.assertRaisesRegex(
+            ValidationError,
+            r"대형\(L\) 물품은 다마스·라보·1톤",
+        ):
+            DeliveryDraft.model_validate(payload)
+
 
 class MobilityExtensionApiTests(unittest.TestCase):
     def setUp(self) -> None:

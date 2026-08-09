@@ -114,6 +114,21 @@ class DeliveryDraft(CamelModel):
             and self.fleet_option is None
         ):
             raise ValueError("대형(L) 퀵 배송은 차량을 선택해야 합니다.")
+        large_fleets = {Fleet.DAMAS, Fleet.LABO, Fleet.TON}
+        if (
+            self.product_size == ProductSize.L
+            and self.fleet_option is not None
+            and self.fleet_option.fleet not in large_fleets
+        ):
+            raise ValueError("대형(L) 물품은 다마스·라보·1톤을 선택해야 합니다.")
+        if (
+            self.fleet_option is not None
+            and self.fleet_option.fleet in large_fleets
+            and self.product_size != ProductSize.L
+        ):
+            raise ValueError(
+                "다마스·라보·1톤 차량은 물품 크기 L을 선택해야 합니다."
+            )
         return self
 
 
