@@ -1737,19 +1737,17 @@
     #addSmartDropoff {
       position: relative;
       display: inline-flex;
-      min-width: 158px;
-      min-height: 48px;
+      min-height: 42px;
       flex: 0 0 auto;
       align-items: center;
-      justify-content: flex-start;
-      gap: 10px;
-      overflow: hidden;
+      justify-content: center;
+      gap: 8px;
       border: 1px solid #cad3e0;
       border-radius: 10px;
-      padding: 7px 13px 7px 7px;
+      padding: 8px 13px;
       background: #fff;
       color: var(--navy);
-      box-shadow: 0 3px 10px rgba(16, 37, 77, .06);
+      box-shadow: none;
       white-space: nowrap;
       word-break: keep-all;
     }
@@ -1762,35 +1760,22 @@
     #addSmartDropoff:active { transform: translateY(0); }
     .add-route-icon {
       display: grid;
-      width: 34px;
-      height: 34px;
+      width: 24px;
+      height: 24px;
       flex: none;
       place-items: center;
-      border-radius: 8px;
-      background: var(--yellow);
+      border-radius: 50%;
+      background: #fff2a6;
       color: var(--navy);
-    }
-    .add-route-icon svg {
-      width: 21px;
-      height: 21px;
-      fill: none;
-      stroke: currentColor;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-width: 1.8;
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1;
     }
     .add-route-copy {
-      display: grid;
-      gap: 1px;
+      display: block;
       text-align: left;
     }
     .add-route-copy strong { font-size: 13px; line-height: 1.25; }
-    .add-route-copy small {
-      color: var(--muted);
-      font-size: 9.5px;
-      font-weight: 650;
-      line-height: 1.2;
-    }
     .address-actions .benefit-chip,
     .address-actions .round-trip-toggle {
       display: none;
@@ -3032,34 +3017,12 @@
     #quickRequest .review-empty {
       display: flex;
       align-items: center;
-      gap: 14px;
       margin: 0;
       border: 0;
       border-radius: 12px;
       padding: 18px;
       background: linear-gradient(135deg, #f7f9fc 0%, #f2f5f9 100%);
       color: #667085;
-    }
-    #quickRequest .review-empty-icon {
-      display: grid;
-      flex: 0 0 44px;
-      width: 44px;
-      height: 44px;
-      place-items: center;
-      border: 1px solid #dfe5ed;
-      border-radius: 12px;
-      background: #fff;
-      color: #10254d;
-      box-shadow: 0 5px 14px rgba(16, 37, 77, .06);
-    }
-    #quickRequest .review-empty-icon svg {
-      width: 22px;
-      height: 22px;
-      fill: none;
-      stroke: currentColor;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-      stroke-width: 1.8;
     }
     #quickRequest .review-empty-copy {
       min-width: 0;
@@ -3804,16 +3767,9 @@
             </div>
             <div class="address-actions">
               <button type="button" class="secondary" id="addSmartDropoff">
-                <span class="add-route-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24">
-                    <circle cx="6" cy="17" r="2.25"></circle>
-                    <path d="M8.25 17h2.25a3 3 0 0 0 0-6h3"></path>
-                    <path d="M17.5 4.5v7M14 8h7"></path>
-                  </svg>
-                </span>
+                <span class="add-route-icon" aria-hidden="true">+</span>
                 <span class="add-route-copy">
                   <strong>경유지 추가</strong>
-                  <small>배송지 한 곳 더</small>
                 </span>
               </button>
               <span class="benefit-chip">혜택 · 공동배송 요금 비교</span>
@@ -4071,9 +4027,6 @@
         </div>
         <p class="review-route" id="reviewRoute" hidden><strong>출발지와 도착지를 입력해주세요.</strong></p>
         <div class="review-empty" id="reviewEmpty">
-          <span class="review-empty-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="2.5"></circle><circle cx="18" cy="6" r="2.5"></circle><path d="M8.5 18h2.75a2.75 2.75 0 0 0 0-5.5h1.5a2.75 2.75 0 0 0 0-5.5h2.75"></path></svg>
-          </span>
           <span class="review-empty-copy">
             <strong>배송 정보를 입력해주세요</strong>
             <span>출발지와 도착지를 입력하면 예상 시간과 요금을 바로 확인할 수 있어요.</span>
@@ -4174,7 +4127,7 @@
               <label class="payment-card kakaopay">
                 <input type="radio" name="paymentType" value="KAKAOPAY">
                 <span class="payment-brand-mark">pay</span>
-                <span class="payment-copy"><strong>카카오페이</strong><small>빠르고 간편하게 결제할 수 있어요</small></span>
+                <span class="payment-copy"><strong>카카오페이</strong><small id="kakaoPayDescription">개발 환경에서 결제창을 열어요</small></span>
                 <span class="payment-check">✓</span>
               </label>
               <span class="other-payment-label">다른 결제수단</span>
@@ -4500,6 +4453,7 @@
       const cardOnly = isSmartDelivery() || byId("roundTrip").checked;
       const kakaoPayInput = document.querySelector('input[name="paymentType"][value="KAKAOPAY"]');
       const kakaoPayUnavailable = !kakaoPayConfigured || isSmartDelivery() || byId("autoMatch").checked;
+      const kakaoPayDescription = byId("kakaoPayDescription");
       const radios = document.querySelectorAll('input[name="paymentType"]');
       if (cardOnly && paymentTypeValue() !== "KAKAOPAY") {
         document.querySelector('input[name="paymentType"][value="CARD"]').checked = true;
@@ -4520,11 +4474,18 @@
           input.checked
         );
       });
+      kakaoPayDescription.textContent = !kakaoPayConfigured
+        ? "개발 키가 설정되지 않았어요"
+        : isSmartDelivery() || byId("autoMatch").checked
+          ? "스마트 딜리버리는 테스트 카드로 접수해주세요"
+          : "개발 환경에서 결제창을 열어요";
       const method = paymentTypeValue();
       byId("paymentHelp").textContent = !kakaoPayConfigured
         ? "카카오페이 개발 키를 설정하면 테스트 결제를 사용할 수 있습니다. 현재는 Sandbox 결제만 가능합니다."
         : isSmartDelivery() || byId("autoMatch").checked
           ? "카카오페이 연동은 현재 단일 배송 접수에서 사용할 수 있습니다."
+          : method === "KAKAOPAY" && !currentUser
+            ? "카카오페이 결제창을 열려면 먼저 로그인해주세요. 개발 결제이므로 실제 운영 결제와는 다릅니다."
           : method === "KAKAOPAY"
             ? "결제 금액은 서버가 배송 견적 API로 다시 검증합니다. 인증이 끝난 뒤에만 배송 주문을 접수합니다."
             : cardOnly
