@@ -10,9 +10,25 @@
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: #fff;
+      overflow-x: hidden;
+      background: linear-gradient(180deg, #fff 0%, #fff 64%, #f7f9fc 100%);
       color: var(--ink);
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    html { scroll-behavior: smooth; }
+    .page-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 200;
+      width: 100%;
+      height: 3px;
+      transform: scaleX(0);
+      transform-origin: left center;
+      background: var(--yellow);
+      box-shadow: 0 0 14px rgba(255, 204, 0, .45);
+      pointer-events: none;
     }
 
     /* ---------- hero ---------- */
@@ -24,10 +40,14 @@
       display: flex;
       align-items: center;
       background-color: #071226;
-      background-image: url("/assets/movb-brand-hero.webp");
-      background-position: center;
+      background-image:
+        url("/assets/movb-brand-hero.webp"),
+        url("assets/movb-brand-hero.webp");
+      background-position: center calc(50% + var(--hero-shift, 0px));
       background-size: cover;
       color: #fff;
+      isolation: isolate;
+      transition: background-position .08s linear;
     }
     .hero::before {
       content: "";
@@ -38,6 +58,21 @@
         linear-gradient(0deg, rgba(3, 10, 25, .44), transparent 38%);
       pointer-events: none;
     }
+    .hero::after {
+      content: "";
+      position: absolute;
+      z-index: 0;
+      right: -180px;
+      bottom: -330px;
+      width: 700px;
+      height: 700px;
+      border: 1px solid rgba(255, 204, 0, .13);
+      border-radius: 50%;
+      box-shadow:
+        0 0 0 110px rgba(255, 204, 0, .025),
+        0 0 0 220px rgba(255, 204, 0, .018);
+      pointer-events: none;
+    }
     .hero-inner {
       position: relative;
       width: min(1120px, 100%);
@@ -45,12 +80,23 @@
       z-index: 1;
     }
     .hero .eyebrow {
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
       color: var(--yellow);
       font-size: 13px;
       font-weight: 800;
       letter-spacing: .28em;
       text-transform: uppercase;
+    }
+    .hero .eyebrow::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--yellow);
+      box-shadow: 0 0 0 5px rgba(255, 204, 0, .12);
+      animation: pulse-dot 2s ease-in-out infinite;
     }
     .hero h1 {
       margin: 18px 0 0;
@@ -85,12 +131,52 @@
       font-weight: 800;
       font-size: 14px;
       text-decoration: none;
+      transition: transform .22s ease, box-shadow .22s ease, background .22s ease, border-color .22s ease;
     }
-    .hero-cta .primary { background: var(--yellow); color: #17191f; }
+    .hero-cta a:hover { transform: translateY(-3px); }
+    .hero-cta .primary {
+      background: var(--yellow);
+      color: #17191f;
+      box-shadow: 0 12px 28px rgba(255, 204, 0, .16);
+    }
+    .hero-cta .primary:hover { box-shadow: 0 17px 36px rgba(255, 204, 0, .27); }
     .hero-cta .secondary {
       border: 1px solid rgba(255, 255, 255, .28);
       color: #fff;
       background: rgba(255, 255, 255, .04);
+    }
+    .hero-cta .secondary:hover { border-color: rgba(255, 255, 255, .5); background: rgba(255, 255, 255, .1); }
+    .scroll-cue {
+      position: absolute;
+      right: 0;
+      bottom: -82px;
+      display: inline-flex;
+      align-items: center;
+      gap: 11px;
+      color: rgba(255, 255, 255, .58);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-decoration: none;
+    }
+    .scroll-cue span {
+      position: relative;
+      width: 26px;
+      height: 38px;
+      border: 1px solid rgba(255, 255, 255, .3);
+      border-radius: 999px;
+    }
+    .scroll-cue span::after {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      width: 3px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--yellow);
+      transform: translateX(-50%);
+      animation: scroll-dot 1.8s ease-in-out infinite;
     }
 
     /* ---------- pillars ---------- */
@@ -102,7 +188,15 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 18px;
     }
-    .pillar { display: flex; align-items: flex-start; gap: 14px; }
+    .pillar {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 10px;
+      border-radius: 14px;
+      transition: transform .24s ease, background .24s ease;
+    }
+    .pillar:hover { transform: translateY(-4px); background: #f7f9fc; }
     .pillar .badge {
       display: grid;
       place-items: center;
@@ -112,7 +206,9 @@
       border-radius: 12px;
       background: var(--navy);
       color: #fff;
+      transition: transform .28s ease, background .28s ease, color .28s ease;
     }
+    .pillar:hover .badge { transform: rotate(-5deg) scale(1.06); background: var(--yellow); color: var(--navy); }
     .pillar .badge svg { width: 21px; height: 21px; }
     .pillar strong { display: block; font-size: 14px; }
     .pillar span { display: block; margin-top: 3px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
@@ -148,16 +244,37 @@
       gap: 16px;
     }
     .service-card {
+      position: relative;
       display: block;
+      overflow: hidden;
       padding: 24px;
       border: 1px solid var(--line);
       border-radius: 16px;
       color: inherit;
       text-decoration: none;
       background: #fafbfd;
-      transition: border-color .15s ease, background .15s ease;
+      box-shadow: 0 8px 26px rgba(16, 37, 77, .035);
+      transform: perspective(900px) translateY(var(--card-lift, 0)) rotateX(var(--tilt-y, 0deg)) rotateY(var(--tilt-x, 0deg));
+      transform-style: preserve-3d;
+      transition: transform .26s ease, border-color .26s ease, background .26s ease, box-shadow .26s ease;
     }
-    .service-card:hover { border-color: #c7cedb; background: #f4f6f9; }
+    .service-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 -120%;
+      width: 75%;
+      transform: skewX(-18deg);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .8), transparent);
+      transition: left .65s ease;
+      pointer-events: none;
+    }
+    .service-card:hover {
+      --card-lift: -7px;
+      border-color: #c7cedb;
+      background: #f8fafc;
+      box-shadow: 0 20px 44px rgba(16, 37, 77, .1);
+    }
+    .service-card:hover::before { left: 140%; }
     .service-card .icon {
       display: grid;
       place-items: center;
@@ -167,7 +284,9 @@
       background: #fff;
       border: 1px solid var(--line);
       color: var(--navy);
+      transition: transform .25s ease, background .25s ease, color .25s ease;
     }
+    .service-card:hover .icon { transform: scale(1.08) rotate(-4deg); background: var(--navy); color: var(--yellow); }
     .service-card .icon svg { width: 20px; height: 20px; }
     .service-card strong { display: block; margin: 16px 0 6px; color: var(--navy); font-size: 15.5px; }
     .service-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
@@ -179,7 +298,9 @@
       color: var(--navy);
       font-size: 12.5px;
       font-weight: 800;
+      transition: gap .2s ease;
     }
+    .service-card:hover .go { gap: 9px; }
 
     /* ---------- tech list ---------- */
     .tech-grid {
@@ -188,7 +309,15 @@
       grid-template-columns: repeat(3, 1fr);
       gap: 24px;
     }
-    .tech-item svg { width: 22px; height: 22px; color: var(--navy); }
+    .tech-item {
+      position: relative;
+      padding: 18px;
+      border-radius: 16px;
+      transition: transform .24s ease, background .24s ease, box-shadow .24s ease;
+    }
+    .tech-item:hover { transform: translateY(-5px); background: #fff; box-shadow: 0 16px 38px rgba(16, 37, 77, .07); }
+    .tech-item svg { width: 22px; height: 22px; color: var(--navy); transition: transform .25s ease, color .25s ease; }
+    .tech-item:hover svg { transform: translateY(-3px) scale(1.1); color: #b18700; }
     .tech-item strong { display: block; margin: 12px 0 6px; color: var(--navy); font-size: 14.5px; }
     .tech-item p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
 
@@ -216,6 +345,28 @@
       text-decoration: none;
       font-weight: 800;
       font-size: 14px;
+      transition: transform .22s ease, box-shadow .22s ease;
+    }
+    .closing a:hover { transform: translateX(4px); box-shadow: 0 12px 28px rgba(16, 37, 77, .18); }
+
+    .motion-ready .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity .65s ease, transform .65s cubic-bezier(.2, .72, .2, 1);
+    }
+    .motion-ready .reveal.is-visible { opacity: 1; transform: translateY(0); }
+    .motion-ready .reveal-delay-1 { transition-delay: .08s; }
+    .motion-ready .reveal-delay-2 { transition-delay: .16s; }
+    .motion-ready .reveal-delay-3 { transition-delay: .24s; }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: .65; transform: scale(.9); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+    @keyframes scroll-dot {
+      0% { opacity: 0; transform: translate(-50%, 0); }
+      35% { opacity: 1; }
+      100% { opacity: 0; transform: translate(-50%, 14px); }
     }
 
     @media (max-width: 860px) {
@@ -236,17 +387,25 @@
       }
       .hero h1 { font-size: clamp(36px, 11vw, 50px); }
       .hero p { color: #d1d8e6; }
+      .scroll-cue { display: none; }
       .pillars { grid-template-columns: 1fr; }
       .closing { flex-direction: column; align-items: flex-start; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+      .motion-ready .reveal { opacity: 1; transform: none; }
+      .hero { --hero-shift: 0px !important; }
     }
   </style>
 {{SITE_HEADER_CSS}}
 </head>
 <body>
+<div class="page-progress" id="pageProgress" aria-hidden="true"></div>
 {{SITE_HEADER}}
 
 <section class="hero" role="img" aria-label="도시의 실제 도로와 여러 배송 경로가 하나로 연결되는 MOVB 스마트 딜리버리">
-  <div class="hero-inner">
+  <div class="hero-inner reveal">
     <span class="eyebrow">MOVB BRAND</span>
     <h1>흩어진 이동을,<br>하나의 경로로 <em>연결합니다.</em></h1>
     <p>MOVB는 실제 도로 데이터를 기준으로 배송 시간과 요금을 먼저 보여드리고, 방향이 비슷한 주문끼리는 자동으로 묶어 한 번에 옮겨드리는 퀵·스마트 딜리버리 서비스입니다.</p>
@@ -254,47 +413,48 @@
       <a class="primary" href="/order">퀵 배송 접수하기 →</a>
       <a class="secondary" href="#services">서비스 살펴보기</a>
     </div>
+    <a class="scroll-cue" href="#services" aria-label="서비스 영역으로 이동">SCROLL<span aria-hidden="true"></span></a>
   </div>
 </section>
 
-<div class="pillars">
-  <div class="pillar">
+<div class="pillars reveal">
+  <div class="pillar reveal reveal-delay-1">
     <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 8h13M3 12.5h10M3 17h6"/></svg></span>
     <div><strong>빠르게</strong><span>실제 도로 기준으로 계산한 예상 시간</span></div>
   </div>
-  <div class="pillar">
+  <div class="pillar reveal reveal-delay-2">
     <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.8-6.5-11A6.5 6.5 0 0 1 18.5 10c0 5.2-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.2"/></svg></span>
     <div><strong>정확하게</strong><span>출발지부터 도착지까지 경로 그대로</span></div>
   </div>
-  <div class="pillar">
+  <div class="pillar reveal reveal-delay-3">
     <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span>
     <div><strong>함께</strong><span>방향이 비슷한 주문은 자동으로 묶어서</span></div>
   </div>
-  <div class="pillar">
+  <div class="pillar reveal reveal-delay-3">
     <span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg></span>
     <div><strong>안전하게</strong><span>물품 정보와 보험 기준을 접수 전에 확인</span></div>
   </div>
 </div>
 
 <section class="block" id="services">
-  <div class="block-head">
+  <div class="block-head reveal">
     <h2>상황에 맞는 배송 방식을 골라보세요</h2>
     <p>급한 물건은 지금 바로, 여유 있는 물건은 원하는 시간에, 여러 건은 스마트 딜리버리로 한 번에 묶어서 보낼 수 있어요.</p>
   </div>
   <div class="service-grid">
-    <a class="service-card" href="/order">
+    <a class="service-card reveal reveal-delay-1" href="/order">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></span>
       <strong>일반 퀵배송</strong>
       <p>필요한 정보만 입력하면 실제 도로 기준 예상 시간과 요금을 바로 확인하고 접수할 수 있어요.</p>
       <span class="go">바로 접수하기 →</span>
     </a>
-    <a class="service-card" href="/order?booking=scheduled">
+    <a class="service-card reveal reveal-delay-2" href="/order?booking=scheduled">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
       <strong>예약 배송</strong>
       <p>지금 당장이 아니어도 괜찮다면 원하는 픽업 시간을 골라 미리 접수해둘 수 있어요.</p>
       <span class="go">시간 선택하기 →</span>
     </a>
-    <a class="service-card" href="/order#smartDelivery">
+    <a class="service-card reveal reveal-delay-3" href="/order#smartDelivery">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span>
       <strong>스마트 딜리버리</strong>
       <p>방향이 비슷한 주문과 자동으로 묶여 더 저렴해져요. 묶이는 데 시간이 걸릴 수 있어서, 문 앞에 놓아두는 비대면 수령도 선택할 수 있어요.</p>
@@ -304,22 +464,22 @@
 </section>
 
 <section class="block">
-  <div class="block-head">
+  <div class="block-head reveal">
     <h2>경로 데이터로 연결하고, AI로 더 똑똑하게</h2>
     <p>사람이 일일이 배차하지 않아도, 실제 도로 데이터와 매칭 로직이 먼저 계산해서 보여드려요.</p>
   </div>
   <div class="tech-grid">
-    <div class="tech-item">
+    <div class="tech-item reveal reveal-delay-1">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><path d="M6.6 7.4 10.5 16M17.4 7.4 13.5 16M7 6h10"/></svg>
       <strong>실시간 자동 매칭</strong>
       <p>최대 15분 동안 방향과 조건이 비슷한 다른 주문을 찾아 하나의 경로로 묶어드려요.</p>
     </div>
-    <div class="tech-item">
+    <div class="tech-item reveal reveal-delay-2">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20 11 4M15 20 13 4"/><path d="M12 7.5v2M12 12v2M12 16.5v2"/></svg>
       <strong>자동차 실제 도로 기준 경로 계산</strong>
       <p>지도상 직선거리가 아니라 실제 주행 가능한 경로로 시간과 요금을 계산해요.</p>
     </div>
-    <div class="tech-item">
+    <div class="tech-item reveal reveal-delay-3">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H8l-4 4V5z"/><path d="M8 9h8M8 12.5h5"/></svg>
       <strong>AI 상담 에이전트</strong>
       <p>말로 설명하기만 해도 필요한 정보를 정리해 접수까지 이어주는 채팅 상담을 제공해요.</p>
@@ -327,7 +487,7 @@
   </div>
 </section>
 
-<div class="closing">
+<div class="closing reveal">
   <div>
     <strong>지금 바로 첫 배송을 접수해보세요</strong>
     <span>가입 없이도 견적 확인까지 먼저 해볼 수 있어요.</span>
@@ -335,5 +495,62 @@
   <a href="/order">퀵 배송 접수하기 →</a>
 </div>
 
+<script>
+  (() => {
+    const root = document.documentElement;
+    const progress = document.getElementById("pageProgress");
+    const hero = document.querySelector(".hero");
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const revealItems = [...document.querySelectorAll(".reveal")];
+
+    root.classList.add("motion-ready");
+
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      revealItems.forEach((item) => item.classList.add("is-visible"));
+    } else {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-visible");
+          observer.unobserve(entry.target);
+        });
+      }, {threshold: .12, rootMargin: "0px 0px -32px"});
+      revealItems.forEach((item) => observer.observe(item));
+    }
+
+    let frameRequested = false;
+    const updateScrollMotion = () => {
+      const scrollTop = window.scrollY;
+      const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+      progress.style.transform = `scaleX(${Math.min(1, scrollTop / scrollable)})`;
+      if (!reduceMotion && hero) {
+        hero.style.setProperty("--hero-shift", `${Math.min(32, scrollTop * .055)}px`);
+      }
+      frameRequested = false;
+    };
+    window.addEventListener("scroll", () => {
+      if (frameRequested) return;
+      frameRequested = true;
+      requestAnimationFrame(updateScrollMotion);
+    }, {passive: true});
+    updateScrollMotion();
+
+    if (!reduceMotion && window.matchMedia("(pointer: fine)").matches) {
+      document.querySelectorAll(".service-card").forEach((card) => {
+        card.addEventListener("pointermove", (event) => {
+          const rect = card.getBoundingClientRect();
+          const x = (event.clientX - rect.left) / rect.width - .5;
+          const y = (event.clientY - rect.top) / rect.height - .5;
+          card.style.setProperty("--tilt-x", `${x * 5}deg`);
+          card.style.setProperty("--tilt-y", `${y * -5}deg`);
+        });
+        card.addEventListener("pointerleave", () => {
+          card.style.setProperty("--tilt-x", "0deg");
+          card.style.setProperty("--tilt-y", "0deg");
+        });
+      });
+    }
+  })();
+</script>
 </body>
 </html>
