@@ -94,7 +94,9 @@ class MobilityStore:
                     status TEXT NOT NULL,
                     match_id TEXT,
                     provider_order_id TEXT,
+                    original_amount INTEGER,
                     final_amount INTEGER,
+                    saving_amount INTEGER,
                     payment_status TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
                     error TEXT,
                     created_at TEXT NOT NULL,
@@ -167,6 +169,14 @@ class MobilityStore:
             if "final_amount" not in request_columns:
                 connection.execute(
                     "ALTER TABLE delivery_match_requests ADD COLUMN final_amount INTEGER"
+                )
+            if "original_amount" not in request_columns:
+                connection.execute(
+                    "ALTER TABLE delivery_match_requests ADD COLUMN original_amount INTEGER"
+                )
+            if "saving_amount" not in request_columns:
+                connection.execute(
+                    "ALTER TABLE delivery_match_requests ADD COLUMN saving_amount INTEGER"
                 )
             if "payment_status" not in request_columns:
                 connection.execute(
@@ -657,7 +667,9 @@ class MobilityStore:
             "status": row["status"],
             "matchId": row["match_id"],
             "partnerOrderId": row["provider_order_id"],
+            "originalAmount": row["original_amount"],
             "finalAmount": row["final_amount"],
+            "savingAmount": row["saving_amount"],
             "paymentStatus": row["payment_status"],
             "routeSummary": f"{pickup} → {dropoff}",
             "error": row["error"],
@@ -712,7 +724,8 @@ class MobilityStore:
     ) -> dict[str, Any] | None:
         query = """
             SELECT request_id, client_id, request_json, status, match_id,
-                   provider_order_id, final_amount, payment_status, error,
+                   provider_order_id, original_amount, final_amount,
+                   saving_amount, payment_status, error,
                    created_at, updated_at, expires_at
             FROM delivery_match_requests
             WHERE request_id = ?
@@ -747,7 +760,8 @@ class MobilityStore:
             rows = connection.execute(
                 """
                 SELECT request_id, client_id, request_json, status, match_id,
-                       provider_order_id, final_amount, payment_status, error,
+                       provider_order_id, original_amount, final_amount,
+                       saving_amount, payment_status, error,
                        created_at, updated_at, expires_at
                 FROM delivery_match_requests
                 WHERE status = 'WAITING'
@@ -811,13 +825,18 @@ class MobilityStore:
         *,
         match_id: str,
         request_amounts: dict[str, int],
+        original_amounts: dict[str, int],
         provider_order_id: str,
         pooled_order: dict[str, Any],
         quote: dict[str, Any],
         total_amount: int,
     ) -> None:
         """Freeze the matched route and each participant's charge before payment."""
-        if len(request_amounts) != 2 or any(value <= 0 for value in request_amounts.values()):
+        if (
+            len(request_amounts) != 2
+            or set(request_amounts) != set(original_amounts)
+            or any(value <= 0 for value in request_amounts.values())
+        ):
             raise ValueError("공동배송 참가자별 결제 금액이 올바르지 않습니다.")
         now = utc_now()
         request_ids = tuple(request_amounts)
@@ -844,11 +863,20 @@ class MobilityStore:
                     """
                     UPDATE delivery_match_requests
                     SET status = 'MATCHED_AWAITING_PAYMENT',
-                        provider_order_id = ?, final_amount = ?,
+                        provider_order_id = ?, original_amount = ?,
+                        final_amount = ?, saving_amount = ?,
                         payment_status = 'PENDING', error = NULL, updated_at = ?
                     WHERE request_id = ? AND match_id = ? AND status = 'MATCHING'
                     """,
-                    (provider_order_id, amount, now, request_id, match_id),
+                    (
+                        provider_order_id,
+                        original_amounts[request_id],
+                        amount,
+                        max(0, original_amounts[request_id] - amount),
+                        now,
+                        request_id,
+                        match_id,
+                    ),
                 )
                 if cursor.rowcount != 1:
                     raise RuntimeError("공동배송 매칭 상태를 결제 대기로 전환하지 못했습니다.")
@@ -994,7 +1022,8 @@ class MobilityStore:
             rows = connection.execute(
                 """
                 SELECT request_id, client_id, request_json, status, match_id,
-                       provider_order_id, final_amount, payment_status, error,
+                       provider_order_id, original_amount, final_amount,
+                       saving_amount, payment_status, error,
                        created_at, updated_at, expires_at
                 FROM delivery_match_requests
                 WHERE client_id = ?

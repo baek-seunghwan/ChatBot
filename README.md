@@ -14,7 +14,7 @@ Kakao Mobility Quick/Walking Delivery Sandbox를 주문 계층으로 사용하�
 - **AI 배송 도우미**: 자연어 요청에서 배송 정보와 의도를 추출하고, 누락된 항목을 질문합니다.
 - **근거 기반 안내**: 서비스 정책 문서를 BM25와 한국어 문자 n-gram으로 검색해 출처와 함께 답변합니다.
 - **배송 접수와 추적**: 퀵·도보 배송 견적, 경로 요약, Sandbox 주문, 상태·Step 조회와 취소를 제공합니다.
-- **스마트 딜리버리**: 다중 픽업·배송지를 입력하면 경로와 개별/묶음 견적을 비교하고, 확인 후 주문합니다.
+- **스마트 딜리버리**: 같은 차량·비슷한 경로의 주문을 매칭해 단독 예상가, 최종가와 절약액을 비교한 뒤 참가자 결제 완료 시 하나의 배송으로 접수합니다. 이용자가 적을 때도 실제 매칭 로직을 검증할 수 있는 명시적 Sandbox 데모를 제공합니다.
 - **운영 기능**: 이메일 인증, 역할 기반 관리자 화면, SQLite 기반 주문·콜백·대화 이력 저장을 제공합니다.
 
 ## 기술 구성
@@ -123,6 +123,8 @@ MOVB_ADMIN_PASSWORD=
 | `PATCH` | `/api/orders/{partnerOrderId}/cancel` | 주문 취소 |
 | `POST` | `/api/smart-delivery/quote` | 스마트 딜리버리 비교 견적 |
 | `POST` | `/api/smart-delivery/orders` | 스마트 딜리버리 주문 생성 |
+| `POST` | `/api/delivery-matches` | 실사용자 스마트 딜리버리 매칭 대기·결제 금액 확정 |
+| `POST` | `/api/delivery-matches/{request_id}/demo-match` | Sandbox 상대 주문으로 실제 매칭·할인 흐름 시연 |
 
 주문 생성 API는 멱등성을 지원합니다. 스마트 딜리버리 주문은 서버에서 주소, 경로, 가격과
 명시적 동의를 다시 검증합니다.

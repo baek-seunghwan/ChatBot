@@ -510,6 +510,46 @@ class KakaoPayFlowTests(unittest.TestCase):
         finally:
             second_client.close()
 
+    def test_demo_peer_is_prepaid_and_user_payment_dispatches_delivery(self) -> None:
+        payload = sample_order()
+        payload.pop("partnerOrderId", None)
+        waiting = self.client.post(
+            "/api/delivery-matches",
+            headers={
+                "X-Client-Id": "payment-demo-computer",
+                "Idempotency-Key": "payment-demo-match",
+            },
+            json=payload,
+        )
+        self.assertEqual(waiting.json()["data"]["matching"]["status"], "WAITING")
+
+        demo = self.client.post(
+            "/api/delivery-matches/payment-demo-match/demo-match",
+            headers={"X-Client-Id": "payment-demo-computer"},
+        )
+        matching = demo.json()["data"]["matching"]
+        self.assertEqual(matching["originalAmount"], 12000)
+        self.assertEqual(matching["finalAmount"], 6000)
+        self.assertEqual(matching["savingAmount"], 6000)
+
+        ready = self.client.post(
+            "/api/payments/kakaopay/ready",
+            headers={"X-Client-Id": "payment-demo-computer"},
+            json={"matchRequestId": "payment-demo-match"},
+        ).json()["data"]
+        self.assertEqual(ready["amount"], 6000)
+
+        paid = self.client.get(
+            f"/api/payments/kakaopay/{ready['paymentId']}/success",
+            params={"pg_token": "demo-matched-token"},
+            follow_redirects=False,
+        )
+        self.assertIn("payment=success", paid.headers["location"])
+        self.assertEqual(self.mobility.create_calls, 1)
+        final = self.store.get_match_request("payment-demo-match")
+        self.assertEqual(final["status"], "MATCHED")
+        self.assertEqual(final["paymentStatus"], "PAID")
+
 
 class MobilityApiTests(unittest.TestCase):
     def setUp(self) -> None:

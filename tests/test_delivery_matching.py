@@ -89,7 +89,9 @@ class DeliveryMatchingTests(unittest.TestCase):
         self.assertEqual(matching["status"], "MATCHED_AWAITING_PAYMENT")
         self.assertTrue(matching["partnerOrderId"].startswith("smart-pool-"))
         self.assertEqual(matching["paymentStatus"], "PENDING")
+        self.assertEqual(matching["originalAmount"], 12000)
         self.assertEqual(matching["finalAmount"], 6000)
+        self.assertEqual(matching["savingAmount"], 6000)
         self.assertEqual(self.fake.create_calls, 0)
 
         saved = self.store.get_order(matching["partnerOrderId"])
@@ -101,7 +103,9 @@ class DeliveryMatchingTests(unittest.TestCase):
         )
         first_match = first_history.json()["data"][0]
         self.assertEqual(first_match["status"], "MATCHED_AWAITING_PAYMENT")
+        self.assertEqual(first_match["originalAmount"], 12000)
         self.assertEqual(first_match["finalAmount"], 6000)
+        self.assertEqual(first_match["savingAmount"], 6000)
         self.assertEqual(
             first_match["partnerOrderId"],
             matching["partnerOrderId"],
@@ -128,6 +132,38 @@ class DeliveryMatchingTests(unittest.TestCase):
                 "WAITING",
             )
         self.assertEqual(self.fake.create_calls, 0)
+
+    def test_waiting_order_can_run_a_transparent_demo_match(self) -> None:
+        payload = sample_order()
+        payload.pop("partnerOrderId", None)
+        waiting = self.client.post(
+            "/api/delivery-matches",
+            headers={
+                "X-Client-Id": "demo-computer",
+                "Idempotency-Key": "demo-waiting-order",
+            },
+            json=payload,
+        )
+        self.assertEqual(waiting.json()["data"]["matching"]["status"], "WAITING")
+
+        response = self.client.post(
+            "/api/delivery-matches/demo-waiting-order/demo-match",
+            headers={"X-Client-Id": "demo-computer"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        matching = response.json()["data"]["matching"]
+        self.assertTrue(matching["demoMatch"])
+        self.assertEqual(matching["status"], "MATCHED_AWAITING_PAYMENT")
+        self.assertEqual(matching["originalAmount"], 12000)
+        self.assertEqual(matching["finalAmount"], 6000)
+        self.assertEqual(matching["savingAmount"], 6000)
+        self.assertEqual(self.fake.create_calls, 0)
+
+        _, should_dispatch = self.store.mark_match_participant_paid(
+            "demo-waiting-order"
+        )
+        self.assertTrue(should_dispatch)
 
     def test_same_logged_in_account_on_two_computers_does_not_self_match(self) -> None:
         registered = self.client.post(

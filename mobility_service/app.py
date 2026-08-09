@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import hashlib
 import secrets
 from contextlib import asynccontextmanager
@@ -897,6 +898,52 @@ def create_app(
             else f"browser:{x_client_id}"
         )
 
+    async def prepare_delivery_match(
+        *,
+        first: dict[str, Any],
+        second: dict[str, Any],
+        match_id: str,
+        partner_order_id: str,
+    ) -> None:
+        """Price one pooled route and freeze each user's before/after amount."""
+        pooled_order = build_pooled_order(
+            first["request"],
+            second["request"],
+            partner_order_id,
+        )
+        first_order = CreateDeliveryRequest.model_validate(first["request"])
+        second_order = CreateDeliveryRequest.model_validate(second["request"])
+        pooled_quote, first_quote, second_quote = await asyncio.gather(
+            resolved_client.price(pooled_order),
+            resolved_client.price(first_order),
+            resolved_client.price(second_order),
+        )
+        pooled_total = payment_total(pooled_quote, pooled_order.order_type.value)
+        first_total = payment_total(first_quote, first["request"]["orderType"])
+        second_total = payment_total(second_quote, second["request"]["orderType"])
+        solo_total = first_total + second_total
+        first_amount = max(1, round(pooled_total * first_total / solo_total))
+        second_amount = pooled_total - first_amount
+        if second_amount <= 0:
+            raise ValueError("공동배송 최종 결제 금액을 나누지 못했습니다.")
+        resolved_store.prepare_matched_payments(
+            match_id=match_id,
+            request_amounts={
+                first["requestId"]: first_amount,
+                second["requestId"]: second_amount,
+            },
+            original_amounts={
+                first["requestId"]: first_total,
+                second["requestId"]: second_total,
+            },
+            provider_order_id=partner_order_id,
+            pooled_order=pooled_order.model_dump(
+                mode="json", by_alias=True, exclude_none=True
+            ),
+            quote=pooled_quote,
+            total_amount=pooled_total,
+        )
+
     @application.post(
         "/api/delivery-matches",
         response_model=ApiEnvelope,
@@ -969,50 +1016,11 @@ def create_app(
             partner_order_id = f"smart-pool-{uuid4().hex[:18]}"
             request_ids = (candidate["requestId"], request_id)
             try:
-                pooled_order = build_pooled_order(
-                    candidate["request"],
-                    request_payload,
-                    partner_order_id,
-                )
-                pooled_quote, first_quote, second_quote = await asyncio.gather(
-                    resolved_client.price(pooled_order),
-                    resolved_client.price(
-                        CreateDeliveryRequest.model_validate(candidate["request"])
-                    ),
-                    resolved_client.price(request),
-                )
-                pooled_total = payment_total(
-                    pooled_quote,
-                    pooled_order.order_type.value,
-                )
-                first_total = payment_total(
-                    first_quote,
-                    candidate["request"]["orderType"],
-                )
-                second_total = payment_total(
-                    second_quote,
-                    request_payload["orderType"],
-                )
-                solo_total = first_total + second_total
-                first_amount = max(
-                    1,
-                    round(pooled_total * first_total / solo_total),
-                )
-                second_amount = pooled_total - first_amount
-                if second_amount <= 0:
-                    raise ValueError("공동배송 최종 결제 금액을 나누지 못했습니다.")
-                resolved_store.prepare_matched_payments(
+                await prepare_delivery_match(
+                    first=candidate,
+                    second={"requestId": request_id, "request": request_payload},
                     match_id=match_id,
-                    request_amounts={
-                        candidate["requestId"]: first_amount,
-                        request_id: second_amount,
-                    },
-                    provider_order_id=partner_order_id,
-                    pooled_order=pooled_order.model_dump(
-                        mode="json", by_alias=True, exclude_none=True
-                    ),
-                    quote=pooled_quote,
-                    total_amount=pooled_total,
+                    partner_order_id=partner_order_id,
                 )
             except Exception as exc:
                 resolved_store.fail_match_requests(request_ids, str(exc))
@@ -1034,6 +1042,97 @@ def create_app(
             message=(
                 "공동배송 대기열에 접수했습니다. 15분 안에 출발지·도착 방향과 "
                 "배송 조건이 비슷한 다른 사용자 주문을 찾습니다."
+            ),
+        )
+
+    @application.post(
+        "/api/delivery-matches/{request_id}/demo-match",
+        response_model=ApiEnvelope,
+    )
+    async def create_demo_delivery_match(
+        request_id: str,
+        x_client_id: str = Header(
+            alias="X-Client-Id",
+            min_length=8,
+            max_length=100,
+        ),
+        session_token: str | None = Cookie(
+            default=None,
+            alias=SESSION_COOKIE_NAME,
+        ),
+    ) -> ApiEnvelope:
+        """Create a clearly labelled Sandbox peer and run the real match logic."""
+        owner_id = match_owner_id(x_client_id, session_token)
+        current = resolved_store.get_match_request(
+            request_id,
+            client_id=owner_id,
+        )
+        if current is None:
+            raise HTTPException(
+                status_code=404,
+                detail="본인의 매칭 요청을 찾을 수 없습니다.",
+            )
+        if current["status"] != "WAITING":
+            raise HTTPException(
+                status_code=409,
+                detail="대기 중인 주문에서만 Sandbox 데모 매칭을 시작할 수 있습니다.",
+            )
+
+        demo_payload = copy.deepcopy(current["request"])
+        demo_payload.pop("partnerOrderId", None)
+        demo_payload["pickup"]["contact"] = {
+            "name": "Sandbox 데모 발송자",
+            "phone": "010-1000-0901",
+        }
+        demo_payload["dropoff"]["contact"] = {
+            "name": "Sandbox 데모 수령인",
+            "phone": "010-1000-0902",
+        }
+        demo_payload["productName"] = "Sandbox 데모 배송"
+        demo_request_id = f"demo-peer-{uuid4().hex[:20]}"
+        demo_owner_id = f"sandbox-demo:{uuid4().hex[:16]}"
+        expires_at = (datetime.now(timezone.utc) + timedelta(minutes=15)).isoformat()
+        demo_request, _ = resolved_store.reserve_match_request(
+            demo_request_id,
+            demo_owner_id,
+            demo_payload,
+            expires_at,
+        )
+        match_id = f"demo-match-{uuid4().hex[:20]}"
+        if not resolved_store.claim_match_requests(
+            request_id,
+            demo_request_id,
+            match_id,
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="매칭 상태가 바뀌었습니다. 이용 내역에서 다시 확인해주세요.",
+            )
+        partner_order_id = f"smart-demo-{uuid4().hex[:18]}"
+        try:
+            await prepare_delivery_match(
+                first=current,
+                second=demo_request,
+                match_id=match_id,
+                partner_order_id=partner_order_id,
+            )
+            # 데모 상대는 결제를 마친 것으로 처리해 사용자의 결제 후 즉시 접수된다.
+            resolved_store.mark_match_participant_paid(demo_request_id)
+        except Exception as exc:
+            resolved_store.fail_match_requests(
+                (request_id, demo_request_id),
+                str(exc),
+            )
+            raise
+
+        matched = resolved_store.get_match_request(request_id, client_id=owner_id)
+        response_matching = public_match_request(matched or current)
+        response_matching["demoMatch"] = True
+        return ApiEnvelope(
+            data={"matching": response_matching},
+            message=(
+                "Sandbox 데모 주문과 실제 매칭 로직으로 묶었습니다. "
+                "단독 배송가와 최종 할인 요금을 비교해보세요."
             ),
         )
 
