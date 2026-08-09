@@ -244,63 +244,45 @@
       gap: 16px;
     }
     .service-card {
-      position: relative;
-      display: block;
-      overflow: hidden;
-      padding: 24px;
+      display: grid;
+      min-height: 174px;
+      grid-template-rows: auto auto 1fr auto;
+      align-content: start;
+      padding: 22px;
       border: 1px solid var(--line);
-      border-radius: 16px;
+      border-radius: 12px;
       color: inherit;
       text-decoration: none;
-      background: #fafbfd;
-      box-shadow: 0 8px 26px rgba(16, 37, 77, .035);
-      transform: perspective(900px) translateY(var(--card-lift, 0)) rotateX(var(--tilt-y, 0deg)) rotateY(var(--tilt-x, 0deg));
-      transform-style: preserve-3d;
-      transition: transform .26s ease, border-color .26s ease, background .26s ease, box-shadow .26s ease;
-    }
-    .service-card::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 -120%;
-      width: 75%;
-      transform: skewX(-18deg);
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .8), transparent);
-      transition: left .65s ease;
-      pointer-events: none;
+      background: #fff;
+      box-shadow: none;
+      transition: border-color .16s ease, background .16s ease;
     }
     .service-card:hover {
-      --card-lift: -7px;
-      border-color: #c7cedb;
+      border-color: #9ba8bb;
       background: #f8fafc;
-      box-shadow: 0 20px 44px rgba(16, 37, 77, .1);
     }
-    .service-card:hover::before { left: 140%; }
     .service-card .icon {
       display: grid;
       place-items: center;
       width: 40px;
       height: 40px;
       border-radius: 10px;
-      background: #fff;
+      background: #f4f6f9;
       border: 1px solid var(--line);
       color: var(--navy);
-      transition: transform .25s ease, background .25s ease, color .25s ease;
     }
-    .service-card:hover .icon { transform: scale(1.08) rotate(-4deg); background: var(--navy); color: var(--yellow); }
     .service-card .icon svg { width: 20px; height: 20px; }
-    .service-card strong { display: block; margin: 16px 0 6px; color: var(--navy); font-size: 15.5px; }
-    .service-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .service-card strong { display: block; margin: 15px 0 5px; color: var(--navy); font-size: 16px; }
+    .service-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
     .service-card .go {
       display: inline-flex;
+      align-self: end;
       align-items: center;
-      gap: 4px;
-      margin-top: 14px;
+      margin-top: 16px;
       color: var(--navy);
       font-size: 12.5px;
       font-weight: 800;
-      transition: gap .2s ease;
     }
-    .service-card:hover .go { gap: 9px; }
 
     /* ---------- tech list ---------- */
     .tech-grid {
@@ -439,26 +421,26 @@
 <section class="block" id="services">
   <div class="block-head reveal">
     <h2>상황에 맞는 배송 방식을 골라보세요</h2>
-    <p>급한 물건은 지금 바로, 여유 있는 물건은 원하는 시간에, 여러 건은 스마트 딜리버리로 한 번에 묶어서 보낼 수 있어요.</p>
+    <p>필요한 방식 하나를 선택하면 바로 접수 화면으로 이동합니다.</p>
   </div>
   <div class="service-grid">
     <a class="service-card reveal reveal-delay-1" href="/order">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5 12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5 12 12l8-4.5M12 12v9"/></svg></span>
       <strong>일반 퀵배송</strong>
-      <p>필요한 정보만 입력하면 실제 도로 기준 예상 시간과 요금을 바로 확인하고 접수할 수 있어요.</p>
-      <span class="go">바로 접수하기 →</span>
+      <p>지금 바로 픽업하고 배송합니다.</p>
+      <span class="go">선택하기 →</span>
     </a>
     <a class="service-card reveal reveal-delay-2" href="/order?booking=scheduled">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
       <strong>예약 배송</strong>
-      <p>지금 당장이 아니어도 괜찮다면 원하는 픽업 시간을 골라 미리 접수해둘 수 있어요.</p>
-      <span class="go">시간 선택하기 →</span>
+      <p>원하는 픽업 시간을 미리 정합니다.</p>
+      <span class="go">선택하기 →</span>
     </a>
     <a class="service-card reveal reveal-delay-3" href="/order#smartDelivery">
       <span class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="2.5"/><circle cx="16" cy="8" r="2.5"/><path d="M3.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6M11.5 18c.5-3 2.3-4.6 4.5-4.6s4 1.6 4.5 4.6"/></svg></span>
       <strong>스마트 딜리버리</strong>
-      <p>방향이 비슷한 주문과 자동으로 묶여 더 저렴해져요. 묶이는 데 시간이 걸릴 수 있어서, 문 앞에 놓아두는 비대면 수령도 선택할 수 있어요.</p>
-      <span class="go">자동 매칭 알아보기 →</span>
+      <p>비슷한 경로와 묶어 배송비를 줄입니다.</p>
+      <span class="go">선택하기 →</span>
     </a>
   </div>
 </section>
@@ -535,21 +517,6 @@
     }, {passive: true});
     updateScrollMotion();
 
-    if (!reduceMotion && window.matchMedia("(pointer: fine)").matches) {
-      document.querySelectorAll(".service-card").forEach((card) => {
-        card.addEventListener("pointermove", (event) => {
-          const rect = card.getBoundingClientRect();
-          const x = (event.clientX - rect.left) / rect.width - .5;
-          const y = (event.clientY - rect.top) / rect.height - .5;
-          card.style.setProperty("--tilt-x", `${x * 5}deg`);
-          card.style.setProperty("--tilt-y", `${y * -5}deg`);
-        });
-        card.addEventListener("pointerleave", () => {
-          card.style.setProperty("--tilt-x", "0deg");
-          card.style.setProperty("--tilt-y", "0deg");
-        });
-      });
-    }
   })();
 </script>
 </body>

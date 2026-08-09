@@ -591,6 +591,9 @@ class MobilityApiTests(unittest.TestCase):
             'href="/order?booking=scheduled"',
             about.text,
         )
+        self.assertNotIn(".service-card::before", about.text)
+        self.assertNotIn("--tilt-x", about.text)
+        self.assertNotIn('addEventListener("pointermove"', about.text)
         self.assertEqual(hero.status_code, 200)
         self.assertEqual(hero.headers["content-type"], "image/webp")
         self.assertGreater(len(hero.content), 100_000)

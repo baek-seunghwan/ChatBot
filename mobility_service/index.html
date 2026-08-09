@@ -2183,98 +2183,67 @@
     .quick-review .review-grid {
       grid-template-columns: repeat(4, minmax(0, 1fr));
     }
-    .fare-current-summary {
+    .matched-checkout-card {
       grid-column: 1 / -1;
+      display: grid;
+      width: min(100%, 620px);
+      justify-self: center;
       overflow: hidden;
-      border: 1px solid #d6ddea;
-      border-radius: 10px;
+      border: 1px solid #dfe4ec;
+      border-radius: 14px;
       background: #fff;
+      color: var(--navy);
     }
-    .fare-current-top {
+    .matched-checkout-head {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 14px;
-      background: var(--navy);
-      color: #fff;
+      border-bottom: 1px solid #edf0f4;
+      padding: 14px 18px;
     }
-    .fare-current-service {
+    .matched-checkout-head span { color: var(--muted); font-size: 11px; font-weight: 800; }
+    .matched-checkout-head strong { color: #7c6200; font-size: 12px; }
+    .matched-checkout-price {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 18px;
+    }
+    .matched-checkout-price span { display: grid; gap: 5px; }
+    .matched-checkout-price small,
+    .matched-checkout-route small,
+    .matched-checkout-action small { color: var(--muted); font-size: 10px; font-weight: 700; }
+    .matched-checkout-price strong { color: var(--navy); font-size: 28px; letter-spacing: -.03em; }
+    .matched-checkout-price del { color: #929bab; font-size: 13px; font-weight: 700; }
+    .matched-checkout-route {
       display: grid;
       gap: 5px;
-      min-width: 0;
+      border-top: 1px solid #edf0f4;
+      padding: 14px 18px;
     }
-    .fare-current-service small {
-      color: rgba(255, 255, 255, .68);
-      font-size: 10px;
-      font-weight: 750;
-    }
-    .fare-current-service strong {
-      overflow: hidden;
-      font-size: 15px;
-      line-height: 1.3;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .fare-vehicle {
-      display: inline-flex;
-      width: fit-content;
+    #matchedPaymentRoute { overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
+    .matched-checkout-action {
+      display: grid;
+      grid-template-columns: minmax(200px, 1fr) auto;
       align-items: center;
-      border: 1px solid rgba(255, 255, 255, .2);
-      border-radius: 999px;
-      padding: 3px 7px;
-      background: rgba(255, 255, 255, .1);
-      color: rgba(255, 255, 255, .88);
-      font-size: 10px;
-      font-weight: 750;
+      gap: 12px;
+      border-top: 1px solid #edf0f4;
+      padding: 14px 18px;
+      background: #f8f9fb;
     }
-    .fare-current-price {
-      flex: 0 0 auto;
-      color: var(--yellow);
-      font-size: 19px;
-      line-height: 1.25;
-      white-space: nowrap;
-    }
-    .fare-current-metrics {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
-      border-top: 1px solid #e7eaf0;
-    }
-    .fare-current-metrics > span,
-    .fare-current-metrics > div {
-      display: grid;
-      gap: 2px;
-      padding: 10px 14px;
-    }
-    .fare-current-metrics > span + span,
-    .fare-current-metrics > div + div { border-left: 1px solid #e7eaf0; }
-    .fare-current-metrics small { color: var(--muted); font-size: 9.5px; }
-    .fare-current-metrics b { color: var(--navy); font-size: 12px; }
-    #matchedPaymentRoute { overflow-wrap: anywhere; line-height: 1.45; }
-    .match-price-drop {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr auto;
-      align-items: center;
-      gap: 14px;
-      border-top: 1px solid #e7eaf0;
-      padding: 16px 18px;
-      background: #fff;
-    }
-    .match-price-value { display: grid; gap: 3px; }
-    .match-price-value small { color: var(--muted); font-size: 10px; font-weight: 750; }
-    .match-price-value del { color: #7c879b; font-size: 16px; font-weight: 800; }
-    .match-price-value strong { color: var(--navy); font-size: 22px; }
-    .match-price-arrow { color: #8d98aa; font-size: 18px; font-weight: 900; }
-    .match-saving-badge {
-      border-radius: 999px;
-      padding: 8px 11px;
+    .matched-checkout-action button {
+      min-height: 46px;
+      border: 0;
+      border-radius: 9px;
       background: var(--yellow);
       color: var(--navy);
-      font-size: 12px;
-      font-style: normal;
+      font-size: 13px;
       font-weight: 900;
-      white-space: nowrap;
+      box-shadow: none;
     }
+    .matched-checkout-action button:hover { transform: none; background: #f3ca00; box-shadow: none; }
     .match-waiting-card {
       grid-column: 1 / -1;
       display: grid;
@@ -2629,23 +2598,19 @@
       background: rgba(255, 255, 255, .08);
       color: #fff;
     }
-    #quickRequest .result-prominent .fare-current-summary {
-      border: 2px solid var(--yellow);
+    #quickRequest .result-prominent.match-payment-result {
+      width: min(100%, 720px);
+      border-radius: 0;
+      padding: 0;
+      background: transparent;
+      box-shadow: none;
+    }
+    #quickRequest .result-prominent.match-payment-result > h3 {
+      color: var(--navy);
+    }
+    #quickRequest .result-prominent.match-payment-result .result-chip {
+      border-color: #dfe4ec;
       background: #fff;
-    }
-    #quickRequest .result-prominent .fare-current-top {
-      background: var(--yellow);
-      color: var(--navy);
-    }
-    #quickRequest .result-prominent .fare-current-service small {
-      color: rgba(16, 37, 77, .65);
-    }
-    #quickRequest .result-prominent .fare-vehicle {
-      border-color: rgba(16, 37, 77, .2);
-      background: rgba(255, 255, 255, .45);
-      color: var(--navy);
-    }
-    #quickRequest .result-prominent .fare-current-price {
       color: var(--navy);
     }
     #quickRequest .result-prominent .fare-alternatives {
@@ -2811,12 +2776,6 @@
         border-bottom: 1px solid #e7eaf0;
       }
       .fare-group-option:last-child { border-bottom: 0; }
-      .fare-current-metrics { grid-template-columns: 1fr; }
-      .fare-current-metrics > span + span,
-      .fare-current-metrics > div + div {
-        border-top: 1px solid #e7eaf0;
-        border-left: 0;
-      }
       .delivery-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .choice-card { min-height: 104px; }
       .pickup-time-field { grid-template-columns: 1fr; }
@@ -3939,8 +3898,7 @@
         align-items: stretch;
         flex-direction: column;
       }
-      .match-price-drop { grid-template-columns: 1fr auto 1fr; }
-      .match-saving-badge { grid-column: 1 / -1; justify-self: start; }
+      .matched-checkout-action { grid-template-columns: 1fr; }
       .match-waiting-actions { align-items: stretch; flex-direction: column; }
       .fare-confirm-button { width: 100%; min-width: 0; }
       #quickRequest .live-ops {
@@ -5998,6 +5956,7 @@
       const meta = byId("resultMeta");
       const grid = byId("resultGrid");
       const body = byId("resultBody");
+      byId("result").classList.remove("match-payment-result");
       byId("resultTitle").textContent = title;
       meta.innerHTML = "";
       delete meta.dataset.requestId;
@@ -7185,21 +7144,21 @@
       const meta = byId("resultMeta");
       const grid = byId("resultGrid");
       const body = byId("resultBody");
+      byId("result").classList.remove("match-payment-result");
       byId("resultTitle").textContent = "스마트 딜리버리 매칭 대기";
-      meta.innerHTML = '<span>비슷한 경로의 주문을 찾고 있어요</span><span class="result-chip">최대 15분</span>';
+      meta.innerHTML = '<span class="result-chip">최대 15분</span>';
       grid.innerHTML = `
         <article class="match-waiting-card">
           <div>
-            <h4>주문 등록이 완료됐어요.</h4>
-            <p>실제 사용자의 같은 차량·비슷한 경로 주문이 들어오면 단독 배송가와 매칭 후 할인 가격을 비교해 보여드립니다.</p>
+            <h4>비슷한 배송을 찾고 있어요</h4>
+            <p>같은 차량과 비슷한 경로의 주문을 자동으로 찾습니다.</p>
           </div>
           <div class="match-demo-note">
-            <strong>Sandbox 기능 시연</strong><br>
-            현재 이용자가 없어도 가상 상대 주문 1건을 만들어 실제 백엔드 매칭·요금 분담·결제 대기 흐름을 확인할 수 있습니다. 실제 결제는 발생하지 않습니다.
+            이용자가 없어도 체험 매칭으로 할인 과정을 확인할 수 있습니다.
           </div>
           <div class="match-waiting-actions">
-            <button type="button" onclick="keepWaitingForRealMatch(this)">실제 주문 계속 기다리기</button>
-            <button type="button" class="primary" onclick="startDemoMatch('${matching.requestId}', this)">데모 매칭 시작</button>
+            <button type="button" onclick="keepWaitingForRealMatch(this)">계속 기다리기</button>
+            <button type="button" class="primary" onclick="startDemoMatch('${matching.requestId}', this)">체험 매칭 보기</button>
           </div>
         </article>`;
       body.hidden = true;
@@ -7240,44 +7199,37 @@
       const meta = byId("resultMeta");
       const grid = byId("resultGrid");
       const body = byId("resultBody");
-      byId("resultTitle").textContent = matching.demoMatch
-        ? "Sandbox 데모 매칭 완료"
-        : "스마트 딜리버리 매칭 완료";
-      meta.innerHTML = `<span>단독 배송보다 ${won(savingAmount)} 절약했어요</span><span class="result-chip">${matching.demoMatch ? "데모 · " : ""}결제 대기</span>`;
+      byId("resultTitle").textContent = "배송이 함께 묶였어요";
+      meta.innerHTML = matching.demoMatch
+        ? '<span class="result-chip">체험용 매칭</span>'
+        : '<span class="result-chip">매칭 완료</span>';
       grid.innerHTML = `
-        <article class="fare-current-summary">
-          <div class="fare-current-top">
-            <div class="fare-current-service">
-              <small>내 공동배송 최종 요금</small>
-              <strong>스마트 딜리버리</strong>
-              <span class="fare-vehicle">매칭 완료</span>
-            </div>
-            <strong class="fare-current-price">${won(amount)}</strong>
+        <article class="matched-checkout-card">
+          <header class="matched-checkout-head">
+            <span>스마트 딜리버리</span>
+            ${savingAmount > 0 ? `<strong>${won(savingAmount)} 절약</strong>` : ""}
+          </header>
+          <div class="matched-checkout-price">
+            <span>
+              <small>최종 결제금액</small>
+              <strong>${won(amount)}</strong>
+            </span>
+            ${originalAmount > 0 ? `<del>${won(originalAmount)}</del>` : ""}
           </div>
-          <div class="fare-current-metrics">
-            <div><span>배송 경로</span><strong id="matchedPaymentRoute"></strong></div>
-            <div><span>결제 상태</span><strong>카카오페이 결제 전</strong></div>
+          <div class="matched-checkout-route">
+            <small>배송 경로</small>
+            <strong id="matchedPaymentRoute"></strong>
           </div>
-          ${originalAmount > 0 ? `
-            <div class="match-price-drop" aria-label="매칭 전후 가격 비교">
-              <span class="match-price-value"><small>단독 배송 예상가</small><del>${won(originalAmount)}</del></span>
-              <span class="match-price-arrow" aria-hidden="true">→</span>
-              <span class="match-price-value"><small>매칭 후 최종가</small><strong>${won(amount)}</strong></span>
-              <em class="match-saving-badge">${won(savingAmount)} 절약</em>
-            </div>` : ""}
-        </article>
-        <div class="fare-confirm-bar">
-          <span class="fare-confirm-copy">
-            <small>다른 참가자도 결제를 완료하면</small>
-            <strong>하나의 묶음 배송으로 자동 접수됩니다.</strong>
-          </span>
-          <button type="button" class="fare-confirm-button" onclick="startMatchedKakaoPay('${matching.requestId}', this)">
-            카카오페이로 ${won(amount)} 결제
-          </button>
-        </div>`;
+          <div class="matched-checkout-action">
+            <button type="button" onclick="startMatchedKakaoPay('${matching.requestId}', this)">
+              카카오페이로 결제
+            </button>
+            <small>결제 완료 후 묶음 배송으로 접수됩니다.</small>
+          </div>
+        </article>`;
       byId("matchedPaymentRoute").textContent = matching.routeSummary || "확정 완료";
       body.hidden = true;
-      byId("result").classList.add("visible");
+      byId("result").classList.add("visible", "match-payment-result");
       byId("result").scrollIntoView({behavior: "smooth", block: "start"});
     }
 
