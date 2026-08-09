@@ -594,6 +594,12 @@ def create_app(
         payload: KakaoPayReadyRequest,
         request: Request,
         user: dict[str, Any] = Depends(require_current_user),
+        x_client_id: str | None = Header(
+            default=None,
+            alias="X-Client-Id",
+            min_length=8,
+            max_length=100,
+        ),
     ) -> ApiEnvelope:
         if not resolved_settings.kakaopay_configured:
             raise HTTPException(
@@ -605,7 +611,47 @@ def create_app(
         partner_order_id = f"movb-pay-{token[:20]}"
         delivery_order_id = f"movb-{token[:20]}"
         partner_user_id = str(user["id"])
-        if payload.smart_order is not None:
+        match_request_id: str | None = None
+        if payload.match_request_id is not None:
+            match_request_id = payload.match_request_id
+            match_request = resolved_store.get_match_request(
+                match_request_id,
+                client_id=f"user:{user['id']}",
+            )
+            if match_request is None and x_client_id:
+                match_request = resolved_store.get_match_request(
+                    match_request_id,
+                    client_id=f"browser:{x_client_id}",
+                )
+            if match_request is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="본인의 공동배송 매칭 요청을 찾지 못했습니다.",
+                )
+            if match_request["status"] != "MATCHED_AWAITING_PAYMENT":
+                raise HTTPException(
+                    status_code=409,
+                    detail="매칭과 최종 요금 확정이 끝난 주문만 결제할 수 있습니다.",
+                )
+            if match_request["paymentStatus"] == "PAID":
+                raise HTTPException(status_code=409, detail="이미 결제한 공동배송입니다.")
+            group = resolved_store.get_match_group(match_request["matchId"])
+            if group is None or group["status"] not in {
+                "AWAITING_PAYMENT",
+                "DISPATCHING",
+            }:
+                raise HTTPException(
+                    status_code=409,
+                    detail="현재 결제할 수 없는 공동배송 상태입니다.",
+                )
+            prepared_order = CreateDeliveryRequest.model_validate(
+                group["pooledOrder"]
+            )
+            quote = group["quote"]
+            amount = int(match_request["finalAmount"])
+            delivery_order_id = f"match-payment-{token[:20]}"
+            item_name = f"MOVB 공동배송 · {prepared_order.product_name}"
+        elif payload.smart_order is not None:
             try:
                 quote, prepared_order = await prepare_bundle_order(
                     resolved_client,
@@ -634,6 +680,7 @@ def create_app(
             delivery_order_id=delivery_order_id,
             amount=amount,
             order_payload=delivery_payload,
+            match_request_id=match_request_id,
         )
         callback_base = payment_redirect_base(request)
         callback_path = f"/api/payments/kakaopay/{payment_id}"
@@ -694,10 +741,21 @@ def create_app(
         if payment is None:
             raise HTTPException(status_code=404, detail="결제 요청을 찾지 못했습니다.")
         if payment["status"] == "COMPLETED":
+            result = "success"
+            delivery_order_id = payment["deliveryOrderId"]
+            if payment.get("matchRequestId"):
+                match_request = resolved_store.get_match_request(
+                    payment["matchRequestId"]
+                )
+                if match_request and match_request["status"] == "MATCHED":
+                    delivery_order_id = match_request["partnerOrderId"]
+                else:
+                    result = "waiting-peer"
+                    delivery_order_id = None
             return payment_result_redirect(
-                "success",
+                result,
                 payment_id=payment_id,
-                delivery_order_id=payment["deliveryOrderId"],
+                delivery_order_id=delivery_order_id,
             )
         if payment["status"] != "READY" or not payment.get("tid"):
             return payment_result_redirect("fail", payment_id=payment_id)
@@ -726,26 +784,59 @@ def create_app(
             )
             return payment_result_redirect("fail", payment_id=payment_id)
 
-        delivery_request = CreateDeliveryRequest.model_validate(payment["order"])
-        try:
-            await place_order(
-                resolved_client,
-                resolved_store,
-                delivery_request,
-                payment["deliveryOrderId"],
-            )
-        except Exception as exc:
-            resolved_store.mark_kakaopay_status(
-                payment_id, "DELIVERY_FAILED", response=approval, error=str(exc)
-            )
-            return payment_result_redirect("delivery-failed", payment_id=payment_id)
+        delivery_order_id = payment["deliveryOrderId"]
+        if payment.get("matchRequestId"):
+            group = None
+            try:
+                group, should_dispatch = resolved_store.mark_match_participant_paid(
+                    payment["matchRequestId"]
+                )
+                if should_dispatch:
+                    delivery_request = CreateDeliveryRequest.model_validate(
+                        group["pooledOrder"]
+                    )
+                    await place_order(
+                        resolved_client,
+                        resolved_store,
+                        delivery_request,
+                        group["providerOrderId"],
+                    )
+                    resolved_store.complete_paid_match(group["matchId"])
+                    delivery_order_id = group["providerOrderId"]
+                else:
+                    delivery_order_id = None
+            except Exception as exc:
+                if group is not None:
+                    resolved_store.fail_paid_match(group["matchId"], str(exc))
+                resolved_store.mark_kakaopay_status(
+                    payment_id, "DELIVERY_FAILED", response=approval, error=str(exc)
+                )
+                return payment_result_redirect(
+                    "delivery-failed", payment_id=payment_id
+                )
+        else:
+            delivery_request = CreateDeliveryRequest.model_validate(payment["order"])
+            try:
+                await place_order(
+                    resolved_client,
+                    resolved_store,
+                    delivery_request,
+                    payment["deliveryOrderId"],
+                )
+            except Exception as exc:
+                resolved_store.mark_kakaopay_status(
+                    payment_id, "DELIVERY_FAILED", response=approval, error=str(exc)
+                )
+                return payment_result_redirect(
+                    "delivery-failed", payment_id=payment_id
+                )
         resolved_store.mark_kakaopay_status(
             payment_id, "COMPLETED", response=approval
         )
         return payment_result_redirect(
-            "success",
+            "success" if delivery_order_id else "waiting-peer",
             payment_id=payment_id,
-            delivery_order_id=payment["deliveryOrderId"],
+            delivery_order_id=delivery_order_id,
         )
 
     @application.get(
@@ -883,28 +974,57 @@ def create_app(
                     request_payload,
                     partner_order_id,
                 )
-                order_result = await place_order(
-                    resolved_client,
-                    resolved_store,
-                    pooled_order,
-                    partner_order_id,
+                pooled_quote, first_quote, second_quote = await asyncio.gather(
+                    resolved_client.price(pooled_order),
+                    resolved_client.price(
+                        CreateDeliveryRequest.model_validate(candidate["request"])
+                    ),
+                    resolved_client.price(request),
+                )
+                pooled_total = payment_total(
+                    pooled_quote,
+                    pooled_order.order_type.value,
+                )
+                first_total = payment_total(
+                    first_quote,
+                    candidate["request"]["orderType"],
+                )
+                second_total = payment_total(
+                    second_quote,
+                    request_payload["orderType"],
+                )
+                solo_total = first_total + second_total
+                first_amount = max(
+                    1,
+                    round(pooled_total * first_total / solo_total),
+                )
+                second_amount = pooled_total - first_amount
+                if second_amount <= 0:
+                    raise ValueError("공동배송 최종 결제 금액을 나누지 못했습니다.")
+                resolved_store.prepare_matched_payments(
+                    match_id=match_id,
+                    request_amounts={
+                        candidate["requestId"]: first_amount,
+                        request_id: second_amount,
+                    },
+                    provider_order_id=partner_order_id,
+                    pooled_order=pooled_order.model_dump(
+                        mode="json", by_alias=True, exclude_none=True
+                    ),
+                    quote=pooled_quote,
+                    total_amount=pooled_total,
                 )
             except Exception as exc:
                 resolved_store.fail_match_requests(request_ids, str(exc))
                 raise
-            resolved_store.complete_match_requests(
-                request_ids,
-                partner_order_id,
-            )
             matched = resolved_store.get_match_request(request_id)
             return ApiEnvelope(
                 data={
                     "matching": public_match_request(matched or saved),
-                    "orderResult": order_result,
                 },
                 message=(
-                    "다른 사용자의 배송과 매칭되어 스마트 딜리버리 한 건으로 "
-                    "접수되었습니다."
+                    "다른 사용자의 배송과 매칭되어 최종 요금이 확정되었습니다. "
+                    "양쪽 결제가 끝나면 배송을 접수합니다."
                 ),
             )
 

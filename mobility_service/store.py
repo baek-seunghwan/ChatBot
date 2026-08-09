@@ -94,6 +94,8 @@ class MobilityStore:
                     status TEXT NOT NULL,
                     match_id TEXT,
                     provider_order_id TEXT,
+                    final_amount INTEGER,
+                    payment_status TEXT NOT NULL DEFAULT 'NOT_REQUIRED',
                     error TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL,
@@ -105,6 +107,18 @@ class MobilityStore:
 
                 CREATE INDEX IF NOT EXISTS idx_delivery_match_client
                 ON delivery_match_requests(client_id, created_at);
+
+                CREATE TABLE IF NOT EXISTS delivery_match_groups (
+                    match_id TEXT PRIMARY KEY,
+                    provider_order_id TEXT NOT NULL UNIQUE,
+                    pooled_order_json TEXT NOT NULL,
+                    quote_json TEXT NOT NULL,
+                    total_amount INTEGER NOT NULL,
+                    status TEXT NOT NULL,
+                    error TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                );
 
                 CREATE TABLE IF NOT EXISTS address_share_requests (
                     token TEXT PRIMARY KEY,
@@ -134,6 +148,7 @@ class MobilityStore:
                     order_json TEXT NOT NULL,
                     ready_json TEXT,
                     approval_json TEXT,
+                    match_request_id TEXT,
                     error TEXT,
                     created_at TEXT NOT NULL,
                     updated_at TEXT NOT NULL
@@ -143,6 +158,31 @@ class MobilityStore:
                 ON kakaopay_payments(partner_user_id, created_at);
                 """
             )
+            request_columns = {
+                row["name"]
+                for row in connection.execute(
+                    "PRAGMA table_info(delivery_match_requests)"
+                ).fetchall()
+            }
+            if "final_amount" not in request_columns:
+                connection.execute(
+                    "ALTER TABLE delivery_match_requests ADD COLUMN final_amount INTEGER"
+                )
+            if "payment_status" not in request_columns:
+                connection.execute(
+                    "ALTER TABLE delivery_match_requests ADD COLUMN "
+                    "payment_status TEXT NOT NULL DEFAULT 'NOT_REQUIRED'"
+                )
+            payment_columns = {
+                row["name"]
+                for row in connection.execute(
+                    "PRAGMA table_info(kakaopay_payments)"
+                ).fetchall()
+            }
+            if "match_request_id" not in payment_columns:
+                connection.execute(
+                    "ALTER TABLE kakaopay_payments ADD COLUMN match_request_id TEXT"
+                )
 
     def create_kakaopay_payment(
         self,
@@ -153,6 +193,7 @@ class MobilityStore:
         delivery_order_id: str,
         amount: int,
         order_payload: dict[str, Any],
+        match_request_id: str | None = None,
     ) -> dict[str, Any]:
         now = utc_now()
         with self._connect() as connection:
@@ -161,8 +202,8 @@ class MobilityStore:
                 INSERT INTO kakaopay_payments (
                     payment_id, partner_order_id, partner_user_id,
                     delivery_order_id, status, amount, order_json,
-                    created_at, updated_at
-                ) VALUES (?, ?, ?, ?, 'CREATED', ?, ?, ?, ?)
+                    match_request_id, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, 'CREATED', ?, ?, ?, ?, ?)
                 """,
                 (
                     payment_id,
@@ -171,6 +212,7 @@ class MobilityStore:
                     delivery_order_id,
                     amount,
                     json.dumps(order_payload, ensure_ascii=False),
+                    match_request_id,
                     now,
                     now,
                 ),
@@ -186,7 +228,8 @@ class MobilityStore:
                 """
                 SELECT payment_id, tid, partner_order_id, partner_user_id,
                        delivery_order_id, status, amount, order_json,
-                       ready_json, approval_json, error, created_at, updated_at
+                       ready_json, approval_json, match_request_id, error,
+                       created_at, updated_at
                 FROM kakaopay_payments
                 WHERE payment_id = ?
                 """,
@@ -209,6 +252,7 @@ class MobilityStore:
                 if row["approval_json"]
                 else None
             ),
+            "matchRequestId": row["match_request_id"],
             "error": row["error"],
             "createdAt": row["created_at"],
             "updatedAt": row["updated_at"],
@@ -613,6 +657,8 @@ class MobilityStore:
             "status": row["status"],
             "matchId": row["match_id"],
             "partnerOrderId": row["provider_order_id"],
+            "finalAmount": row["final_amount"],
+            "paymentStatus": row["payment_status"],
             "routeSummary": f"{pickup} → {dropoff}",
             "error": row["error"],
             "createdAt": row["created_at"],
@@ -666,7 +712,8 @@ class MobilityStore:
     ) -> dict[str, Any] | None:
         query = """
             SELECT request_id, client_id, request_json, status, match_id,
-                   provider_order_id, error, created_at, updated_at, expires_at
+                   provider_order_id, final_amount, payment_status, error,
+                   created_at, updated_at, expires_at
             FROM delivery_match_requests
             WHERE request_id = ?
         """
@@ -700,7 +747,8 @@ class MobilityStore:
             rows = connection.execute(
                 """
                 SELECT request_id, client_id, request_json, status, match_id,
-                       provider_order_id, error, created_at, updated_at, expires_at
+                       provider_order_id, final_amount, payment_status, error,
+                       created_at, updated_at, expires_at
                 FROM delivery_match_requests
                 WHERE status = 'WAITING'
                   AND expires_at > ?
@@ -758,6 +806,160 @@ class MobilityStore:
                 (provider_order_id, utc_now(), *request_ids),
             )
 
+    def prepare_matched_payments(
+        self,
+        *,
+        match_id: str,
+        request_amounts: dict[str, int],
+        provider_order_id: str,
+        pooled_order: dict[str, Any],
+        quote: dict[str, Any],
+        total_amount: int,
+    ) -> None:
+        """Freeze the matched route and each participant's charge before payment."""
+        if len(request_amounts) != 2 or any(value <= 0 for value in request_amounts.values()):
+            raise ValueError("공동배송 참가자별 결제 금액이 올바르지 않습니다.")
+        now = utc_now()
+        request_ids = tuple(request_amounts)
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO delivery_match_groups (
+                    match_id, provider_order_id, pooled_order_json, quote_json,
+                    total_amount, status, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, 'AWAITING_PAYMENT', ?, ?)
+                """,
+                (
+                    match_id,
+                    provider_order_id,
+                    json.dumps(pooled_order, ensure_ascii=False),
+                    json.dumps(quote, ensure_ascii=False),
+                    total_amount,
+                    now,
+                    now,
+                ),
+            )
+            for request_id, amount in request_amounts.items():
+                cursor = connection.execute(
+                    """
+                    UPDATE delivery_match_requests
+                    SET status = 'MATCHED_AWAITING_PAYMENT',
+                        provider_order_id = ?, final_amount = ?,
+                        payment_status = 'PENDING', error = NULL, updated_at = ?
+                    WHERE request_id = ? AND match_id = ? AND status = 'MATCHING'
+                    """,
+                    (provider_order_id, amount, now, request_id, match_id),
+                )
+                if cursor.rowcount != 1:
+                    raise RuntimeError("공동배송 매칭 상태를 결제 대기로 전환하지 못했습니다.")
+
+    def get_match_group(self, match_id: str) -> dict[str, Any] | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT match_id, provider_order_id, pooled_order_json,
+                       quote_json, total_amount, status, error,
+                       created_at, updated_at
+                FROM delivery_match_groups
+                WHERE match_id = ?
+                """,
+                (match_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return {
+            "matchId": row["match_id"],
+            "providerOrderId": row["provider_order_id"],
+            "pooledOrder": json.loads(row["pooled_order_json"]),
+            "quote": json.loads(row["quote_json"]),
+            "totalAmount": row["total_amount"],
+            "status": row["status"],
+            "error": row["error"],
+            "createdAt": row["created_at"],
+            "updatedAt": row["updated_at"],
+        }
+
+    def mark_match_participant_paid(
+        self,
+        request_id: str,
+    ) -> tuple[dict[str, Any], bool]:
+        """Mark one participant paid and atomically claim dispatch when both paid."""
+        now = utc_now()
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT match_id FROM delivery_match_requests
+                WHERE request_id = ?
+                  AND status IN ('MATCHED_AWAITING_PAYMENT', 'MATCHED')
+                """,
+                (request_id,),
+            ).fetchone()
+            if row is None or not row["match_id"]:
+                raise RuntimeError("결제할 공동배송 매칭을 찾지 못했습니다.")
+            match_id = row["match_id"]
+            connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET payment_status = 'PAID', updated_at = ?
+                WHERE request_id = ?
+                """,
+                (now, request_id),
+            )
+            unpaid = connection.execute(
+                """
+                SELECT COUNT(*) AS count
+                FROM delivery_match_requests
+                WHERE match_id = ? AND payment_status != 'PAID'
+                """,
+                (match_id,),
+            ).fetchone()["count"]
+            should_dispatch = False
+            if unpaid == 0:
+                cursor = connection.execute(
+                    """
+                    UPDATE delivery_match_groups
+                    SET status = 'DISPATCHING', updated_at = ?
+                    WHERE match_id = ? AND status = 'AWAITING_PAYMENT'
+                    """,
+                    (now, match_id),
+                )
+                should_dispatch = cursor.rowcount == 1
+        group = self.get_match_group(match_id)
+        if group is None:
+            raise RuntimeError("공동배송 결제 그룹을 찾지 못했습니다.")
+        return group, should_dispatch
+
+    def complete_paid_match(self, match_id: str) -> None:
+        now = utc_now()
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE delivery_match_groups
+                SET status = 'DISPATCHED', error = NULL, updated_at = ?
+                WHERE match_id = ?
+                """,
+                (now, match_id),
+            )
+            connection.execute(
+                """
+                UPDATE delivery_match_requests
+                SET status = 'MATCHED', updated_at = ?
+                WHERE match_id = ?
+                """,
+                (now, match_id),
+            )
+
+    def fail_paid_match(self, match_id: str, error: str) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                UPDATE delivery_match_groups
+                SET status = 'DISPATCH_FAILED', error = ?, updated_at = ?
+                WHERE match_id = ?
+                """,
+                (error[:1000], utc_now(), match_id),
+            )
+
     def fail_match_requests(
         self,
         request_ids: tuple[str, str],
@@ -792,7 +994,8 @@ class MobilityStore:
             rows = connection.execute(
                 """
                 SELECT request_id, client_id, request_json, status, match_id,
-                       provider_order_id, error, created_at, updated_at, expires_at
+                       provider_order_id, final_amount, payment_status, error,
+                       created_at, updated_at, expires_at
                 FROM delivery_match_requests
                 WHERE client_id = ?
                 ORDER BY created_at DESC

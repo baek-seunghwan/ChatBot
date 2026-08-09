@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import hashlib
 import json
 import re
@@ -313,7 +314,7 @@ class FakeKakaoPayClient:
     async def ready(self, **payload: Any) -> dict[str, Any]:
         self.ready_calls.append(payload)
         return {
-            "tid": "T1234567890123456789",
+            "tid": f"T{len(self.ready_calls):020d}",
             "next_redirect_pc_url": "https://mockup-pg-web.kakao.com/pay",
             "next_redirect_mobile_url": "https://mockup-pg-web.kakao.com/mobile",
         }
@@ -342,6 +343,7 @@ class KakaoPayFlowTests(unittest.TestCase):
             geocoder=PaymentFlowGeocoder(),  # type: ignore[arg-type]
         )
         self.client = TestClient(app)
+        self.app = app
         registered = self.client.post(
             "/api/auth/register",
             json={
@@ -422,6 +424,91 @@ class KakaoPayFlowTests(unittest.TestCase):
         payment = self.store.get_kakaopay_payment(data["paymentId"])
         self.assertEqual(payment["status"], "COMPLETED")
         self.assertEqual(len(payment["order"]["waypoints"]), 1)
+
+    def test_matched_delivery_dispatches_only_after_both_users_pay(self) -> None:
+        second_client = TestClient(self.app)
+        try:
+            registered = second_client.post(
+                "/api/auth/register",
+                json={
+                    "name": "두 번째 결제자",
+                    "email": "second-payment@example.com",
+                    "password": "practice-password-456",
+                },
+            )
+            self.assertEqual(registered.status_code, 201)
+
+            first_payload = sample_order()
+            first_payload.pop("partnerOrderId", None)
+            first = self.client.post(
+                "/api/delivery-matches",
+                headers={
+                    "X-Client-Id": "payment-computer-one",
+                    "Idempotency-Key": "payment-match-one",
+                },
+                json=first_payload,
+            )
+            self.assertEqual(first.json()["data"]["matching"]["status"], "WAITING")
+
+            second_payload = copy.deepcopy(first_payload)
+            second_payload["pickup"]["location"] = {
+                "basicAddress": "경기도 성남시 분당구 판교역로 160",
+                "latitude": 37.397,
+                "longitude": 127.114,
+            }
+            second_payload["dropoff"]["location"] = {
+                "basicAddress": "경기도 성남시 분당구 정자일로 100",
+                "latitude": 37.361,
+                "longitude": 127.107,
+            }
+            matched = second_client.post(
+                "/api/delivery-matches",
+                headers={
+                    "X-Client-Id": "payment-computer-two",
+                    "Idempotency-Key": "payment-match-two",
+                },
+                json=second_payload,
+            )
+            self.assertEqual(
+                matched.json()["data"]["matching"]["status"],
+                "MATCHED_AWAITING_PAYMENT",
+            )
+            self.assertEqual(self.mobility.create_calls, 0)
+
+            first_ready = self.client.post(
+                "/api/payments/kakaopay/ready",
+                headers={"X-Client-Id": "payment-computer-one"},
+                json={"matchRequestId": "payment-match-one"},
+            ).json()["data"]
+            first_paid = self.client.get(
+                f"/api/payments/kakaopay/{first_ready['paymentId']}/success",
+                params={"pg_token": "first-matched-token"},
+                follow_redirects=False,
+            )
+            self.assertIn("payment=waiting-peer", first_paid.headers["location"])
+            self.assertEqual(self.mobility.create_calls, 0)
+
+            second_ready = second_client.post(
+                "/api/payments/kakaopay/ready",
+                headers={"X-Client-Id": "payment-computer-two"},
+                json={"matchRequestId": "payment-match-two"},
+            ).json()["data"]
+            second_paid = second_client.get(
+                f"/api/payments/kakaopay/{second_ready['paymentId']}/success",
+                params={"pg_token": "second-matched-token"},
+                follow_redirects=False,
+            )
+            self.assertIn("payment=success", second_paid.headers["location"])
+            self.assertEqual(self.mobility.create_calls, 1)
+
+            final_first = self.store.get_match_request("payment-match-one")
+            final_second = self.store.get_match_request("payment-match-two")
+            self.assertEqual(final_first["status"], "MATCHED")
+            self.assertEqual(final_second["status"], "MATCHED")
+            self.assertEqual(final_first["paymentStatus"], "PAID")
+            self.assertEqual(final_second["paymentStatus"], "PAID")
+        finally:
+            second_client.close()
 
 
 class MobilityApiTests(unittest.TestCase):

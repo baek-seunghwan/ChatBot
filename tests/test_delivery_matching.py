@@ -59,7 +59,7 @@ class DeliveryMatchingTests(unittest.TestCase):
         self.client.close()
         self.temporary.cleanup()
 
-    def test_two_computers_create_one_pooled_provider_order(self) -> None:
+    def test_two_computers_freeze_one_pooled_quote_before_payment(self) -> None:
         first_payload = sample_order()
         first_payload.pop("partnerOrderId", None)
         first = self.client.post(
@@ -86,24 +86,22 @@ class DeliveryMatchingTests(unittest.TestCase):
 
         self.assertEqual(second.status_code, 202)
         matching = second.json()["data"]["matching"]
-        self.assertEqual(matching["status"], "MATCHED")
+        self.assertEqual(matching["status"], "MATCHED_AWAITING_PAYMENT")
         self.assertTrue(matching["partnerOrderId"].startswith("smart-pool-"))
-        self.assertEqual(self.fake.create_calls, 1)
+        self.assertEqual(matching["paymentStatus"], "PENDING")
+        self.assertEqual(matching["finalAmount"], 6000)
+        self.assertEqual(self.fake.create_calls, 0)
 
         saved = self.store.get_order(matching["partnerOrderId"])
-        self.assertIsNotNone(saved)
-        self.assertEqual(len(saved["request"]["waypoints"]), 2)
-        self.assertTrue(
-            saved["request"]["waypoints"][0]["note"].startswith("[추가 픽업]")
-        )
-        self.assertEqual(saved["request"]["quantity"], "2건")
+        self.assertIsNone(saved)
 
         first_history = self.client.get(
             "/api/delivery-matches",
             headers={"X-Client-Id": "computer-one"},
         )
         first_match = first_history.json()["data"][0]
-        self.assertEqual(first_match["status"], "MATCHED")
+        self.assertEqual(first_match["status"], "MATCHED_AWAITING_PAYMENT")
+        self.assertEqual(first_match["finalAmount"], 6000)
         self.assertEqual(
             first_match["partnerOrderId"],
             matching["partnerOrderId"],

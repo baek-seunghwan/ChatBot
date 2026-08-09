@@ -4246,10 +4246,10 @@
             <div class="section-heading">
               <div>
                 <span class="checkout-panel-label">PAYMENT METHOD</span>
-                <h3>결제 방법</h3>
+                <h3 id="paymentSectionTitle">결제 방법</h3>
               </div>
             </div>
-            <div class="payment-methods">
+            <div class="payment-methods" id="paymentMethods">
               <label class="payment-card kakaopay">
                 <input type="radio" name="paymentType" value="KAKAOPAY">
                 <span class="payment-brand-mark">pay</span>
@@ -4578,9 +4578,14 @@
     function syncPaymentUi() {
       const cardOnly = isSmartDelivery() || byId("roundTrip").checked;
       const kakaoPayInput = document.querySelector('input[name="paymentType"][value="KAKAOPAY"]');
-      const kakaoPayUnavailable = !kakaoPayConfigured || byId("autoMatch").checked;
+      const awaitingMatch = byId("autoMatch").checked;
+      const kakaoPayUnavailable = !kakaoPayConfigured;
       const kakaoPayDescription = byId("kakaoPayDescription");
       const radios = document.querySelectorAll('input[name="paymentType"]');
+      byId("paymentMethods").hidden = awaitingMatch;
+      byId("paymentSectionTitle").textContent = awaitingMatch
+        ? "스마트 딜리버리 매칭 신청"
+        : "결제 방법";
       if (cardOnly && paymentTypeValue() !== "KAKAOPAY") {
         document.querySelector('input[name="paymentType"][value="CARD"]').checked = true;
       }
@@ -4588,7 +4593,9 @@
         document.querySelector('input[name="paymentType"][value="CARD"]').checked = true;
       }
       radios.forEach(input => {
-        input.disabled = input === kakaoPayInput
+        input.disabled = awaitingMatch
+          ? true
+          : input === kakaoPayInput
           ? kakaoPayUnavailable
           : cardOnly && input.value !== "CARD" && input.value !== "KAKAOPAY";
         input.closest(".payment-card").classList.toggle(
@@ -4602,16 +4609,16 @@
       });
       kakaoPayDescription.textContent = !kakaoPayConfigured
         ? "개발 키가 설정되지 않았어요"
-        : byId("autoMatch").checked
-          ? "자동 매칭 대기 주문은 테스트 카드로 접수해주세요"
+        : awaitingMatch
+          ? "매칭 후 확정 요금으로 결제해요"
           : isSmartDelivery()
             ? "여러 배송을 한 번에 결제해요"
           : "개발 환경에서 결제창을 열어요";
       const method = paymentTypeValue();
       byId("paymentHelp").textContent = !kakaoPayConfigured
         ? "카카오페이 개발 키를 설정하면 테스트 결제를 사용할 수 있습니다. 현재는 Sandbox 결제만 가능합니다."
-        : byId("autoMatch").checked
-          ? "다른 사용자의 주문을 기다리는 자동 매칭은 현재 테스트 카드로 접수할 수 있습니다."
+        : awaitingMatch
+          ? "지금은 결제하지 않습니다. 비슷한 배송과 매칭되어 할인 요금이 확정되면 카카오페이 결제 버튼이 열립니다."
           : method === "KAKAOPAY" && !currentUser
             ? "카카오페이 결제창을 열려면 먼저 로그인해주세요. 개발 결제이므로 실제 운영 결제와는 다릅니다."
           : method === "KAKAOPAY"
@@ -4619,11 +4626,18 @@
             : cardOnly
               ? "스마트 딜리버리·경유지·왕복 배송은 카카오페이 또는 테스트 카드로 결제할 수 있습니다."
               : "Sandbox 카드는 실제 결제 없이 주문 흐름만 시험합니다.";
-      byId("checkoutPaymentLabel").textContent = paymentTypeLabel(paymentTypeValue());
-      byId("finalOrderButton").textContent = method === "KAKAOPAY"
+      byId("checkoutPaymentLabel").textContent = awaitingMatch
+        ? "매칭 후 카카오페이"
+        : paymentTypeLabel(paymentTypeValue());
+      byId("finalOrderButton").textContent = awaitingMatch
+        ? "스마트 딜리버리 매칭 시작"
+        : method === "KAKAOPAY"
         ? "카카오페이로 결제"
         : "Sandbox 주문 접수";
-      byId("finalOrderButton").classList.toggle("kakaopay-cta", method === "KAKAOPAY");
+      byId("finalOrderButton").classList.toggle(
+        "kakaopay-cta",
+        method === "KAKAOPAY" || awaitingMatch
+      );
     }
 
     function handlingUnitPrice(value) {
@@ -6073,6 +6087,34 @@
         openAuthModal();
         return;
       }
+      if (
+        byId("autoMatch").checked
+        && ["QUICK", "QUICK_EXPRESS"].includes(byId("orderType").value)
+      ) {
+        await withButton(button, async () => {
+          smartOrderKey ||= `match-web-${crypto.randomUUID().replaceAll("-", "")}`;
+          const result = await api("/api/delivery-matches", {
+            method: "POST",
+            headers: {
+              "X-Client-Id": matchClientId,
+              "Idempotency-Key": smartOrderKey,
+            },
+            body: JSON.stringify(draft()),
+          });
+          closePaymentStep(false);
+          const matching = result.data.matching || {};
+          if (matching.status === "MATCHED_AWAITING_PAYMENT") {
+            showMatchedPayment(matching);
+          } else {
+            showResult(
+              "스마트 딜리버리 매칭 대기",
+              "주문을 등록했습니다. 비슷한 경로의 배송이 들어오면 최종 할인 요금을 확정하고 카카오페이 결제 버튼을 보여드릴게요."
+            );
+          }
+          await refreshLiveOperations();
+        });
+        return;
+      }
       if (paymentTypeValue() === "KAKAOPAY") {
         await withButton(button, async () => {
           const result = await api("/api/payments/kakaopay/ready", {
@@ -6112,20 +6154,6 @@
           });
           const orderResult = result.data.orderResult || {};
           id = orderResult.partnerOrderId || orderResult.order?.partnerOrderId;
-        } else if (
-          byId("autoMatch").checked
-          && ["QUICK", "QUICK_EXPRESS"].includes(byId("orderType").value)
-        ) {
-          smartOrderKey ||= `match-web-${crypto.randomUUID().replaceAll("-", "")}`;
-          result = await api("/api/delivery-matches", {
-            method: "POST",
-            headers: {
-              "X-Client-Id": matchClientId,
-              "Idempotency-Key": smartOrderKey,
-            },
-            body: JSON.stringify(draft()),
-          });
-          id = result.data.matching?.partnerOrderId || result.data.matching?.requestId;
         } else {
           result = await api("/api/orders", {
             method: "POST",
@@ -6808,6 +6836,68 @@
     });
 
     let liveOpsRefreshInFlight = false;
+    let visibleMatchPaymentId = null;
+
+    function showMatchedPayment(matching) {
+      if (!matching?.requestId) return;
+      visibleMatchPaymentId = matching.requestId;
+      const amount = Number(matching.finalAmount || 0);
+      const meta = byId("resultMeta");
+      const grid = byId("resultGrid");
+      const body = byId("resultBody");
+      byId("resultTitle").textContent = "스마트 딜리버리 매칭 완료";
+      meta.innerHTML = '<span>최종 할인 요금이 확정됐어요</span><span class="result-chip">결제 대기</span>';
+      grid.innerHTML = `
+        <article class="fare-current-summary">
+          <div class="fare-current-top">
+            <div class="fare-current-service">
+              <small>내 공동배송 최종 요금</small>
+              <strong>스마트 딜리버리</strong>
+              <span class="fare-vehicle">매칭 완료</span>
+            </div>
+            <strong class="fare-current-price">${won(amount)}</strong>
+          </div>
+          <div class="fare-current-metrics">
+            <div><span>배송 경로</span><strong id="matchedPaymentRoute"></strong></div>
+            <div><span>결제 상태</span><strong>카카오페이 결제 전</strong></div>
+          </div>
+        </article>
+        <div class="fare-confirm-bar">
+          <span class="fare-confirm-copy">
+            <small>다른 참가자도 결제를 완료하면</small>
+            <strong>하나의 묶음 배송으로 자동 접수됩니다.</strong>
+          </span>
+          <button type="button" class="fare-confirm-button" onclick="startMatchedKakaoPay('${matching.requestId}', this)">
+            카카오페이로 ${won(amount)} 결제
+          </button>
+        </div>`;
+      byId("matchedPaymentRoute").textContent = matching.routeSummary || "확정 완료";
+      body.hidden = true;
+      byId("result").classList.add("visible");
+      byId("result").scrollIntoView({behavior: "smooth", block: "start"});
+    }
+
+    async function startMatchedKakaoPay(requestId, button) {
+      if (!currentUser) {
+        showResult("로그인 필요", "카카오페이 결제를 진행하려면 로그인해주세요.", true);
+        openAuthModal();
+        return;
+      }
+      await withButton(button, async () => {
+        try {
+          const result = await api("/api/payments/kakaopay/ready", {
+            method: "POST",
+            headers: {"X-Client-Id": matchClientId},
+            body: JSON.stringify({matchRequestId: requestId}),
+          });
+          const redirectUrl = result.data?.nextRedirectPcUrl;
+          if (!redirectUrl) throw new Error("카카오페이 결제 주소를 받지 못했습니다.");
+          window.location.assign(redirectUrl);
+        } catch (error) {
+          showResult("카카오페이 결제 준비 실패", error.message, true);
+        }
+      });
+    }
 
     function setLiveMetric(id, value) {
       const node = byId(id);
@@ -6856,8 +6946,15 @@
           order => !terminal.has(String(order.status || "").toUpperCase())
         ).length;
         const waitingCount = matches.filter(
-          item => ["WAITING", "MATCHING"].includes(String(item.status || "").toUpperCase())
+          item => ["WAITING", "MATCHING", "MATCHED_AWAITING_PAYMENT"].includes(String(item.status || "").toUpperCase())
         ).length;
+        const paymentPending = matches.find(item =>
+          item.status === "MATCHED_AWAITING_PAYMENT"
+          && item.paymentStatus === "PENDING"
+        );
+        if (paymentPending && paymentPending.requestId !== visibleMatchPaymentId) {
+          showMatchedPayment(paymentPending);
+        }
         const now = new Date();
         const todayCount = orders.filter(order => {
           const value = order.createdAt || order.updatedAt;
@@ -6961,6 +7058,11 @@
           `결제가 승인되고 배송 주문이 접수되었습니다. 주문번호: ${query.get("orderId") || "확인 중"}`
         );
         await loadOrders();
+      } else if (paymentResult === "waiting-peer") {
+        showResult(
+          "카카오페이 결제 완료",
+          "내 결제가 완료되었습니다. 함께 배송할 상대방의 결제가 끝나면 묶음 배송을 자동으로 접수합니다."
+        );
       } else if (paymentResult === "cancel") {
         showResult("카카오페이 결제 취소", "결제가 취소되어 배송 주문을 접수하지 않았습니다.", true);
       } else if (paymentResult === "delivery-failed") {

@@ -306,11 +306,24 @@ class BundleOrderRequest(CamelModel):
 class KakaoPayReadyRequest(CamelModel):
     order: CreateDeliveryRequest | None = None
     smart_order: BundleOrderRequest | None = Field(default=None, alias="smartOrder")
+    match_request_id: str | None = Field(
+        default=None,
+        alias="matchRequestId",
+        min_length=4,
+        max_length=100,
+        pattern=r"^[A-Za-z0-9._-]+$",
+    )
 
     @model_validator(mode="after")
     def require_one_order(self) -> "KakaoPayReadyRequest":
-        if (self.order is None) == (self.smart_order is None):
-            raise ValueError("단일 배송 또는 스마트 딜리버리 주문 중 하나가 필요합니다.")
+        choices = sum(
+            value is not None
+            for value in (self.order, self.smart_order, self.match_request_id)
+        )
+        if choices != 1:
+            raise ValueError(
+                "단일 배송, 스마트 딜리버리 또는 매칭 요청 중 하나가 필요합니다."
+            )
         return self
 
 
