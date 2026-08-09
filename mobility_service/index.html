@@ -2237,17 +2237,20 @@
     }
     .fare-current-metrics {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 2fr) minmax(180px, 1fr);
       border-top: 1px solid #e7eaf0;
     }
-    .fare-current-metrics span {
+    .fare-current-metrics > span,
+    .fare-current-metrics > div {
       display: grid;
       gap: 2px;
       padding: 10px 14px;
     }
-    .fare-current-metrics span + span { border-left: 1px solid #e7eaf0; }
+    .fare-current-metrics > span + span,
+    .fare-current-metrics > div + div { border-left: 1px solid #e7eaf0; }
     .fare-current-metrics small { color: var(--muted); font-size: 9.5px; }
     .fare-current-metrics b { color: var(--navy); font-size: 12px; }
+    #matchedPaymentRoute { overflow-wrap: anywhere; line-height: 1.45; }
     .match-price-drop {
       display: grid;
       grid-template-columns: 1fr auto 1fr auto;
@@ -2364,6 +2367,7 @@
     }
     .fare-option-groups {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
       border-top: 1px solid #e7eaf0;
       padding: 14px;
@@ -2406,25 +2410,26 @@
     }
     .fare-group-options {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: minmax(0, 1fr);
       gap: 0;
     }
     .fare-group-option {
       position: relative;
       display: grid;
-      min-height: 134px;
-      align-content: space-between;
-      gap: 14px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      min-height: 82px;
+      align-items: center;
+      gap: 12px;
       border: 0;
-      border-right: 1px solid #e7eaf0;
+      border-bottom: 1px solid #e7eaf0;
       border-radius: 0;
-      padding: 14px;
+      padding: 12px 14px;
       background: #fff;
       color: var(--ink);
       text-align: left;
       box-shadow: none;
     }
-    .fare-group-option:last-child { border-right: 0; }
+    .fare-group-option:last-child { border-bottom: 0; }
     .fare-group-option:hover {
       z-index: 1;
       background: #fffbea;
@@ -2438,9 +2443,15 @@
     .fare-group-option-top,
     .fare-group-option-bottom {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
       gap: 10px;
+    }
+    .fare-group-option-bottom {
+      min-width: 92px;
+      align-items: flex-end;
+      flex-direction: column;
+      gap: 3px;
     }
     .fare-speed-copy { display: grid; gap: 4px; }
     .fare-speed-copy strong { color: var(--navy); font-size: 14px; }
@@ -2512,10 +2523,13 @@
       font-weight: 900;
     }
     #quickRequest .result-prominent {
+      width: min(100%, 920px);
       margin-top: 18px;
+      margin-right: auto;
+      margin-left: auto;
       border: 0;
       border-radius: 18px;
-      padding: 30px;
+      padding: 24px;
       background: linear-gradient(145deg, #10254d 0%, #081a39 100%);
       box-shadow: 0 18px 44px rgba(16, 37, 77, .18);
     }
@@ -2710,11 +2724,17 @@
       .fare-option-list { grid-template-columns: 1fr; }
       .fare-group-options { grid-template-columns: 1fr; }
       .fare-group-option {
-        min-height: 104px;
+        min-height: 82px;
         border-right: 0;
         border-bottom: 1px solid #e7eaf0;
       }
       .fare-group-option:last-child { border-bottom: 0; }
+      .fare-current-metrics { grid-template-columns: 1fr; }
+      .fare-current-metrics > span + span,
+      .fare-current-metrics > div + div {
+        border-top: 1px solid #e7eaf0;
+        border-left: 0;
+      }
       .delivery-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .choice-card { min-height: 104px; }
       .pickup-time-field { grid-template-columns: 1fr; }
@@ -3783,6 +3803,7 @@
       #quickRequest .form-sections {
         grid-template-columns: 1fr;
       }
+      .fare-option-groups { grid-template-columns: 1fr; }
       #quickRequest .live-ops {
         margin-top: 14px;
       }
