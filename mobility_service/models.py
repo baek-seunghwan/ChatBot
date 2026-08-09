@@ -156,10 +156,6 @@ class ApiEnvelope(CamelModel):
     message: str | None = None
 
 
-class KakaoPayReadyRequest(CamelModel):
-    order: CreateDeliveryRequest
-
-
 class AgentChatRequest(CamelModel):
     session_id: str | None = Field(default=None, alias="sessionId")
     message: str = Field(min_length=1, max_length=5000)
@@ -304,6 +300,17 @@ class BundleOrderRequest(CamelModel):
             and self.fleet_option is None
         ):
             raise ValueError("대형(L) 스마트 딜리버리는 차량을 선택해야 합니다.")
+        return self
+
+
+class KakaoPayReadyRequest(CamelModel):
+    order: CreateDeliveryRequest | None = None
+    smart_order: BundleOrderRequest | None = Field(default=None, alias="smartOrder")
+
+    @model_validator(mode="after")
+    def require_one_order(self) -> "KakaoPayReadyRequest":
+        if (self.order is None) == (self.smart_order is None):
+            raise ValueError("단일 배송 또는 스마트 딜리버리 주문 중 하나가 필요합니다.")
         return self
 
 

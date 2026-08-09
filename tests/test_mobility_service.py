@@ -20,7 +20,7 @@ from mobility_service.chat_cache import GREETING_REPLY
 from mobility_service.client import KakaoMobilityClient
 from mobility_service.config import Settings
 from mobility_service.kakaopay import KakaoPayClient
-from mobility_service.models import DeliveryDraft
+from mobility_service.models import DeliveryDraft, Location
 from mobility_service.my_model import load_qa_index, own_model_reply
 from mobility_service.providers import LLMRouter
 from mobility_service.smart_input import (
@@ -78,6 +78,46 @@ def sample_order(partner_order_id: str = "test-order-001") -> dict[str, Any]:
         "productName": "테스트 서류",
         "declaredValue": 10000,
         "paymentType": "CARD",
+    }
+
+
+class PaymentFlowGeocoder:
+    async def search_address(self, query: str) -> Location | None:
+        points = {
+            "판교역": (37.3947, 127.1112),
+            "정자역": (37.3661, 127.1080),
+            "서현역": (37.3851, 127.1230),
+        }
+        point = points.get(query)
+        if point is None:
+            return None
+        return Location(basicAddress=query, latitude=point[0], longitude=point[1])
+
+
+def sample_smart_order() -> dict[str, Any]:
+    return {
+        "pickups": [
+            {
+                "address": "판교역",
+                "contact": {"name": "테스트 발송자", "phone": "010-1000-0001"},
+            }
+        ],
+        "dropoffs": [
+            {
+                "address": "정자역",
+                "contact": {"name": "첫 수령인", "phone": "010-1000-0002"},
+                "pickupIndex": 0,
+            },
+            {
+                "address": "서현역",
+                "contact": {"name": "둘째 수령인", "phone": "010-1000-0003"},
+                "pickupIndex": 0,
+            },
+        ],
+        "productSize": "XS",
+        "productName": "스마트 배송 서류",
+        "quantity": "2건",
+        "consent": True,
     }
 
 
@@ -299,6 +339,7 @@ class KakaoPayFlowTests(unittest.TestCase):
             client=self.mobility,  # type: ignore[arg-type]
             kakaopay_client=self.kakaopay,  # type: ignore[arg-type]
             store=self.store,
+            geocoder=PaymentFlowGeocoder(),  # type: ignore[arg-type]
         )
         self.client = TestClient(app)
         registered = self.client.post(
@@ -357,6 +398,30 @@ class KakaoPayFlowTests(unittest.TestCase):
         self.assertIn("payment=success", duplicate.headers["location"])
         self.assertEqual(len(self.kakaopay.approve_calls), 1)
         self.assertEqual(self.mobility.create_calls, 1)
+
+    def test_smart_delivery_can_be_paid_before_order_creation(self) -> None:
+        ready = self.client.post(
+            "/api/payments/kakaopay/ready",
+            json={"smartOrder": sample_smart_order()},
+        )
+
+        self.assertEqual(ready.status_code, 200)
+        data = ready.json()["data"]
+        self.assertEqual(data["amount"], 12000)
+        self.assertIn("스마트 딜리버리", self.kakaopay.ready_calls[-1]["item_name"])
+
+        approved = self.client.get(
+            f"/api/payments/kakaopay/{data['paymentId']}/success",
+            params={"pg_token": "smart-delivery-token"},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(approved.status_code, 303)
+        self.assertIn("payment=success", approved.headers["location"])
+        self.assertEqual(self.mobility.create_calls, 1)
+        payment = self.store.get_kakaopay_payment(data["paymentId"])
+        self.assertEqual(payment["status"], "COMPLETED")
+        self.assertEqual(len(payment["order"]["waypoints"]), 1)
 
 
 class MobilityApiTests(unittest.TestCase):
@@ -674,7 +739,7 @@ class MobilityApiTests(unittest.TestCase):
 
         self.assertEqual(home.status_code, 200)
         self.assertIn(
-            "필요한 정보만 입력하면 자동차 실제 도로 기준 예상 시간과 요금을 바로 확인할 수 있어요.",
+            "필요한 정보만 입력하면 배송 예상 시간과 요금을 바로 확인할 수 있어요.",
             home.text,
         )
         self.assertNotIn('class="booking-steps"', home.text)

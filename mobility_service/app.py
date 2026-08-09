@@ -600,16 +600,33 @@ def create_app(
                 status_code=503,
                 detail="카카오페이 개발 키가 아직 설정되지 않았습니다.",
             )
-        delivery_payload = payload.order.model_dump(
-            mode="json", by_alias=True, exclude_none=True
-        )
-        quote = await resolved_client.price(payload.order)
-        amount = payment_total(quote, payload.order.order_type.value)
         token = uuid4().hex
         payment_id = f"kp-{token[:24]}"
         partner_order_id = f"movb-pay-{token[:20]}"
         delivery_order_id = f"movb-{token[:20]}"
         partner_user_id = str(user["id"])
+        if payload.smart_order is not None:
+            try:
+                quote, prepared_order = await prepare_bundle_order(
+                    resolved_client,
+                    resolved_geocoder,
+                    payload.smart_order,
+                    delivery_order_id,
+                    route_planner=resolved_routes,
+                )
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc))
+            amount = int(quote["bundledPrice"])
+            item_name = f"MOVB 스마트 딜리버리 · {payload.smart_order.product_name}"
+        else:
+            assert payload.order is not None
+            prepared_order = payload.order
+            quote = await resolved_client.price(prepared_order)
+            amount = payment_total(quote, prepared_order.order_type.value)
+            item_name = f"MOVB 배송 · {prepared_order.product_name}"
+        delivery_payload = prepared_order.model_dump(
+            mode="json", by_alias=True, exclude_none=True
+        )
         resolved_store.create_kakaopay_payment(
             payment_id=payment_id,
             partner_order_id=partner_order_id,
@@ -624,7 +641,7 @@ def create_app(
             ready = await resolved_kakaopay.ready(
                 partner_order_id=partner_order_id,
                 partner_user_id=partner_user_id,
-                item_name=f"MOVB 배송 · {payload.order.product_name}",
+                item_name=item_name,
                 quantity=1,
                 total_amount=amount,
                 approval_url=f"{callback_base}{callback_path}/success",
